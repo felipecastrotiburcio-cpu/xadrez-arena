@@ -50,6 +50,21 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       { image: './assets/splash-icon.png', imageWidth: 220, resizeMode: 'contain', backgroundColor: '#110d2e' },
     ],
     './plugins/withReleaseSigning',
-    ['expo-build-properties', { android: { usesCleartextTraffic: !isProd } }],
+    [
+      'expo-build-properties',
+      {
+        android: {
+          usesCleartextTraffic: !isProd,
+          // O otimizador (R8) do build de release apaga construtores usados por reflexão.
+          // O GLView do expo-gl (área 3D) herda de TextureView e não é coberto pelas regras da Expo.
+          extraProguardRules: [
+            '-keepclassmembers class * extends android.view.View {',
+            '  public <init>(android.content.Context, expo.modules.kotlin.AppContext);',
+            '}',
+            '-keep class expo.modules.gl.** { *; }',
+          ].join('\n'),
+        },
+      },
+    ],
   ],
 });
