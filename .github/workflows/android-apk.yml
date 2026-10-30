@@ -81,14 +81,30 @@ jobs:
           ./gradlew assembleRelease --no-daemon --stacktrace \
             -PreactNativeArchitectures=arm64-v8a,armeabi-v7a,x86_64 2>&1 | tee "$RUNNER_TEMP/gradle.log"
 
-      - name: Conferir o APK
+      # O APK compilado tem bibliotecas para celulares (arm) e para o emulador do teste (x86_64).
+      # O teste usa o completo; o publicado é o mesmo build sem x86_64, realinhado e reassinado
+      # com a mesma chave (~25 MB menor).
+      - name: Gerar APK para celulares e conferir
         run: |
-          cp app/android/app/build/outputs/apk/release/app-release.apk xadrez-arena.apk
-          ls -l xadrez-arena.apk
-          unzip -l xadrez-arena.apk | grep -E "AndroidManifest.xml|classes.dex|index.android.bundle|lib/arm64-v8a/libhermes"
           BT="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)"
+          cp app/android/app/build/outputs/apk/release/app-release.apk xadrez-arena-universal.apk
+          cp xadrez-arena-universal.apk stripped.apk
+          zip -q -d stripped.apk 'lib/x86_64/*'
+          "$BT/zipalign" -f -P 16 4 stripped.apk aligned.apk
+          if [ -n "${XA_UPLOAD_STORE_FILE:-}" ]; then
+            KS="$XA_UPLOAD_STORE_FILE"; KS_PASS="$XA_UPLOAD_STORE_PASSWORD"; ALIAS="$XA_UPLOAD_KEY_ALIAS"; KEY_PASS="$XA_UPLOAD_KEY_PASSWORD"
+          else
+            KS=app/android/app/debug.keystore; KS_PASS=android; ALIAS=androiddebugkey; KEY_PASS=android
+          fi
+          "$BT/apksigner" sign --ks "$KS" --ks-pass "pass:$KS_PASS" --ks-key-alias "$ALIAS" --key-pass "pass:$KEY_PASS" \
+            --out xadrez-arena.apk aligned.apk
+          "$BT/apksigner" verify xadrez-arena.apk
+          "$BT/zipalign" -c -P 16 4 xadrez-arena.apk
+          # A assinatura dos dois arquivos precisa ser a mesma.
+          diff <("$BT/apksigner" verify --print-certs xadrez-arena-universal.apk | grep SHA-256) \
+               <("$BT/apksigner" verify --print-certs xadrez-arena.apk | grep SHA-256)
           { echo "Tamanho: $(du -h xadrez-arena.apk | cut -f1) ($(stat -c %s xadrez-arena.apk) bytes)"
-            "$BT/aapt2" dump badging xadrez-arena.apk | grep -E "^(package|sdkVersion|targetSdkVersion|application-label|uses-permission|native-code)"
+            "$BT/aapt2" dump badging xadrez-arena.apk | grep -E "^(package|minSdkVersion|sdkVersion|targetSdkVersion|application-label:|uses-permission|native-code)"
             "$BT/apksigner" verify --print-certs xadrez-arena.apk | head -3; } | tee apk-info.txt
 
       - uses: actions/upload-artifact@v4
@@ -96,6 +112,7 @@ jobs:
           name: apk
           path: |
             xadrez-arena.apk
+            xadrez-arena-universal.apk
             apk-info.txt
 
       - name: Publicar log de falha
@@ -135,7 +152,7 @@ jobs:
           profile: pixel_6
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
-          script: bash .github/scripts/smoke-test.sh xadrez-arena.apk results
+          script: bash .github/scripts/smoke-test.sh xadrez-arena-universal.apk results
 
       - name: Publicar resultados do teste
         if: always()
@@ -173,4 +190,4 @@ jobs:
             - Funciona **sem internet** no modo contra a IA (5 níveis).
             - O modo online precisa de um servidor, que **ainda não está configurado** nesta versão.
 
-            Este APK foi compilado e testado automaticamente num emulador Android (Pixel 6, Android 14) antes de ser publicado.
+            Este build foi compilado e testado automaticamente num emulador Android (Pixel 6, Android 14) antes de ser publicado: o app abre, a partida contra a IA funciona, lances ilegais são recusados e a finalização 3D aparece.

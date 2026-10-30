@@ -30,6 +30,14 @@ function createRenderer(gl: ExpoWebGLRenderingContext) {
       removeEventListener: () => {},
       getContext: () => gl,
     } as unknown as HTMLCanvasElement;
+    // Em alguns aparelhos o expo-gl não responde getShaderPrecisionFormat; o three.js precisa do valor.
+    const precisionFormat = gl.getShaderPrecisionFormat?.bind(gl);
+    gl.getShaderPrecisionFormat = ((shaderType: number, precisionType: number) =>
+      precisionFormat?.(shaderType, precisionType) ?? {
+        rangeMin: 127,
+        rangeMax: 127,
+        precision: 23,
+      }) as typeof gl.getShaderPrecisionFormat;
     // expo-gl não implementa todos os parâmetros de pixelStorei; ignora os não suportados.
     const pixelStorei = gl.pixelStorei.bind(gl);
     gl.pixelStorei = (pname: number, param: number | boolean) => {

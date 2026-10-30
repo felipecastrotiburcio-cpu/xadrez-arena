@@ -32,6 +32,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'android.permission.READ_EXTERNAL_STORAGE',
       'android.permission.WRITE_EXTERNAL_STORAGE',
       'android.permission.SYSTEM_ALERT_WINDOW',
+      // Trazidas pelo expo-secure-store para login por digital, recurso que o app não usa.
+      'android.permission.USE_BIOMETRIC',
+      'android.permission.USE_FINGERPRINT',
     ],
     adaptiveIcon: {
       backgroundColor: '#8b5cff',
