@@ -1,0 +1,16 @@
+{
+  "cli": { "appVersionSource": "remote" },
+  "build": {
+    "preview": {
+      "distribution": "internal",
+      "android": { "buildType": "apk" },
+      "env": { "APP_ENV": "development" }
+    },
+    "production": {
+      "env": {
+        "APP_ENV": "production",
+        "EXPO_PUBLIC_SERVER_URL": "https://api.seudominio.com.br"
+      }
+    }
+  }
+}

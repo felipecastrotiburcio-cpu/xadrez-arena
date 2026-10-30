@@ -1,0 +1,38 @@
+# Uso:
+#   cd deploy
+#   cp .env.example .env   # preencha DOMAIN e JWT_SECRET
+#   docker compose up -d --build
+services:
+  server:
+    build: ../server
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no deploy/.env}
+      TRUST_PROXY: "1"
+      PUBLIC_HOST: ${DOMAIN}
+      CORS_ORIGINS: https://${DOMAIN}
+    volumes:
+      - server-data:/app/data
+    expose:
+      - "3001"
+
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    depends_on: [server]
+    environment:
+      DOMAIN: ${DOMAIN:?defina DOMAIN no deploy/.env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  server-data:
+  caddy-data:
+  caddy-config:

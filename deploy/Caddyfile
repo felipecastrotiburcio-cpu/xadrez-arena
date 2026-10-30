@@ -1,0 +1,7 @@
+# Caddy obtém e renova o certificado HTTPS (Let's Encrypt) automaticamente
+# e redireciona HTTP -> HTTPS. Troque pelo seu domínio em .env (DOMAIN).
+{$DOMAIN} {
+	encode zstd gzip
+	# WebSocket (Socket.IO) passa direto pelo reverse_proxy.
+	reverse_proxy server:3001
+}

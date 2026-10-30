@@ -1,0 +1,47 @@
+{
+  "name": "xadrez-app",
+  "version": "1.0.0",
+  "main": "expo-router/entry",
+  "dependencies": {
+    "@expo-google-fonts/fredoka": "^0.4.1",
+    "@expo/metro-runtime": "~58.0.15",
+    "@react-native-async-storage/async-storage": "^2.2.0",
+    "chess.js": "^1.4.0",
+    "expo": "~58.0.21",
+    "expo-build-properties": "~58.0.11",
+    "expo-constants": "~58.0.14",
+    "expo-font": "~58.0.11",
+    "expo-gl": "~58.0.3",
+    "expo-haptics": "~58.0.7",
+    "expo-linear-gradient": "~58.0.3",
+    "expo-linking": "~58.0.15",
+    "expo-router": "~58.0.28",
+    "expo-secure-store": "~58.0.2",
+    "expo-status-bar": "~58.0.4",
+    "react": "19.3.0",
+    "react-dom": "^19.3.0",
+    "react-native": "0.88.1",
+    "react-native-safe-area-context": "~5.10.1",
+    "react-native-screens": "~4.30.0",
+    "react-native-svg": "^15.16.0",
+    "react-native-web": "^0.21.4",
+    "socket.io-client": "^4.8.4",
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@types/react": "~19.3.0",
+    "@types/three": "^0.186.0",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3"
+  },
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "typecheck": "tsc --noEmit",
+    "test:ai": "tsx --test src/ai/__tests__/engine.test.ts"
+  },
+  "private": true
+}
