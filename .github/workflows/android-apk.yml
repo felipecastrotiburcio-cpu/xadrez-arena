@@ -75,7 +75,8 @@ jobs:
       - name: Compilar APK (release)
         working-directory: app/android
         run: |
-          echo "org.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=1g" >> gradle.properties
+          # O arquivo gerado termina sem quebra de linha: começa com uma para não colar na última propriedade.
+          printf '\norg.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=1g\n' >> gradle.properties
           # arm64/armv7 = celulares; x86_64 = emulador usado no teste automático.
           ./gradlew assembleRelease --no-daemon --stacktrace \
             -PreactNativeArchitectures=arm64-v8a,armeabi-v7a,x86_64 2>&1 | tee "$RUNNER_TEMP/gradle.log"
