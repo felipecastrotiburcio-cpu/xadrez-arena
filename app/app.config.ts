@@ -12,11 +12,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   name: 'Xadrez Arena',
   slug: 'xadrez-arena',
   scheme: 'xadrezarena',
-  version: '1.1.0',
+  version: '1.2.0',
   orientation: 'portrait',
   icon: './assets/icon.png',
   userInterfaceStyle: 'dark',
-  backgroundColor: '#14161b',
+  backgroundColor: '#110d2e',
   ios: {
     supportsTablet: true,
     bundleIdentifier: 'app.xadrezarena',
@@ -24,8 +24,17 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   android: {
     package: 'app.xadrezarena',
+    // Cada compilação no GitHub Actions recebe um número maior, para o Android aceitar atualizar por cima.
+    versionCode: Number(process.env.APP_VERSION_CODE ?? 1),
+    // Só o necessário: internet (modo online) e vibração (toque ao mover peças).
+    permissions: ['INTERNET', 'VIBRATE'],
+    blockedPermissions: [
+      'android.permission.READ_EXTERNAL_STORAGE',
+      'android.permission.WRITE_EXTERNAL_STORAGE',
+      'android.permission.SYSTEM_ALERT_WINDOW',
+    ],
     adaptiveIcon: {
-      backgroundColor: '#14161b',
+      backgroundColor: '#8b5cff',
       foregroundImage: './assets/android-icon-foreground.png',
       backgroundImage: './assets/android-icon-background.png',
       monochromeImage: './assets/android-icon-monochrome.png',
@@ -36,6 +45,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   plugins: [
     'expo-router',
     'expo-secure-store',
+    [
+      'expo-splash-screen',
+      { image: './assets/splash-icon.png', imageWidth: 220, resizeMode: 'contain', backgroundColor: '#110d2e' },
+    ],
+    './plugins/withReleaseSigning',
     ['expo-build-properties', { android: { usesCleartextTraffic: !isProd } }],
   ],
 });

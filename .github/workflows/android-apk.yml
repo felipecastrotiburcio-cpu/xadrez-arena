@@ -1,0 +1,175 @@
+# Compila o APK do Xadrez Arena, testa num emulador Android e publica em Releases.
+# Roda sozinho a cada mudança no app (ramo main) e também pelo botão "Run workflow" na aba Actions.
+name: APK Android
+
+on:
+  push:
+    branches: [main]
+    paths: ['app/**', '.github/workflows/android-apk.yml', '.github/scripts/**']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-apk
+  cancel-in-progress: true
+
+env:
+  APP_ENV: production
+  APP_VERSION_CODE: ${{ github.run_number }}
+  APP_VERSION_NAME: 1.2.0
+  EXPO_NO_TELEMETRY: 1
+  CI: 1
+
+jobs:
+  build:
+    name: Compilar APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      HAS_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Instalar dependências
+        working-directory: app
+        run: npm ci
+
+      - name: Verificar tipos e testar a IA
+        working-directory: app
+        run: |
+          npx tsc --noEmit
+          npm run test:ai
+
+      - name: Gerar projeto Android
+        working-directory: app
+        run: npx expo prebuild --platform android --no-install
+
+      # Opcional: assinatura com chave própria (Settings → Secrets → Actions).
+      # Sem esses segredos o APK é assinado com a chave de teste do modelo React Native.
+      - name: Preparar chave de assinatura
+        if: env.HAS_KEYSTORE == 'true'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/upload.keystore"
+          echo "XA_UPLOAD_STORE_FILE=$RUNNER_TEMP/upload.keystore" >> "$GITHUB_ENV"
+          echo "XA_UPLOAD_STORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" >> "$GITHUB_ENV"
+          echo "XA_UPLOAD_KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}" >> "$GITHUB_ENV"
+          echo "XA_UPLOAD_KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD }}" >> "$GITHUB_ENV"
+
+      - name: Compilar APK (release)
+        working-directory: app/android
+        run: |
+          echo "org.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=1g" >> gradle.properties
+          # arm64/armv7 = celulares; x86_64 = emulador usado no teste automático.
+          ./gradlew assembleRelease --no-daemon --stacktrace \
+            -PreactNativeArchitectures=arm64-v8a,armeabi-v7a,x86_64 2>&1 | tee "$RUNNER_TEMP/gradle.log"
+
+      - name: Conferir o APK
+        run: |
+          cp app/android/app/build/outputs/apk/release/app-release.apk xadrez-arena.apk
+          ls -l xadrez-arena.apk
+          unzip -l xadrez-arena.apk | grep -E "AndroidManifest.xml|classes.dex|index.android.bundle|lib/arm64-v8a/libhermes"
+          BT="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)"
+          { echo "Tamanho: $(du -h xadrez-arena.apk | cut -f1) ($(stat -c %s xadrez-arena.apk) bytes)"
+            "$BT/aapt2" dump badging xadrez-arena.apk | grep -E "^(package|sdkVersion|targetSdkVersion|application-label|uses-permission|native-code)"
+            "$BT/apksigner" verify --print-certs xadrez-arena.apk | head -3; } | tee apk-info.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apk
+          path: |
+            xadrez-arena.apk
+            apk-info.txt
+
+      - name: Publicar log de falha
+        if: failure()
+        run: |
+          mkdir -p results && cd results
+          echo "build #${{ github.run_number }}: FALHOU na compilação" > status.txt
+          tail -n 400 "$RUNNER_TEMP/gradle.log" > gradle-tail.log 2>/dev/null || echo "sem log do gradle" > gradle-tail.log
+          git init -q -b ci-results && git add -A
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -qm "Build #${{ github.run_number }}: falha"
+          git push -fq "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" ci-results
+
+  test:
+    name: Testar no emulador Android
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: apk
+
+      - name: Habilitar aceleração (KVM)
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Instalar, abrir e jogar no emulador
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: bash .github/scripts/smoke-test.sh xadrez-arena.apk results
+
+      - name: Publicar resultados do teste
+        if: always()
+        run: |
+          mkdir -p results && cp apk-info.txt results/ 2>/dev/null || true
+          cd results
+          if [ "${{ job.status }}" = "success" ]; then R=SUCESSO; else R=FALHOU; fi
+          echo "build #${{ github.run_number }}: teste no emulador $R" > status.txt
+          git init -q -b ci-results && git add -A
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -qm "Build #${{ github.run_number }}: teste $R"
+          git push -fq "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" ci-results
+
+  release:
+    name: Publicar em Releases
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: apk
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.APP_VERSION_NAME }}-build.${{ github.run_number }}
+          name: Xadrez Arena ${{ env.APP_VERSION_NAME }} (build ${{ github.run_number }})
+          make_latest: true
+          files: xadrez-arena.apk
+          body: |
+            ## 📱 Como instalar
+            1. No celular Android, toque em **xadrez-arena.apk** abaixo (em "Assets") para baixar.
+            2. Abra o arquivo baixado. Se o Android pedir, permita **instalar apps desta fonte**.
+            3. Toque em **Instalar** e depois em **Abrir**.
+
+            - Android mínimo: **7.0** · Versão de **teste** (uso pessoal, fora da Play Store)
+            - Funciona **sem internet** no modo contra a IA (5 níveis).
+            - O modo online precisa de um servidor, que **ainda não está configurado** nesta versão.
+
+            Este APK foi compilado e testado automaticamente num emulador Android (Pixel 6, Android 14) antes de ser publicado.

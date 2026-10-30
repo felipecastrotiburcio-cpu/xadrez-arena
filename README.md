@@ -13,6 +13,19 @@ App mobile de xadrez (iOS/Android, também roda na web) com:
 - **Notificações** em tempo real com central no app (🔔)
 - **Segurança**: JWT endurecido, HTTPS obrigatório em produção, token no Keychain/Keystore
 
+## 📱 Instalar no Android (sem programar)
+
+Baixe o APK mais recente direto no celular:
+**https://github.com/felipecastrotiburcio-cpu/xadrez-arena/releases/latest/download/xadrez-arena.apk**
+
+Abra o arquivo baixado, permita "instalar apps desta fonte" se o Android pedir e toque em **Instalar**. Android 7.0 ou superior.
+
+O APK é gerado automaticamente pelo GitHub Actions (`.github/workflows/android-apk.yml`) a cada mudança no app: ele compila, **testa num emulador Android** (abre o app, joga contra a IA, confere regras e a finalização 3D) e só então publica em [Releases](https://github.com/felipecastrotiburcio-cpu/xadrez-arena/releases). Para gerar de novo manualmente: aba **Actions → APK Android → Run workflow**.
+
+- **Sem internet:** jogar contra a IA (5 níveis), dicas, desfazer e finalização 3D.
+- **Com servidor:** contas, partidas online, amigos, ranking, loja e notificações. O servidor ainda não está publicado; sem ele essas telas avisam que o modo online não está disponível.
+- **Assinatura:** por padrão o APK de teste usa a chave de testes do React Native. Para usar uma chave própria, cadastre em *Settings → Secrets and variables → Actions* os segredos `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` e `ANDROID_KEY_PASSWORD`.
+
 ## Estrutura
 
 ```

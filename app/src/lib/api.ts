@@ -11,7 +11,9 @@ const SERVER_KEY = 'xadrez.serverUrl';
 function defaultServerUrl() {
   if (process.env.EXPO_PUBLIC_SERVER_URL) return process.env.EXPO_PUBLIC_SERVER_URL;
   const host = Constants.expoConfig?.hostUri?.split(':')[0];
-  return `http://${host ?? 'localhost'}:3001`;
+  if (host) return `http://${host}:3001`;
+  // APK publicado sem servidor definido: o modo online fica desligado até o jogador informar um endereço.
+  return __DEV__ ? 'http://localhost:3001' : '';
 }
 
 /**
@@ -37,13 +39,17 @@ export async function loadServerUrl() {
 
 export async function setServerUrl(url: string) {
   const clean = url.trim().replace(/\/+$/, '') || defaultServerUrl();
-  const error = validateServerUrl(clean);
+  const error = clean ? validateServerUrl(clean) : null;
   if (error) throw new Error(error);
   serverUrl = clean;
   await AsyncStorage.setItem(SERVER_KEY, serverUrl);
 }
 
 export const getServerUrl = () => serverUrl;
+/** Há um servidor online configurado? (sem ele, só o modo contra a IA funciona) */
+export const isServerConfigured = () => serverUrl !== '';
+export const SERVER_NOT_CONFIGURED =
+  'O modo online ainda não está disponível: nenhum servidor foi configurado nesta versão. Você pode jogar contra a IA normalmente.';
 export const setAuthToken = (token: string | null) => {
   authToken = token;
 };
@@ -58,6 +64,7 @@ export class ApiError extends Error {
 }
 
 export async function api<T = any>(path: string, opts: { method?: string; body?: unknown } = {}): Promise<T> {
+  if (!serverUrl) throw new ApiError(SERVER_NOT_CONFIGURED, 0);
   const insecure = validateServerUrl(serverUrl);
   if (insecure) throw new ApiError(insecure, 0);
   let res: Response;
