@@ -84,38 +84,29 @@ jobs:
       # O APK compilado tem bibliotecas para celulares (arm) e para o emulador do teste (x86_64).
       # O teste usa o completo; o publicado é o mesmo build sem x86_64, realinhado e reassinado
       # com a mesma chave (~25 MB menor).
+      # O primeiro build tem bibliotecas para celulares (arm) e para o emulador do teste (x86_64).
+      # O APK publicado é recompilado pelo Gradle só para arm (reaproveita o que já foi compilado),
+      # com a assinatura normal do Gradle: ~25 MB menor.
       - name: Gerar APK para celulares e conferir
         run: |
-          exec > >(tee "$RUNNER_TEMP/apk-step.log") 2>&1
-          set -x
+          exec > >(tee apk-step.log) 2>&1
           BT="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)"
-          echo "build-tools: $BT"
-          cp app/android/app/build/outputs/apk/release/app-release.apk xadrez-arena-universal.apk
-          if [ -n "${XA_UPLOAD_STORE_FILE:-}" ]; then
-            KS="$XA_UPLOAD_STORE_FILE"; KS_PASS="$XA_UPLOAD_STORE_PASSWORD"; ALIAS="$XA_UPLOAD_KEY_ALIAS"; KEY_PASS="$XA_UPLOAD_KEY_PASSWORD"
-          else
-            KS=app/android/app/debug.keystore; KS_PASS=android; ALIAS=androiddebugkey; KEY_PASS=android
-          fi
-          strip_x86() {
-            set -e
-            cp xadrez-arena-universal.apk stripped.apk
-            zip -q -d stripped.apk 'lib/x86_64/*'
-            "$BT/zipalign" -f -P 16 4 stripped.apk aligned.apk
-            "$BT/apksigner" sign --alignment-preserved --ks "$KS" --ks-pass "pass:$KS_PASS" \
-              --ks-key-alias "$ALIAS" --key-pass "pass:$KEY_PASS" --out xadrez-arena.apk aligned.apk
-            "$BT/apksigner" verify xadrez-arena.apk
-            # A assinatura precisa ser a mesma do APK testado.
-            diff <("$BT/apksigner" verify --print-certs xadrez-arena-universal.apk | grep SHA-256) \
-                 <("$BT/apksigner" verify --print-certs xadrez-arena.apk | grep SHA-256)
-          }
-          if ( strip_x86 ); then
+          OUT=app/android/app/build/outputs/apk/release/app-release.apk
+          cp "$OUT" xadrez-arena-universal.apk
+          if (cd app/android && ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a,armeabi-v7a); then
+            cp "$OUT" xadrez-arena.apk
             NOTE="APK para celulares (arm64-v8a + armeabi-v7a)"
           else
-            echo "::warning::Não foi possível gerar o APK reduzido; publicando o APK completo (testado)."
+            echo "::warning::Não foi possível gerar o APK só para celulares; publicando o APK completo (testado)."
             cp xadrez-arena-universal.apk xadrez-arena.apk
             NOTE="APK completo (inclui x86_64)"
           fi
-          "$BT/zipalign" -c -P 16 4 xadrez-arena.apk || echo "aviso: alinhamento de 16 KB não confirmado"
+          "$BT/apksigner" verify xadrez-arena.apk
+          # Mesmo código e mesma assinatura do APK testado.
+          diff <("$BT/apksigner" verify --print-certs xadrez-arena-universal.apk | grep SHA-256) \
+               <("$BT/apksigner" verify --print-certs xadrez-arena.apk | grep SHA-256)
+          cmp <(unzip -p xadrez-arena-universal.apk assets/index.android.bundle) <(unzip -p xadrez-arena.apk assets/index.android.bundle) \
+            && echo "bundle JS idêntico ao testado" || echo "aviso: bundle JS diferente do testado"
           { echo "$NOTE"
             echo "Tamanho: $(du -h xadrez-arena.apk | cut -f1) ($(stat -c %s xadrez-arena.apk) bytes)"
             "$BT/aapt2" dump badging xadrez-arena.apk | grep -E "^(package|minSdkVersion|sdkVersion|targetSdkVersion|application-label:|uses-permission|native-code)"
@@ -129,6 +120,7 @@ jobs:
             xadrez-arena.apk
             xadrez-arena-universal.apk
             apk-info.txt
+            apk-step.log
 
       - name: Publicar log de falha
         if: failure()
@@ -136,7 +128,7 @@ jobs:
           mkdir -p results && cd results
           echo "build #${{ github.run_number }}: FALHOU na compilação" > status.txt
           tail -n 400 "$RUNNER_TEMP/gradle.log" > gradle-tail.log 2>/dev/null || echo "sem log do gradle" > gradle-tail.log
-          cp "$RUNNER_TEMP/apk-step.log" . 2>/dev/null || true
+          cp ../apk-step.log . 2>/dev/null || true
           git init -q -b ci-results && git add -A
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -qm "Build #${{ github.run_number }}: falha"
           git push -fq "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" ci-results
@@ -173,7 +165,7 @@ jobs:
       - name: Publicar resultados do teste
         if: always()
         run: |
-          mkdir -p results && cp apk-info.txt results/ 2>/dev/null || true
+          mkdir -p results && cp apk-info.txt apk-step.log results/ 2>/dev/null || true
           cd results
           if [ "${{ job.status }}" = "success" ]; then R=SUCESSO; else R=FALHOU; fi
           echo "build #${{ github.run_number }}: teste no emulador $R" > status.txt

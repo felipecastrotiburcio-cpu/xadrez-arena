@@ -75,6 +75,8 @@ export function Scene3D({
   fallback?: ReactNode;
 }) {
   const [failed, setFailed] = useState(false);
+  // Ao recriar a tela, o contexto gráfico novo às vezes ainda não responde: tenta de novo antes de desistir.
+  const [attempt, setAttempt] = useState(0);
   const frame = useRef<number | null>(null);
   const handle = useRef<SceneHandle | null>(null);
   const renderer = useRef<THREE.WebGLRenderer | null>(null);
@@ -91,10 +93,15 @@ export function Scene3D({
   );
 
   const fail = (e: unknown) => {
-    console.warn('[3D] desativado neste aparelho:', e);
+    console.warn(`[3D] falha na tentativa ${attempt + 1}:`, e);
     if (frame.current !== null) cancelAnimationFrame(frame.current);
     frame.current = null;
-    setFailed(true);
+    handle.current?.dispose();
+    renderer.current?.dispose();
+    handle.current = null;
+    renderer.current = null;
+    if (attempt < 2) setTimeout(() => setAttempt((a) => a + 1), 400);
+    else setFailed(true);
   };
 
   const onContextCreate = (gl: ExpoWebGLRenderingContext) => {
@@ -127,5 +134,5 @@ export function Scene3D({
   if (failed) {
     return <View style={[style, { alignItems: 'center', justifyContent: 'flex-end' }]}>{fallback}</View>;
   }
-  return <GLView style={style} onContextCreate={onContextCreate} msaaSamples={4} />;
+  return <GLView key={attempt} style={style} onContextCreate={onContextCreate} msaaSamples={4} />;
 }
