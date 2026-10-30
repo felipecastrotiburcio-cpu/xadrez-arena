@@ -86,26 +86,41 @@ jobs:
       # com a mesma chave (~25 MB menor).
       - name: Gerar APK para celulares e conferir
         run: |
+          exec > >(tee "$RUNNER_TEMP/apk-step.log") 2>&1
+          set -x
           BT="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)"
+          echo "build-tools: $BT"
           cp app/android/app/build/outputs/apk/release/app-release.apk xadrez-arena-universal.apk
-          cp xadrez-arena-universal.apk stripped.apk
-          zip -q -d stripped.apk 'lib/x86_64/*'
-          "$BT/zipalign" -f -P 16 4 stripped.apk aligned.apk
           if [ -n "${XA_UPLOAD_STORE_FILE:-}" ]; then
             KS="$XA_UPLOAD_STORE_FILE"; KS_PASS="$XA_UPLOAD_STORE_PASSWORD"; ALIAS="$XA_UPLOAD_KEY_ALIAS"; KEY_PASS="$XA_UPLOAD_KEY_PASSWORD"
           else
             KS=app/android/app/debug.keystore; KS_PASS=android; ALIAS=androiddebugkey; KEY_PASS=android
           fi
-          "$BT/apksigner" sign --ks "$KS" --ks-pass "pass:$KS_PASS" --ks-key-alias "$ALIAS" --key-pass "pass:$KEY_PASS" \
-            --out xadrez-arena.apk aligned.apk
-          "$BT/apksigner" verify xadrez-arena.apk
-          "$BT/zipalign" -c -P 16 4 xadrez-arena.apk
-          # A assinatura dos dois arquivos precisa ser a mesma.
-          diff <("$BT/apksigner" verify --print-certs xadrez-arena-universal.apk | grep SHA-256) \
-               <("$BT/apksigner" verify --print-certs xadrez-arena.apk | grep SHA-256)
-          { echo "Tamanho: $(du -h xadrez-arena.apk | cut -f1) ($(stat -c %s xadrez-arena.apk) bytes)"
+          strip_x86() {
+            set -e
+            cp xadrez-arena-universal.apk stripped.apk
+            zip -q -d stripped.apk 'lib/x86_64/*'
+            "$BT/zipalign" -f -P 16 4 stripped.apk aligned.apk
+            "$BT/apksigner" sign --alignment-preserved --ks "$KS" --ks-pass "pass:$KS_PASS" \
+              --ks-key-alias "$ALIAS" --key-pass "pass:$KEY_PASS" --out xadrez-arena.apk aligned.apk
+            "$BT/apksigner" verify xadrez-arena.apk
+            # A assinatura precisa ser a mesma do APK testado.
+            diff <("$BT/apksigner" verify --print-certs xadrez-arena-universal.apk | grep SHA-256) \
+                 <("$BT/apksigner" verify --print-certs xadrez-arena.apk | grep SHA-256)
+          }
+          if ( strip_x86 ); then
+            NOTE="APK para celulares (arm64-v8a + armeabi-v7a)"
+          else
+            echo "::warning::Não foi possível gerar o APK reduzido; publicando o APK completo (testado)."
+            cp xadrez-arena-universal.apk xadrez-arena.apk
+            NOTE="APK completo (inclui x86_64)"
+          fi
+          "$BT/zipalign" -c -P 16 4 xadrez-arena.apk || echo "aviso: alinhamento de 16 KB não confirmado"
+          { echo "$NOTE"
+            echo "Tamanho: $(du -h xadrez-arena.apk | cut -f1) ($(stat -c %s xadrez-arena.apk) bytes)"
             "$BT/aapt2" dump badging xadrez-arena.apk | grep -E "^(package|minSdkVersion|sdkVersion|targetSdkVersion|application-label:|uses-permission|native-code)"
-            "$BT/apksigner" verify --print-certs xadrez-arena.apk | head -3; } | tee apk-info.txt
+            "$BT/apksigner" verify --print-certs xadrez-arena.apk | head -3; } > apk-info.txt
+          cat apk-info.txt
 
       - uses: actions/upload-artifact@v4
         with:
@@ -121,6 +136,7 @@ jobs:
           mkdir -p results && cd results
           echo "build #${{ github.run_number }}: FALHOU na compilação" > status.txt
           tail -n 400 "$RUNNER_TEMP/gradle.log" > gradle-tail.log 2>/dev/null || echo "sem log do gradle" > gradle-tail.log
+          cp "$RUNNER_TEMP/apk-step.log" . 2>/dev/null || true
           git init -q -b ci-results && git add -A
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -qm "Build #${{ github.run_number }}: falha"
           git push -fq "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" ci-results
