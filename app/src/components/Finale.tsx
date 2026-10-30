@@ -4,6 +4,7 @@ import { useMyLook } from '../lib/cosmetics';
 import { colors, fonts } from '../lib/theme';
 import type { CharacterStyle } from '../lib/types';
 import { Scene3D } from '../three/Scene3D';
+import { CharacterThumb } from './Character';
 import { createFinaleScene } from '../three/scenes';
 
 export interface Fighter {
@@ -49,7 +50,12 @@ export function Finale({ visible, winner, loser, move, moveName, title, subtitle
     <Modal visible={visible} animationType="fade" statusBarTranslucent onRequestClose={onDone}>
       <View style={styles.root}>
         {visible && (
-          <Scene3D key={`${move}-${winner.name}`} factory={factory} style={{ width, height: Math.max(360, height * 0.62) }} />
+          <Scene3D
+            key={`${move}-${winner.name}`}
+            factory={factory}
+            style={{ width, height: Math.max(360, height * 0.62) }}
+            fallback={<CharacterThumb look={winner.look} size={260} />}
+          />
         )}
         <View style={styles.top} pointerEvents="none">
           <Text style={styles.title}>{title ?? 'Vitória!'}</Text>

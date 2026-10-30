@@ -108,9 +108,14 @@ export default function Shop() {
         ))}
       </ScrollView>
 
-      {tab === 'character' && fittingFactory && fitting && (
+      {tab === 'character' && fittingFactory && fitting?.type === 'character' && (
         <Card style={styles.fitting}>
-          <Scene3D key={fitting.id} factory={fittingFactory} style={styles.fittingScene} />
+          <Scene3D
+            key={fitting.id}
+            factory={fittingFactory}
+            style={styles.fittingScene}
+            fallback={<CharacterThumb look={fitting.style} size={200} />}
+          />
           <Text style={styles.fittingName}>🪞 Provador: {fitting.name}</Text>
           <Text style={styles.muted}>Toque num boneco para experimentar.</Text>
         </Card>

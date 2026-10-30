@@ -3,6 +3,7 @@ import { router, useIsFocused } from 'expo-router';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { CharacterThumb } from '../components/Character';
 import { Button, Coins, LevelBadge, Screen } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { useCharacterStyle, useMyLook } from '../lib/cosmetics';
@@ -67,7 +68,14 @@ export default function Home() {
         {/* Destaque: seu boneco em 3D (só renderiza com a tela em foco, para poupar bateria) */}
         <LinearGradient colors={gradients.hero} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
           <View style={styles.heroScene}>
-            {focused && <Scene3D key={look.equipped.character} factory={factory} style={StyleSheet.absoluteFill} />}
+            {focused && (
+              <Scene3D
+                key={look.equipped.character}
+                factory={factory}
+                style={StyleSheet.absoluteFill}
+                fallback={<CharacterThumb look={character} size={190} />}
+              />
+            )}
           </View>
           <View style={styles.heroInfo}>
             {user && lp ? (

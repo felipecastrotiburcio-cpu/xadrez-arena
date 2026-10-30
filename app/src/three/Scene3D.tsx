@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
-import { Platform, type StyleProp, type ViewStyle } from 'react-native';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Platform, View, type StyleProp, type ViewStyle } from 'react-native';
 import { GLView, type ExpoWebGLRenderingContext } from 'expo-gl';
 import * as THREE from 'three';
 
@@ -36,15 +36,37 @@ function createRenderer(gl: ExpoWebGLRenderingContext) {
       if (pname === gl.UNPACK_FLIP_Y_WEBGL || pname === gl.UNPACK_ALIGNMENT) pixelStorei(pname, param as number);
     };
   }
-  const renderer = new THREE.WebGLRenderer({ canvas, context: gl as unknown as WebGL2RenderingContext, antialias: true });
+  // No expo-gl a classe do contexto WebGL2 herda de WebGLRenderingContext; o three.js (r163+)
+  // testa `instanceof WebGLRenderingContext` e recusaria o contexto achando que é WebGL 1.
+  const g = globalThis as { WebGLRenderingContext?: unknown };
+  const webgl1 = g.WebGLRenderingContext;
+  if (Platform.OS !== 'web') g.WebGLRenderingContext = undefined;
+  let renderer: THREE.WebGLRenderer;
+  try {
+    renderer = new THREE.WebGLRenderer({ canvas, context: gl as unknown as WebGL2RenderingContext, antialias: true });
+  } finally {
+    if (Platform.OS !== 'web') g.WebGLRenderingContext = webgl1;
+  }
   renderer.setPixelRatio(1);
   renderer.setSize(w, h, false);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   return renderer;
 }
 
-/** Área de desenho 3D. Para trocar de cena, mude a `key` do componente. */
-export function Scene3D({ factory, style }: { factory: SceneFactory; style?: StyleProp<ViewStyle> }) {
+/**
+ * Área de desenho 3D. Para trocar de cena, mude a `key` do componente.
+ * Se o aparelho não conseguir desenhar em 3D, mostra `fallback` em vez de derrubar o app.
+ */
+export function Scene3D({
+  factory,
+  style,
+  fallback,
+}: {
+  factory: SceneFactory;
+  style?: StyleProp<ViewStyle>;
+  fallback?: ReactNode;
+}) {
+  const [failed, setFailed] = useState(false);
   const frame = useRef<number | null>(null);
   const handle = useRef<SceneHandle | null>(null);
   const renderer = useRef<THREE.WebGLRenderer | null>(null);
@@ -60,22 +82,42 @@ export function Scene3D({ factory, style }: { factory: SceneFactory; style?: Sty
     [],
   );
 
+  const fail = (e: unknown) => {
+    console.warn('[3D] desativado neste aparelho:', e);
+    if (frame.current !== null) cancelAnimationFrame(frame.current);
+    frame.current = null;
+    setFailed(true);
+  };
+
   const onContextCreate = (gl: ExpoWebGLRenderingContext) => {
-    const r = createRenderer(gl);
-    renderer.current = r;
-    const h = factoryRef.current(r, gl.drawingBufferWidth, gl.drawingBufferHeight);
-    handle.current = h;
+    let h: SceneHandle;
+    try {
+      const r = createRenderer(gl);
+      renderer.current = r;
+      h = factoryRef.current(r, gl.drawingBufferWidth, gl.drawingBufferHeight);
+      handle.current = h;
+    } catch (e) {
+      fail(e);
+      return;
+    }
     const start = performance.now();
     let last = start;
     const loop = () => {
       frame.current = requestAnimationFrame(loop);
       const now = performance.now();
-      h.update((now - start) / 1000, Math.min(0.05, (now - last) / 1000));
+      try {
+        h.update((now - start) / 1000, Math.min(0.05, (now - last) / 1000));
+        gl.endFrameEXP();
+      } catch (e) {
+        fail(e);
+      }
       last = now;
-      gl.endFrameEXP();
     };
     frame.current = requestAnimationFrame(loop);
   };
 
+  if (failed) {
+    return <View style={[style, { alignItems: 'center', justifyContent: 'flex-end' }]}>{fallback}</View>;
+  }
   return <GLView style={style} onContextCreate={onContextCreate} msaaSamples={4} />;
 }
