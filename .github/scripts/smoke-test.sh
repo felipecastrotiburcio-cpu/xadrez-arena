@@ -15,7 +15,21 @@ log() { echo "$*" | tee -a "$REPORT"; }
 ok() { log "✅ $*"; }
 fail() { log "❌ $*"; FAILED=1; }
 shot() { adb exec-out screencap -p > "$OUT/$1.png"; }
-dump() { adb shell uiautomator dump /sdcard/ui.xml > /dev/null 2>&1; adb pull /sdcard/ui.xml "$OUT/ui.xml" > /dev/null 2>&1; }
+# Lê a tela. Avisos do sistema do emulador ("X isn't responding") são fechados com "Wait".
+dump() {
+  for _ in 1 2 3 4; do
+    rm -f "$OUT/ui.xml"
+    adb shell uiautomator dump /sdcard/ui.xml >> "$OUT/dump.log" 2>&1
+    adb pull /sdcard/ui.xml "$OUT/ui.xml" > /dev/null 2>&1
+    if grep -qE "t responding|não está respondendo" "$OUT/ui.xml" 2>/dev/null; then
+      log "ℹ️  Aviso do sistema do emulador fechado (app do sistema lento)"
+      xy=$(python3 "$UI" find "$OUT/ui.xml" '(Wait|Aguardar)') && adb shell input tap $xy
+      sleep 3
+      continue
+    fi
+    return 0
+  done
+}
 # Toca no elemento cujo texto/descrição casa com a regex (tenta por até ~20 s).
 tap() {
   for _ in $(seq 1 10); do
@@ -36,10 +50,14 @@ log "Dispositivo: $(adb shell getprop ro.product.model | tr -d '\r') · Android 
 # 1. Instalação
 if adb install -r "$APK" > "$OUT/install.txt" 2>&1; then ok "APK instalado"; else fail "Falha ao instalar: $(cat "$OUT/install.txt")"; exit 1; fi
 
-# 2. Abertura
+# 2. Abertura (espera o sistema do emulador estabilizar e fecha avisos pendentes)
+adb shell input keyevent KEYCODE_HOME
+sleep 30
+dump
 adb logcat -c
 adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 > /dev/null 2>&1
 sleep 25
+dump
 shot 01-inicio
 if alive; then ok "App abriu e continua em execução"; else fail "App fechou ao abrir"; fi
 if tap 'JOGAR!'; then ok "Tela inicial carregada (botão JOGAR! encontrado)"; adb shell input keyevent KEYCODE_BACK; sleep 3; else fail "Tela inicial não apareceu"; fi
