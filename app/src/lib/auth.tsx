@@ -46,21 +46,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     (async () => {
-      await loadServerUrl();
-      const saved = await secureStorage.get(TOKEN_KEY);
-      if (saved) {
-        setAuthToken(saved);
-        setToken(saved);
-        try {
-          const me = await api<{ user: PrivateUser; rank: number | null }>('/me');
-          setUser(me.user);
-          setRank(me.rank);
-        } catch (e) {
-          // Token inválido: sai. Servidor fora do ar: mantém a sessão para tentar depois.
-          if (e instanceof ApiError && e.status === 401) await applySession(null, null);
+      try {
+        await loadServerUrl();
+        const saved = await secureStorage.get(TOKEN_KEY);
+        if (saved) {
+          setAuthToken(saved);
+          setToken(saved);
+          try {
+            const me = await api<{ user: PrivateUser; rank: number | null }>('/me');
+            setUser(me.user);
+            setRank(me.rank);
+          } catch (e) {
+            // Token inválido: sai. Servidor fora do ar: mantém a sessão para tentar depois.
+            if (e instanceof ApiError && e.status === 401) await applySession(null, null);
+          }
         }
+      } catch {
+        // Armazenamento indisponível: abre o app sem sessão em vez de ficar carregando.
+      } finally {
+        setReady(true);
       }
-      setReady(true);
     })();
   }, [applySession]);
 

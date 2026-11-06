@@ -6,7 +6,7 @@ name: App iOS
 on:
   push:
     branches: [main]
-    paths: ['app/**', '.github/workflows/ios.yml', '.github/scripts/ios-smoke.sh']
+    paths: ['app/**', '.github/workflows/ios.yml', '.github/scripts/ios-smoke.sh', '.github/maestro/**']
   workflow_dispatch:
 
 permissions:
@@ -72,6 +72,16 @@ jobs:
             CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO > ../build-sim.log 2>&1 \
             || { grep -E "error:|BUILD FAILED" ../build-sim.log | head -60; tail -80 ../build-sim.log; exit 1; }
           tail -3 ../build-sim.log
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Instalar o Maestro (toques automáticos na tela)
+        run: |
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
 
       - name: Testar no simulador de iPhone
         run: bash .github/scripts/ios-smoke.sh app/build/sim/Build/Products/Release-iphonesimulator/XadrezArena.app ios-results

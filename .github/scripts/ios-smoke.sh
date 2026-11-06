@@ -49,21 +49,20 @@ sleep 20
 shot 01-inicio
 if alive; then ok "App continua aberto após 20 s (tela inicial)"; else fail "App fechou ao abrir"; fi
 
-visit() { # visit <link> <nome do print> <descrição>
-  xcrun simctl openurl "$UDID" "$1" > /dev/null 2>&1
-  sleep 8
-  shot "$2"
-  if alive; then ok "$3"; else fail "App fechou ao abrir: $3"; fi
-}
-visit "xadrezarena://ai" 02-escolher-ia "Tela de escolha da IA (níveis, cor e tempo)"
-visit "xadrezarena://ai/play?level=1&color=w&time=5" 03-partida-5min "Partida contra a IA com relógio de 5 min"
-visit "xadrezarena://ai/play?level=2&color=b" 04-partida-pretas "Partida com as pretas (a IA joga primeiro)"
-sleep 4
-shot 05-ia-jogou
-visit "xadrezarena://login" 06-login "Tela de login / criar conta"
-visit "xadrezarena://shop" 07-loja "Loja"
-visit "xadrezarena://settings" 08-configuracoes "Configurações (som)"
-visit "xadrezarena://leaderboard" 09-ranking "Ranking"
+# Uso do app tocando na tela (Maestro): partida, desistência, finalização, conta, loja.
+USERNAME="ios$(date +%s | tail -c 5)"
+if maestro --device "$UDID" test -e OUT="$OUT" -e USERNAME="$USERNAME" --debug-output "$OUT/maestro" \
+     "$(dirname "$0")/../maestro/ios-smoke.yaml" > "$OUT/maestro.log" 2>&1; then
+  ok "Partida contra a IA (5 min): lance e2→e4, resposta da IA e lance ilegal recusado"
+  ok "Desistência, finalização 3D e tela de resultado (Derrota)"
+  ok "Conta '$USERNAME' criada no aparelho com 300 moedas"
+  ok "Compra na loja (Verde Torneio) e prévia do tabuleiro Nogueira Entalhada"
+else
+  fail "Teste de uso falhou: ver maestro.log"
+  grep -E "✅|❌|FAILED|Element not found|Assertion" "$OUT/maestro.log" | tail -25 | tee -a "$REPORT"
+  shot 99-falha
+fi
+if alive; then ok "App continua aberto ao final"; else fail "App não está aberto ao final"; fi
 
 # Relatórios de travamento gerados desde o início do teste
 CRASHES=$(find "$HOME/Library/Logs/DiagnosticReports" -newermt "@$START" \( -iname "*XadrezArena*" -o -iname "*xadrez*" \) 2>/dev/null)

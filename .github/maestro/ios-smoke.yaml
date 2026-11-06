@@ -1,0 +1,92 @@
+# Teste de uso no simulador de iPhone (Maestro toca na tela como uma pessoa).
+appId: app.xadrezarena
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "JOGAR!"
+    timeout: 90000
+- takeScreenshot: ${OUT}/01-inicio
+
+# Partida contra a IA com relógio de 5 minutos
+- tapOn: "Contra a IA"
+- extendedWaitUntil:
+    visible: "Peão Curioso"
+    timeout: 20000
+- tapOn: "Peão Curioso"
+- scrollUntilVisible:
+    element: "5 min"
+- tapOn: "5 min"
+- tapOn: "Começar partida"
+- extendedWaitUntil:
+    visible: "e2 branco p"
+    timeout: 20000
+- takeScreenshot: ${OUT}/02-tabuleiro
+- tapOn: "e2 branco p"
+- tapOn: "e4"
+- extendedWaitUntil:
+    visible: "e4 branco p"
+    timeout: 10000
+- waitForAnimationToEnd:
+    timeout: 6000
+- takeScreenshot: ${OUT}/03-ia-respondeu
+# Lance ilegal (peão de e4 não anda duas casas): a peça continua em e4
+- tapOn: "e4 branco p"
+- tapOn: "e6"
+- assertVisible: "e4 branco p"
+
+# Desistir -> finalização 3D com música -> resultado
+- tapOn: ".*Desistir.*"
+- tapOn: "Desistir"   # botão do alerta de confirmação do iOS
+- extendedWaitUntil:
+    visible: "Pular ›"
+    timeout: 20000
+- takeScreenshot: ${OUT}/04-finalizacao-3d
+- tapOn: "Pular ›"
+- extendedWaitUntil:
+    visible: "Derrota"
+    timeout: 20000
+- takeScreenshot: ${OUT}/05-resultado
+
+# Criar conta no aparelho
+- launchApp:
+    stopApp: true
+- extendedWaitUntil:
+    visible: "JOGAR!"
+    timeout: 60000
+- tapOn: "Criar conta"
+- extendedWaitUntil:
+    visible: "ex: rei_do_xadrez"
+    timeout: 20000
+- tapOn: "Criar conta"   # aba "Criar conta" (a tela abre em "Entrar")
+- tapOn: "ex: rei_do_xadrez"
+- inputText: ${USERNAME}
+- tapOn: "mínimo 8 caracteres"
+- inputText: "segredo123"
+- hideKeyboard
+- tapOn:
+    text: "Criar conta"
+    index: 1
+- extendedWaitUntil:
+    visible: ${USERNAME}
+    timeout: 30000
+- assertVisible: ".*300.*"
+- takeScreenshot: ${OUT}/06-conta-criada
+
+# Loja: comprar "Verde Torneio" (150) e abrir a prévia de outro tabuleiro
+- tapOn: "Loja"
+- extendedWaitUntil:
+    visible: "Verde Torneio"
+    timeout: 20000
+- tapOn: "🪙 150"
+- tapOn: "Comprar"
+- extendedWaitUntil:
+    visible: ".*Equipado.*"
+    timeout: 15000
+- takeScreenshot: ${OUT}/07-compra
+- tapOn: "Nogueira Entalhada"
+- extendedWaitUntil:
+    visible: "Toque nas peças.*"
+    timeout: 15000
+- takeScreenshot: ${OUT}/08-previa
+- tapOn: "Fechar"
