@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { Avatar, Button, Card, LevelBadge, Screen, SectionTitle } from '../../components/ui';
-import { api } from '../../lib/api';
+import { api, isLocalMode } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import { levelProgress, LEVELS } from '../../lib/levels';
 import { useSocket } from '../../lib/socket';
@@ -103,7 +103,7 @@ export default function ProfileScreen() {
         <Stat label="Aproveit." value={`${winRate}%`} />
       </View>
 
-      {!isMe && (
+      {!isMe && !isLocalMode() && (
         <Button
           title={FRIEND_LABEL[friendship.status]}
           variant={friendship.status === 'friends' || friendship.status === 'outgoing' ? 'secondary' : 'primary'}
@@ -119,7 +119,7 @@ export default function ProfileScreen() {
           <View style={[styles.outcomeBar, { backgroundColor: OUTCOME[g.outcome].color }]} />
           <View style={{ flex: 1 }}>
             <Text style={styles.gameTitle}>
-              {OUTCOME[g.outcome].label} vs {g.opponent?.username ?? '—'}
+              {OUTCOME[g.outcome].label} vs {g.opponent?.username ?? g.opponentName ?? '—'}
             </Text>
             <Text style={styles.muted}>
               {g.color === 'white' ? '♔' : '♚'} {g.timeControl} · {g.reason} · {new Date(g.endedAt).toLocaleDateString('pt-BR')}

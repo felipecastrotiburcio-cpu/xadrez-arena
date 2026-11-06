@@ -113,6 +113,16 @@ export const CATALOG: ShopItem[] = [
     coord: { light: '#00f0ff', dark: '#ff2fd6' }, pattern: 'grid', patternColor: 'rgba(0, 240, 255, 0.35)',
     highlight: 'rgba(255, 47, 214, 0.45)',
   }),
+  board('board_ice', 'Gelo Ártico', 'Cristais de gelo com brilho polar.', 600, 'raro', {
+    light: '#eef9ff', dark: '#7fb8d9', border: '#3d7ea6', frame: 6,
+    coord: { light: '#3d7ea6', dark: '#eef9ff' }, pattern: 'shine', patternColor: 'rgba(255,255,255,0.4)',
+    highlight: 'rgba(0, 200, 255, 0.45)',
+  }),
+  board('board_lava', 'Lava Vulcânica', 'Rocha negra com rios de lava brilhando.', 1600, 'epico', {
+    light: '#3a2320', dark: '#1a0f0e', border: '#ff5a1f', frame: 6,
+    coord: { light: '#ffb347', dark: '#ff5a1f' }, pattern: 'grid', patternColor: 'rgba(255, 110, 30, 0.55)',
+    highlight: 'rgba(255, 170, 40, 0.5)',
+  }),
   board('board_royal', 'Ouro Real', 'Marfim e ouro dignos de um rei.', 2000, 'lendario', {
     light: '#fff6dc', dark: '#d4a72c', border: '#8a6508', frame: 10,
     coord: { light: '#a37c10', dark: '#fff6dc' }, pattern: 'shine', patternColor: 'rgba(255, 255, 255, 0.35)',
@@ -137,8 +147,14 @@ export const CATALOG: ShopItem[] = [
   pieces('pieces_gems', 'Rubi e Esmeralda', 'Pedras preciosas lapidadas.', 600, 'raro', {
     whiteFill: '#ff5a6e', whiteOutline: '#5c0010', blackFill: '#1fa86b', blackOutline: '#003d22', glow: 2,
   }),
+  pieces('pieces_candy', 'Doces', 'Morango e menta, de dar água na boca.', 450, 'raro', {
+    whiteFill: '#ffd1e8', whiteOutline: '#d6337a', blackFill: '#7ee8c4', blackOutline: '#0f7a5a', glow: 2,
+  }),
   pieces('pieces_neon', 'Neon', 'Peças que brilham no escuro.', 1000, 'epico', {
     whiteFill: '#e8fdff', whiteOutline: '#00f0ff', blackFill: '#ffd9f6', blackOutline: '#ff2fd6', glow: 8,
+  }),
+  pieces('pieces_shadow', 'Sombras', 'Peças sombrias com brilho violeta.', 1400, 'epico', {
+    whiteFill: '#e9dcff', whiteOutline: '#8b5cff', blackFill: '#2a1747', blackOutline: '#c58bff', glow: 7,
   }),
   pieces('pieces_gold', 'Ouro e Prata', 'Metais preciosos polidos.', 1800, 'lendario', {
     whiteFill: '#ffd34d', whiteOutline: '#7a5500', blackFill: '#c7ced6', blackOutline: '#2e3640', glow: 5,
@@ -152,9 +168,12 @@ export const CATALOG: ShopItem[] = [
   avatar('avatar_knight', 'Cavaleiro', 50, 'comum', { emoji: '♞', background: '#3b4a5e', ring: '#9aa3b2' }),
   avatar('avatar_fox', 'Raposa', 100, 'comum', { emoji: '🦊', background: '#5a3a1e', ring: '#ff9a3c' }),
   avatar('avatar_panda', 'Panda', 100, 'comum', { emoji: '🐼', background: '#2d3a3a', ring: '#e6e6e6' }),
+  avatar('avatar_rocket', 'Foguete', 150, 'comum', { emoji: '🚀', background: '#1d2a5c', ring: '#ff7a59' }),
+  avatar('avatar_gamer', 'Gamer', 250, 'raro', { emoji: '🎮', background: '#2b1d52', ring: '#2ee59d' }),
   avatar('avatar_robot', 'Robô', 200, 'raro', { emoji: '🤖', background: '#253447', ring: '#4f9ee8' }),
   avatar('avatar_lion', 'Leão', 300, 'raro', { emoji: '🦁', background: '#5c3d0a', ring: '#e0a526' }),
   avatar('avatar_wizard', 'Mago', 500, 'epico', { emoji: '🧙', background: '#2e1d52', ring: '#a77bff' }),
+  avatar('avatar_unicorn', 'Unicórnio', 600, 'epico', { emoji: '🦄', background: '#4a1f5c', ring: '#ff9ce6' }),
   avatar('avatar_dragon', 'Dragão', 800, 'epico', { emoji: '🐉', background: '#123d2a', ring: '#3ddc84' }),
   avatar('avatar_crown', 'Coroa', 1500, 'lendario', { emoji: '👑', background: '#4a3300', ring: '#ffd34d' }),
   avatar('avatar_diamond', 'Diamante', 2500, 'lendario', { emoji: '💎', background: '#0f2f4a', ring: '#7fe3ff' }),
@@ -169,6 +188,9 @@ export const CATALOG: ShopItem[] = [
   character('char_cool', 'Descolado', 'Óculos escuros nunca saem de moda.', 400, 'raro', {
     skin: '#f1c27d', shirt: '#1de9b6', pants: '#283593', shoes: '#212121', hat: 'hair', hatColor: '#5d4037', face: 'shades',
   }),
+  character('char_athlete', 'Atleta', 'Faixa na testa e fôlego de campeão.', 500, 'raro', {
+    skin: '#a0663e', shirt: '#2ee59d', pants: '#1b2a49', shoes: '#ff4d6d', hat: 'headband', hatColor: '#ffffff', face: 'grin',
+  }),
   character('char_ninja', 'Ninja', 'Silencioso e mortal no tabuleiro.', 700, 'epico', {
     skin: '#f1c27d', shirt: '#212121', pants: '#1a1a1a', shoes: '#000000', hat: 'headband', hatColor: '#e53935', face: 'mask',
   }),
@@ -178,6 +200,9 @@ export const CATALOG: ShopItem[] = [
   character('char_king', 'Rei do Tabuleiro', 'Coroa de ouro e manto real.', 2000, 'lendario', {
     skin: '#8d5524', shirt: '#c62828', pants: '#ffca28', shoes: '#6d4c41', hat: 'crown', hatColor: '#ffc107', face: 'smile',
   }),
+  character('char_golden_robot', 'Robô Dourado', 'Armadura de ouro e visor futurista.', 2500, 'lendario', {
+    skin: '#ffd34d', shirt: '#e0a526', pants: '#b07d10', shoes: '#5c4100', hat: 'none', hatColor: '#000000', face: 'visor',
+  }),
   character('char_astronaut', 'Astronauta', 'Vitórias de outro planeta.', 3000, 'lendario', {
     skin: '#ffe0bd', shirt: '#eceff1', pants: '#cfd8dc', shoes: '#546e7a', hat: 'helmet', hatColor: '#80deea', face: 'visor',
   }),
@@ -186,8 +211,11 @@ export const CATALOG: ShopItem[] = [
   move('move_jamal', 'Passinho do Jamal', 'O passinho clássico: pra lá e pra cá no ritmo.', 0, 'comum', '🕺'),
   move('move_67', 'Movimento do 67', 'Mãos pra cima e pra baixo: six… seven!', 0, 'comum', '🤲'),
   move('move_spin', 'Giro Vitorioso', 'Um giro completo comemorando o xeque-mate.', 200, 'comum', '🌀'),
+  move('move_airplane', 'Aviãozinho', 'Braços abertos, voando em volta do rival caído.', 300, 'comum', '✈️'),
+  move('move_robot', 'Dança do Robô', 'Movimentos travados e precisos, bip bop.', 450, 'raro', '🤖'),
   move('move_flex', 'Muque', 'Mostra quem manda no tabuleiro.', 350, 'raro', '💪'),
   move('move_kick', 'Voadora', 'Salto e chute que derruba o rival longe.', 600, 'raro', '🦶'),
+  move('move_flip', 'Mortal para Trás', 'Um salto mortal completo para fechar com estilo.', 900, 'epico', '🤸'),
   move('move_crown', 'Coroação', 'Uma coroa desce do céu entre confetes.', 1200, 'epico', '👑'),
   move('move_lightning', 'Fúria do Trovão', 'Raios atingem o adversário derrotado.', 2200, 'lendario', '⚡'),
 ];
@@ -214,6 +242,13 @@ export function streakBonus(streak: number) {
 }
 
 /** Moedas por resultado. Amistosas valem metade; canceladas não valem nada. */
+/** Moedas por partida contra a IA (contas locais, sem servidor): níveis mais fortes pagam mais. */
+export function aiCoinReward(score: number, aiLevel: number) {
+  if (score === 1) return 10 + aiLevel * 5;
+  if (score === 0.5) return 5 + aiLevel * 2;
+  return 3;
+}
+
 export function coinReward(score: number, rated: boolean) {
   const base = score === 1 ? 30 : score === 0.5 ? 15 : 5;
   return rated ? base : Math.ceil(base / 2);

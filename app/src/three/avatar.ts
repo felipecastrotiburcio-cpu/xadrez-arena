@@ -3,87 +3,123 @@ import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeom
 import type { CharacterStyle } from '../lib/types';
 
 /**
- * Boneco 3D em blocos (estilo avatar de jogo): cabeça, tronco, braços e pernas
- * são caixas arredondadas. Medidas em "studs": pés em y=0, altura total ~5,3.
+ * Boneco 3D em blocos (estilo avatar de jogo), com esqueleto articulado:
+ * pelve → coluna → pescoço/ombros/cotovelos e pelve → quadris/joelhos.
+ * Medidas em "studs": pés em y=0, altura total ~5,3; o boneco olha para +z.
  *
- * Articulações (Groups) giram a partir do ombro/quadril. Convenções:
- * - rotation.x negativo leva braço/perna para a FRENTE (+z local);
- * - rotation.z afasta o braço do corpo (negativo no esquerdo, positivo no direito).
+ * Convenções de rotação (radianos):
+ * - ombro/quadril .x negativo: braço/perna para a FRENTE; .z afasta do corpo
+ *   (negativo no lado esquerdo, positivo no direito);
+ * - cotovelo .x negativo dobra o antebraço para a frente; joelho .x positivo dobra para trás;
+ * - coluna/pescoço .x positivo: inclina para a frente;
+ * - body: pivô nos pés (cair, inclinar); pelvis: pivô no quadril (saltos mortais).
  */
 export interface Avatar {
   /** Posição no chão e direção (rotation.y). */
   root: THREE.Group;
-  /** Pivô nos pés: usado para cair, inclinar e pular. */
   body: THREE.Group;
-  torso: THREE.Mesh;
-  head: THREE.Group;
-  armL: THREE.Group;
-  armR: THREE.Group;
-  legL: THREE.Group;
-  legR: THREE.Group;
-  /** Volta todas as articulações para a pose neutra. */
-  resetPose(): void;
+  pelvis: THREE.Group;
+  spine: THREE.Group;
+  neck: THREE.Group;
+  shoulderL: THREE.Group;
+  elbowL: THREE.Group;
+  shoulderR: THREE.Group;
+  elbowR: THREE.Group;
+  hipL: THREE.Group;
+  kneeL: THREE.Group;
+  hipR: THREE.Group;
+  kneeR: THREE.Group;
+  /** Altura de repouso da pelve (quadril). */
+  pelvisHeight: number;
   dispose(): void;
 }
 
 const toon = (color: string, extra: THREE.MeshToonMaterialParameters = {}) =>
   new THREE.MeshToonMaterial({ color: new THREE.Color(color), ...extra });
 
+const PELVIS_Y = 2;
+
 export function buildAvatar(look: CharacterStyle): Avatar {
   const root = new THREE.Group();
   const body = new THREE.Group();
   root.add(body);
+  const pelvis = new THREE.Group();
+  pelvis.position.y = PELVIS_Y;
+  body.add(pelvis);
+  const spine = new THREE.Group();
+  pelvis.add(spine);
 
-  const limbGeo = new RoundedBoxGeometry(0.98, 2, 0.98, 2, 0.14);
   const skin = toon(look.skin);
   const shirt = toon(look.shirt);
   const pants = toon(look.pants);
   const shoes = toon(look.shoes);
   const dark = toon('#1b1b1f');
+  const segment = new RoundedBoxGeometry(0.98, 1.06, 0.98, 2, 0.14);
+  // "Tampa" da articulação: preenche a fresta quando cotovelo/joelho dobram.
+  const jointCap = new RoundedBoxGeometry(0.9, 0.5, 0.9, 2, 0.2);
 
-  // Pernas: pivô no quadril (y = 2).
+  // Pernas: quadril → coxa → joelho → canela + tênis.
   const makeLeg = (x: number) => {
-    const pivot = new THREE.Group();
-    pivot.position.set(x, 2, 0);
-    const leg = new THREE.Mesh(limbGeo, pants);
-    leg.position.y = -1;
-    const shoe = new THREE.Mesh(new RoundedBoxGeometry(1.02, 0.36, 1.12, 2, 0.1), shoes);
-    shoe.position.set(0, -1.82, 0.06);
-    pivot.add(leg, shoe);
-    body.add(pivot);
-    return pivot;
+    const hip = new THREE.Group();
+    hip.position.set(x, 0, 0);
+    const thigh = new THREE.Mesh(segment, pants);
+    thigh.position.y = -0.5;
+    const knee = new THREE.Group();
+    knee.position.y = -1;
+    const cap = new THREE.Mesh(jointCap, pants);
+    const shin = new THREE.Mesh(segment, pants);
+    shin.scale.y = 0.85;
+    shin.position.y = -0.42;
+    const shoe = new THREE.Mesh(new RoundedBoxGeometry(1.02, 0.36, 1.14, 2, 0.1), shoes);
+    shoe.position.set(0, -0.82, 0.07);
+    knee.add(cap, shin, shoe);
+    hip.add(thigh, knee);
+    pelvis.add(hip);
+    return { hip, knee };
   };
   const legL = makeLeg(-0.5);
   const legR = makeLeg(0.5);
 
+  // Tronco (preso à coluna) e cinto (preso à pelve).
   const torso = new THREE.Mesh(new RoundedBoxGeometry(2, 2, 1, 2, 0.16), shirt);
-  torso.position.y = 3;
-  body.add(torso);
-  // Cinto
-  const belt = new THREE.Mesh(new THREE.BoxGeometry(2.04, 0.18, 1.04), toon(new THREE.Color(look.pants).multiplyScalar(0.7).getStyle()));
-  belt.position.y = 2.1;
-  body.add(belt);
+  torso.position.y = 1;
+  spine.add(torso);
+  const belt = new THREE.Mesh(
+    new THREE.BoxGeometry(2.04, 0.18, 1.04),
+    toon(new THREE.Color(look.pants).multiplyScalar(0.7).getStyle()),
+  );
+  belt.position.y = 0.1;
+  pelvis.add(belt);
 
-  // Braços: pivô no ombro.
+  // Braços: ombro → braço (manga) → cotovelo → antebraço + mão.
   const makeArm = (x: number) => {
-    const pivot = new THREE.Group();
-    pivot.position.set(x, 3.8, 0);
-    const sleeve = new THREE.Mesh(new RoundedBoxGeometry(0.98, 0.9, 0.98, 2, 0.14), shirt);
-    sleeve.position.y = -0.25;
-    const arm = new THREE.Mesh(limbGeo, skin);
-    arm.scale.y = 0.62;
-    arm.position.y = -1.08;
-    pivot.add(arm, sleeve);
-    body.add(pivot);
-    return pivot;
+    const shoulder = new THREE.Group();
+    shoulder.position.set(x, 1.8, 0);
+    const upper = new THREE.Mesh(segment, shirt);
+    upper.scale.y = 0.95;
+    upper.position.y = -0.38;
+    const elbow = new THREE.Group();
+    elbow.position.y = -0.92;
+    const cap = new THREE.Mesh(jointCap, skin);
+    cap.scale.set(1.04, 1, 1.04);
+    const fore = new THREE.Mesh(segment, skin);
+    fore.scale.set(0.96, 0.92, 0.96);
+    fore.position.y = -0.45;
+    elbow.add(cap, fore);
+    shoulder.add(upper, elbow);
+    spine.add(shoulder);
+    return { shoulder, elbow };
   };
   const armL = makeArm(-1.5);
   const armR = makeArm(1.5);
 
-  // Cabeça
+  // Cabeça (presa ao pescoço, que gira a partir do topo do tronco)
+  const neckJoint = new THREE.Group();
+  neckJoint.position.y = 2.0;
+  spine.add(neckJoint);
   const head = new THREE.Group();
-  head.position.y = 4.68;
-  body.add(head);
+  head.position.y = 0.68;
+  neckJoint.add(head);
   const headSize = 1.3;
   const front = headSize / 2 + 0.005;
   head.add(new THREE.Mesh(new RoundedBoxGeometry(headSize, headSize, headSize, 3, 0.26), skin));
@@ -216,25 +252,21 @@ export function buildAvatar(look: CharacterStyle): Avatar {
     }
   }
 
-  const resetPose = () => {
-    body.position.set(0, 0, 0);
-    body.rotation.set(0, 0, 0);
-    body.scale.set(1, 1, 1);
-    head.rotation.set(0, 0, 0);
-    torso.rotation.set(0, 0, 0);
-    for (const j of [armL, armR, legL, legR]) j.rotation.set(0, 0, 0);
-  };
-
   return {
     root,
     body,
-    torso,
-    head,
-    armL,
-    armR,
-    legL,
-    legR,
-    resetPose,
+    pelvis,
+    spine,
+    neck: neckJoint,
+    shoulderL: armL.shoulder,
+    elbowL: armL.elbow,
+    shoulderR: armR.shoulder,
+    elbowR: armR.elbow,
+    hipL: legL.hip,
+    kneeL: legL.knee,
+    hipR: legR.hip,
+    kneeR: legR.knee,
+    pelvisHeight: PELVIS_Y,
     dispose: () => disposeTree(root),
   };
 }

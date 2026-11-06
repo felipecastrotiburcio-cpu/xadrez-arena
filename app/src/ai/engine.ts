@@ -3,9 +3,13 @@
  *
  * Representação 0x88 (sq = rank * 16 + file, rank 0 = fileira 1), geração de
  * lances pseudo-legais com filtro de legalidade, hash Zobrist incremental,
- * busca negamax com poda alfa-beta, aprofundamento iterativo, busca de
- * quiescência, tabela de transposição e heurísticas de ordenação (MVV-LVA,
- * killer moves, history).
+ * busca negamax PVS com poda alfa-beta, aprofundamento iterativo, reduções de
+ * lances tardios, busca de quiescência, tabela de transposição e heurísticas
+ * de ordenação (MVV-LVA, killer moves, history).
+ *
+ * Otimizado para interpretadores (Hermes no celular): nada é alocado durante a
+ * busca — pilhas, listas de lances e tabela de transposição são arrays tipados
+ * pré-alocados, e os laços são indexados.
  *
  * O jogo em si (regras exibidas na UI, PGN etc.) é controlado pelo chess.js;
  * este motor só recebe um FEN e devolve o melhor lance.
@@ -22,26 +26,22 @@ export const ROOK = 4;
 export const QUEEN = 5;
 export const KING = 6;
 
-const KNIGHT_OFFSETS = [33, 31, 18, 14, -33, -31, -18, -14];
-const BISHOP_OFFSETS = [15, 17, -15, -17];
-const ROOK_OFFSETS = [16, -16, 1, -1];
-const KING_OFFSETS = [15, 17, -15, -17, 16, -16, 1, -1];
+const KNIGHT_OFFSETS = Int32Array.of(33, 31, 18, 14, -33, -31, -18, -14);
+const BISHOP_OFFSETS = Int32Array.of(15, 17, -15, -17);
+const ROOK_OFFSETS = Int32Array.of(16, -16, 1, -1);
+const KING_OFFSETS = Int32Array.of(15, 17, -15, -17, 16, -16, 1, -1);
 
 const F_DOUBLE = 1;
 const F_EP = 2;
 const F_CASTLE = 4;
 
 // Lance codificado em um inteiro: from | to << 7 | promo << 14 | flags << 17
-const encode = (from: number, to: number, promo = 0, flags = 0) =>
+const encode = (from: number, to: number, promo: number, flags: number) =>
   from | (to << 7) | (promo << 14) | (flags << 17);
 export const moveFrom = (m: number) => m & 127;
 export const moveTo = (m: number) => (m >> 7) & 127;
 export const movePromo = (m: number) => (m >> 14) & 7;
 const moveFlags = (m: number) => (m >> 17) & 15;
-
-const pieceType = (p: number) => p & 7;
-const pieceColor = (p: number) => (p >> 3) as Color;
-const makePiece = (type: number, color: Color) => type | (color << 3);
 
 export const squareName = (sq: number) =>
   'abcdefgh'[sq & 7] + String((sq >> 4) + 1);
@@ -65,24 +65,16 @@ const rand32 = () => {
   seed ^= seed << 5;
   return seed | 0;
 };
-const Z_PIECE: Int32Array[] = Array.from({ length: 16 }, () => {
-  const t = new Int32Array(128);
-  for (let i = 0; i < 128; i++) t[i] = rand32();
-  return t;
-});
+/** Z_PIECE[peça * 128 + casa] */
+const Z_PIECE = new Int32Array(16 * 128);
+for (let i = 0; i < Z_PIECE.length; i++) Z_PIECE[i] = rand32();
 const Z_CASTLE = Int32Array.from({ length: 16 }, rand32);
 const Z_EP = Int32Array.from({ length: 128 }, rand32);
 const Z_SIDE = rand32();
 
-interface Undo {
-  move: number;
-  captured: number;
-  capturedSq: number;
-  castling: number;
-  ep: number;
-  halfmove: number;
-  hash: number;
-}
+const MAX_UNDO = 1024;
+/** Tamanho máximo de uma lista de lances (o máximo legal conhecido é 218). */
+export const MAX_MOVES = 256;
 
 export class Position {
   board = new Int8Array(128);
@@ -91,11 +83,19 @@ export class Position {
   ep = -1;
   halfmove = 0;
   fullmove = 1;
-  kings = [0, 0];
+  kings = new Int32Array(2);
   hash = 0;
   /** Hashes de todas as posições já ocorridas (para detectar repetição). */
   history: number[] = [];
-  private undos: Undo[] = [];
+  // Pilha de desfazer em arrays tipados (sem alocação por lance).
+  private sp = 0;
+  private uMove = new Int32Array(MAX_UNDO);
+  private uCaptured = new Int8Array(MAX_UNDO);
+  private uCapSq = new Int16Array(MAX_UNDO);
+  private uCastling = new Int8Array(MAX_UNDO);
+  private uEp = new Int16Array(MAX_UNDO);
+  private uHalf = new Int16Array(MAX_UNDO);
+  private uHash = new Int32Array(MAX_UNDO);
 
   constructor(fen?: string) {
     if (fen) this.load(fen);
@@ -116,7 +116,7 @@ export class Position {
         const color: Color = ch === ch.toUpperCase() ? WHITE : BLACK;
         const type = ' pnbrqk'.indexOf(ch.toLowerCase());
         const sq = rank * 16 + file;
-        this.board[sq] = makePiece(type, color);
+        this.board[sq] = type | (color << 3);
         if (type === KING) this.kings[color] = sq;
         file++;
       }
@@ -132,7 +132,7 @@ export class Position {
     this.ep = ep && ep !== '-' ? parseSquare(ep) : -1;
     this.halfmove = Number(half) || 0;
     this.fullmove = Number(full) || 1;
-    this.undos = [];
+    this.sp = 0;
     this.hash = this.computeHash();
     this.history = [this.hash];
   }
@@ -142,7 +142,7 @@ export class Position {
     for (let sq = 0; sq < 128; sq++) {
       if (sq & 0x88) continue;
       const p = this.board[sq];
-      if (p) h ^= Z_PIECE[p][sq];
+      if (p) h ^= Z_PIECE[p * 128 + sq];
     }
     h ^= Z_CASTLE[this.castling];
     if (this.ep !== -1) h ^= Z_EP[this.ep];
@@ -150,36 +150,38 @@ export class Position {
     return h;
   }
 
-  isAttacked(sq: number, by: Color): boolean {
+  isAttacked(sq: number, by: number): boolean {
     const b = this.board;
+    let t: number;
     // Peões
     if (by === WHITE) {
-      const a = sq - 15;
-      const c = sq - 17;
-      if (!(a & 0x88) && b[a] === PAWN) return true;
-      if (!(c & 0x88) && b[c] === PAWN) return true;
+      t = sq - 15;
+      if (!(t & 0x88) && b[t] === PAWN) return true;
+      t = sq - 17;
+      if (!(t & 0x88) && b[t] === PAWN) return true;
     } else {
-      const a = sq + 15;
-      const c = sq + 17;
-      const bp = makePiece(PAWN, BLACK);
-      if (!(a & 0x88) && b[a] === bp) return true;
-      if (!(c & 0x88) && b[c] === bp) return true;
+      t = sq + 15;
+      if (!(t & 0x88) && b[t] === (PAWN | 8)) return true;
+      t = sq + 17;
+      if (!(t & 0x88) && b[t] === (PAWN | 8)) return true;
     }
-    const n = makePiece(KNIGHT, by);
-    for (const o of KNIGHT_OFFSETS) {
-      const t = sq + o;
+    const c = by << 3;
+    const n = KNIGHT | c;
+    for (let i = 0; i < 8; i++) {
+      t = sq + KNIGHT_OFFSETS[i];
       if (!(t & 0x88) && b[t] === n) return true;
     }
-    const k = makePiece(KING, by);
-    for (const o of KING_OFFSETS) {
-      const t = sq + o;
+    const k = KING | c;
+    for (let i = 0; i < 8; i++) {
+      t = sq + KING_OFFSETS[i];
       if (!(t & 0x88) && b[t] === k) return true;
     }
-    const bishop = makePiece(BISHOP, by);
-    const rook = makePiece(ROOK, by);
-    const queen = makePiece(QUEEN, by);
-    for (const o of BISHOP_OFFSETS) {
-      let t = sq + o;
+    const bishop = BISHOP | c;
+    const rook = ROOK | c;
+    const queen = QUEEN | c;
+    for (let i = 0; i < 4; i++) {
+      const o = BISHOP_OFFSETS[i];
+      t = sq + o;
       while (!(t & 0x88)) {
         const p = b[t];
         if (p) {
@@ -189,8 +191,9 @@ export class Position {
         t += o;
       }
     }
-    for (const o of ROOK_OFFSETS) {
-      let t = sq + o;
+    for (let i = 0; i < 4; i++) {
+      const o = ROOK_OFFSETS[i];
+      t = sq + o;
       while (!(t & 0x88)) {
         const p = b[t];
         if (p) {
@@ -203,24 +206,27 @@ export class Position {
     return false;
   }
 
-  inCheck(color: Color = this.side) {
-    return this.isAttacked(this.kings[color], (color ^ 1) as Color);
+  inCheck(color: number = this.side) {
+    return this.isAttacked(this.kings[color], color ^ 1);
   }
 
-  /** Gera lances pseudo-legais. Com `noisy`, só capturas e promoções a dama. */
-  generate(noisy = false): number[] {
-    const moves: number[] = [];
+  /**
+   * Escreve os lances pseudo-legais em `out` a partir de `start` e devolve o novo fim.
+   * Com `noisy`, só capturas e promoções a dama.
+   */
+  genInto(out: Int32Array, start: number, noisy: boolean): number {
+    let n = start;
     const b = this.board;
     const us = this.side;
-    const them = (us ^ 1) as Color;
+    const them = us ^ 1;
     for (let sq = 0; sq < 128; sq++) {
       if (sq & 0x88) {
         sq += 7;
         continue;
       }
       const p = b[sq];
-      if (!p || pieceColor(p) !== us) continue;
-      const type = pieceType(p);
+      if (!p || p >> 3 !== us) continue;
+      const type = p & 7;
 
       if (type === PAWN) {
         const dir = us === WHITE ? 16 : -16;
@@ -229,35 +235,35 @@ export class Position {
         const one = sq + dir;
         if (!(one & 0x88) && !b[one]) {
           if (one >> 4 === lastRank) {
-            moves.push(encode(sq, one, QUEEN));
+            out[n++] = encode(sq, one, QUEEN, 0);
             if (!noisy) {
-              moves.push(encode(sq, one, ROOK));
-              moves.push(encode(sq, one, BISHOP));
-              moves.push(encode(sq, one, KNIGHT));
+              out[n++] = encode(sq, one, ROOK, 0);
+              out[n++] = encode(sq, one, BISHOP, 0);
+              out[n++] = encode(sq, one, KNIGHT, 0);
             }
           } else if (!noisy) {
-            moves.push(encode(sq, one));
+            out[n++] = encode(sq, one, 0, 0);
             const two = one + dir;
-            if (sq >> 4 === startRank && !b[two]) moves.push(encode(sq, two, 0, F_DOUBLE));
+            if (sq >> 4 === startRank && !b[two]) out[n++] = encode(sq, two, 0, F_DOUBLE);
           }
         }
-        for (const side of [dir - 1, dir + 1]) {
-          const t = sq + side;
+        for (let s = -1; s <= 1; s += 2) {
+          const t = one + s;
           if (t & 0x88) continue;
           const target = b[t];
-          if (target && pieceColor(target) === them) {
+          if (target && target >> 3 === them) {
             if (t >> 4 === lastRank) {
-              moves.push(encode(sq, t, QUEEN));
+              out[n++] = encode(sq, t, QUEEN, 0);
               if (!noisy) {
-                moves.push(encode(sq, t, ROOK));
-                moves.push(encode(sq, t, BISHOP));
-                moves.push(encode(sq, t, KNIGHT));
+                out[n++] = encode(sq, t, ROOK, 0);
+                out[n++] = encode(sq, t, BISHOP, 0);
+                out[n++] = encode(sq, t, KNIGHT, 0);
               }
             } else {
-              moves.push(encode(sq, t));
+              out[n++] = encode(sq, t, 0, 0);
             }
           } else if (t === this.ep) {
-            moves.push(encode(sq, t, 0, F_EP));
+            out[n++] = encode(sq, t, 0, F_EP);
           }
         }
         continue;
@@ -265,27 +271,28 @@ export class Position {
 
       if (type === KNIGHT || type === KING) {
         const offsets = type === KNIGHT ? KNIGHT_OFFSETS : KING_OFFSETS;
-        for (const o of offsets) {
-          const t = sq + o;
+        for (let i = 0; i < 8; i++) {
+          const t = sq + offsets[i];
           if (t & 0x88) continue;
           const target = b[t];
           if (!target) {
-            if (!noisy) moves.push(encode(sq, t));
-          } else if (pieceColor(target) === them) {
-            moves.push(encode(sq, t));
+            if (!noisy) out[n++] = encode(sq, t, 0, 0);
+          } else if (target >> 3 === them) {
+            out[n++] = encode(sq, t, 0, 0);
           }
         }
       } else {
-        const offsets =
-          type === BISHOP ? BISHOP_OFFSETS : type === ROOK ? ROOK_OFFSETS : KING_OFFSETS;
-        for (const o of offsets) {
+        const offsets = type === BISHOP ? BISHOP_OFFSETS : type === ROOK ? ROOK_OFFSETS : KING_OFFSETS;
+        const count = offsets.length;
+        for (let i = 0; i < count; i++) {
+          const o = offsets[i];
           let t = sq + o;
           while (!(t & 0x88)) {
             const target = b[t];
             if (!target) {
-              if (!noisy) moves.push(encode(sq, t));
+              if (!noisy) out[n++] = encode(sq, t, 0, 0);
             } else {
-              if (pieceColor(target) === them) moves.push(encode(sq, t));
+              if (target >> 3 === them) out[n++] = encode(sq, t, 0, 0);
               break;
             }
             t += o;
@@ -297,75 +304,78 @@ export class Position {
         if (us === WHITE && sq === 4) {
           if (this.castling & 1 && !b[5] && !b[6] && b[7] === ROOK &&
             !this.isAttacked(4, BLACK) && !this.isAttacked(5, BLACK) && !this.isAttacked(6, BLACK)) {
-            moves.push(encode(4, 6, 0, F_CASTLE));
+            out[n++] = encode(4, 6, 0, F_CASTLE);
           }
           if (this.castling & 2 && !b[3] && !b[2] && !b[1] && b[0] === ROOK &&
             !this.isAttacked(4, BLACK) && !this.isAttacked(3, BLACK) && !this.isAttacked(2, BLACK)) {
-            moves.push(encode(4, 2, 0, F_CASTLE));
+            out[n++] = encode(4, 2, 0, F_CASTLE);
           }
         } else if (us === BLACK && sq === 116) {
-          const br = makePiece(ROOK, BLACK);
+          const br = ROOK | 8;
           if (this.castling & 4 && !b[117] && !b[118] && b[119] === br &&
             !this.isAttacked(116, WHITE) && !this.isAttacked(117, WHITE) && !this.isAttacked(118, WHITE)) {
-            moves.push(encode(116, 118, 0, F_CASTLE));
+            out[n++] = encode(116, 118, 0, F_CASTLE);
           }
           if (this.castling & 8 && !b[115] && !b[114] && !b[113] && b[112] === br &&
             !this.isAttacked(116, WHITE) && !this.isAttacked(115, WHITE) && !this.isAttacked(114, WHITE)) {
-            moves.push(encode(116, 114, 0, F_CASTLE));
+            out[n++] = encode(116, 114, 0, F_CASTLE);
           }
         }
       }
     }
-    return moves;
+    return n;
+  }
+
+  /** Lances pseudo-legais como array comum (fora da busca). */
+  generate(noisy = false): number[] {
+    const buf = new Int32Array(MAX_MOVES);
+    return Array.from(buf.subarray(0, this.genInto(buf, 0, noisy)));
   }
 
   /** Executa o lance. Retorna false (e desfaz) se deixar o próprio rei em xeque. */
   make(m: number): boolean {
     const b = this.board;
-    const from = moveFrom(m);
-    const to = moveTo(m);
-    const flags = moveFlags(m);
-    const promo = movePromo(m);
+    const from = m & 127;
+    const to = (m >> 7) & 127;
+    const flags = (m >> 17) & 15;
+    const promo = (m >> 14) & 7;
     const piece = b[from];
     const us = this.side;
     let captured = b[to];
     let capturedSq = to;
     let h = this.hash;
 
-    this.undos.push({
-      move: m,
-      captured: 0,
-      capturedSq: to,
-      castling: this.castling,
-      ep: this.ep,
-      halfmove: this.halfmove,
-      hash: this.hash,
-    });
+    const i = this.sp++;
+    this.uMove[i] = m;
+    this.uCastling[i] = this.castling;
+    this.uEp[i] = this.ep;
+    this.uHalf[i] = this.halfmove;
+    this.uHash[i] = h;
 
     if (flags & F_EP) {
       capturedSq = us === WHITE ? to - 16 : to + 16;
       captured = b[capturedSq];
       b[capturedSq] = 0;
     }
-    if (captured) h ^= Z_PIECE[captured][capturedSq];
-    const undo = this.undos[this.undos.length - 1];
-    undo.captured = captured;
-    undo.capturedSq = capturedSq;
+    if (captured) h ^= Z_PIECE[captured * 128 + capturedSq];
+    this.uCaptured[i] = captured;
+    this.uCapSq[i] = capturedSq;
 
-    h ^= Z_PIECE[piece][from];
+    h ^= Z_PIECE[piece * 128 + from];
     b[from] = 0;
-    const placed = promo ? makePiece(promo, us) : piece;
+    const placed = promo ? promo | (us << 3) : piece;
     b[to] = placed;
-    h ^= Z_PIECE[placed][to];
+    h ^= Z_PIECE[placed * 128 + to];
 
     if (flags & F_CASTLE) {
-      const rook = makePiece(ROOK, us);
-      const [rFrom, rTo] = to > from ? [from + 3, from + 1] : [from - 4, from - 1];
+      const rook = ROOK | (us << 3);
+      const rFrom = to > from ? from + 3 : from - 4;
+      const rTo = to > from ? from + 1 : from - 1;
       b[rFrom] = 0;
       b[rTo] = rook;
-      h ^= Z_PIECE[rook][rFrom] ^ Z_PIECE[rook][rTo];
+      h ^= Z_PIECE[rook * 128 + rFrom] ^ Z_PIECE[rook * 128 + rTo];
     }
-    if (pieceType(piece) === KING) this.kings[us] = to;
+    if ((piece & 7) === KING) this.kings[us] = to;
 
     h ^= Z_CASTLE[this.castling];
     this.castling &= CASTLE_MASK[from] & CASTLE_MASK[to];
@@ -375,14 +385,14 @@ export class Position {
     this.ep = flags & F_DOUBLE ? (from + to) >> 1 : -1;
     if (this.ep !== -1) h ^= Z_EP[this.ep];
 
-    this.halfmove = pieceType(piece) === PAWN || captured ? 0 : this.halfmove + 1;
+    this.halfmove = (piece & 7) === PAWN || captured ? 0 : this.halfmove + 1;
     if (us === BLACK) this.fullmove++;
     this.side = (us ^ 1) as Color;
     h ^= Z_SIDE;
     this.hash = h;
     this.history.push(h);
 
-    if (this.isAttacked(this.kings[us], this.side)) {
+    if (this.isAttacked(this.kings[us], us ^ 1)) {
       this.unmake();
       return false;
     }
@@ -390,31 +400,66 @@ export class Position {
   }
 
   unmake() {
-    const u = this.undos.pop();
-    if (!u) return;
+    if (this.sp === 0) return;
+    const i = --this.sp;
     const b = this.board;
-    const m = u.move;
-    const from = moveFrom(m);
-    const to = moveTo(m);
-    const flags = moveFlags(m);
+    const m = this.uMove[i];
+    const from = m & 127;
+    const to = (m >> 7) & 127;
+    const flags = (m >> 17) & 15;
     this.side = (this.side ^ 1) as Color;
     const us = this.side;
-    const moved = movePromo(m) ? makePiece(PAWN, us) : b[to];
+    const moved = (m >> 14) & 7 ? PAWN | (us << 3) : b[to];
     b[from] = moved;
     b[to] = 0;
-    if (u.captured) b[u.capturedSq] = u.captured;
+    const captured = this.uCaptured[i];
+    if (captured) b[this.uCapSq[i]] = captured;
     if (flags & F_CASTLE) {
-      const rook = makePiece(ROOK, us);
-      const [rFrom, rTo] = to > from ? [from + 3, from + 1] : [from - 4, from - 1];
+      const rFrom = to > from ? from + 3 : from - 4;
+      const rTo = to > from ? from + 1 : from - 1;
       b[rTo] = 0;
-      b[rFrom] = rook;
+      b[rFrom] = ROOK | (us << 3);
     }
-    if (pieceType(moved) === KING) this.kings[us] = from;
+    if ((moved & 7) === KING) this.kings[us] = from;
     if (us === BLACK) this.fullmove--;
-    this.castling = u.castling;
-    this.ep = u.ep;
-    this.halfmove = u.halfmove;
-    this.hash = u.hash;
+    this.castling = this.uCastling[i];
+    this.ep = this.uEp[i];
+    this.halfmove = this.uHalf[i];
+    this.hash = this.uHash[i];
+    this.history.pop();
+  }
+
+  /** Altura atual da pilha de desfazer. */
+  stackDepth() {
+    return this.sp;
+  }
+
+  /** Desfaz lances até a pilha voltar à altura `sp` (após interromper a busca). */
+  rewind(sp: number) {
+    while (this.sp > sp) {
+      if (this.uMove[this.sp - 1] === 0) this.unmakeNull();
+      else this.unmake();
+    }
+  }
+
+  /** Passa a vez (null move) — usado pela poda de lance nulo. */
+  makeNull() {
+    const i = this.sp++;
+    this.uMove[i] = 0;
+    this.uEp[i] = this.ep;
+    this.uHash[i] = this.hash;
+    if (this.ep !== -1) this.hash ^= Z_EP[this.ep];
+    this.ep = -1;
+    this.side = (this.side ^ 1) as Color;
+    this.hash ^= Z_SIDE;
+    this.history.push(this.hash);
+  }
+
+  unmakeNull() {
+    const i = --this.sp;
+    this.side = (this.side ^ 1) as Color;
+    this.ep = this.uEp[i];
+    this.hash = this.uHash[i];
     this.history.pop();
   }
 
@@ -441,9 +486,11 @@ export class Position {
 
   perft(depth: number): number {
     if (depth === 0) return 1;
+    const buf = new Int32Array(MAX_MOVES);
+    const n = this.genInto(buf, 0, false);
     let nodes = 0;
-    for (const m of this.generate()) {
-      if (this.make(m)) {
+    for (let i = 0; i < n; i++) {
+      if (this.make(buf[i])) {
         nodes += this.perft(depth - 1);
         this.unmake();
       }
@@ -454,8 +501,8 @@ export class Position {
 
 // ---------------------------------------------------------------- Avaliação
 
-const VALUE = [0, 100, 320, 330, 500, 900, 0];
-const PHASE = [0, 0, 1, 1, 2, 4, 0];
+const VALUE = Int32Array.of(0, 100, 320, 330, 500, 900, 0);
+const PHASE = Int32Array.of(0, 0, 1, 1, 2, 4, 0);
 
 // Tabelas peça-casa (Simplified Evaluation Function), de a8 até h1 sob a ótica das brancas.
 const PST: number[][] = [
@@ -539,11 +586,16 @@ const KING_END = [
 ];
 const PASSED_BONUS = [0, 5, 10, 20, 35, 60, 100, 0];
 
-const pstIndex = (sq: number, color: Color) => {
-  const rank = sq >> 4;
-  const file = sq & 7;
-  return color === WHITE ? (7 - rank) * 8 + file : rank * 8 + file;
-};
+// Tabelas achatadas em arrays tipados: PST_FLAT[tipo * 64 + índice]
+const PST_FLAT = new Int32Array(8 * 64);
+for (let t = 1; t <= 6; t++) for (let i = 0; i < 64; i++) PST_FLAT[t * 64 + i] = PST[t][i];
+const KING_END_FLAT = Int32Array.from(KING_END);
+const PASSED = Int32Array.from(PASSED_BONUS);
+
+// Áreas de rascunho da avaliação (reaproveitadas a cada chamada).
+const pawnFiles = new Int8Array(16); // cor * 8 + coluna
+const pawnSq = new Int16Array(32); // cor * 16 + n
+const pawnCount = new Int32Array(2);
 
 /** Avaliação estática em centipeões, do ponto de vista de quem joga. */
 export function evaluate(pos: Position): number {
@@ -551,9 +603,11 @@ export function evaluate(pos: Position): number {
   let mg = 0;
   let eg = 0;
   let phase = 0;
-  const bishops = [0, 0];
-  const pawnFiles = [new Int8Array(8), new Int8Array(8)];
-  const pawnRanks: number[][] = [[], []];
+  let bishopsW = 0;
+  let bishopsB = 0;
+  pawnFiles.fill(0);
+  pawnCount[0] = 0;
+  pawnCount[1] = 0;
 
   for (let sq = 0; sq < 128; sq++) {
     if (sq & 0x88) {
@@ -562,52 +616,76 @@ export function evaluate(pos: Position): number {
     }
     const p = b[sq];
     if (!p) continue;
-    const type = pieceType(p);
-    const color = pieceColor(p);
-    const sign = color === WHITE ? 1 : -1;
-    const idx = pstIndex(sq, color);
+    const type = p & 7;
+    const color = p >> 3;
+    const rank = sq >> 4;
+    const file = sq & 7;
+    const idx = color === WHITE ? (7 - rank) * 8 + file : rank * 8 + file;
     phase += PHASE[type];
     if (type === KING) {
-      mg += sign * PST[KING][idx];
-      eg += sign * KING_END[idx];
+      if (color === WHITE) {
+        mg += PST_FLAT[KING * 64 + idx];
+        eg += KING_END_FLAT[idx];
+      } else {
+        mg -= PST_FLAT[KING * 64 + idx];
+        eg -= KING_END_FLAT[idx];
+      }
       continue;
     }
-    const v = VALUE[type] + PST[type][idx];
-    mg += sign * v;
-    eg += sign * v;
-    if (type === BISHOP) bishops[color]++;
-    if (type === PAWN) {
-      pawnFiles[color][sq & 7]++;
-      pawnRanks[color].push(sq);
+    const v = VALUE[type] + PST_FLAT[type * 64 + idx];
+    if (color === WHITE) {
+      mg += v;
+      eg += v;
+    } else {
+      mg -= v;
+      eg -= v;
+    }
+    if (type === BISHOP) {
+      if (color === WHITE) bishopsW++;
+      else bishopsB++;
+    } else if (type === PAWN) {
+      pawnFiles[color * 8 + file]++;
+      pawnSq[color * 16 + pawnCount[color]++] = sq;
     }
   }
 
   // Par de bispos
-  if (bishops[WHITE] >= 2) { mg += 30; eg += 40; }
-  if (bishops[BLACK] >= 2) { mg -= 30; eg -= 40; }
+  if (bishopsW >= 2) {
+    mg += 30;
+    eg += 40;
+  }
+  if (bishopsB >= 2) {
+    mg -= 30;
+    eg -= 40;
+  }
 
   // Estrutura de peões: dobrados, isolados e passados
-  for (const color of [WHITE, BLACK] as Color[]) {
+  for (let color = 0; color < 2; color++) {
     const sign = color === WHITE ? 1 : -1;
-    const files = pawnFiles[color];
-    const enemy = (color ^ 1) as Color;
+    const fb = color * 8;
     for (let f = 0; f < 8; f++) {
-      if (files[f] > 1) {
-        mg -= sign * 12 * (files[f] - 1);
-        eg -= sign * 20 * (files[f] - 1);
+      const cnt = pawnFiles[fb + f];
+      if (!cnt) continue;
+      if (cnt > 1) {
+        mg -= sign * 12 * (cnt - 1);
+        eg -= sign * 20 * (cnt - 1);
       }
-      if (files[f] && !(f > 0 && files[f - 1]) && !(f < 7 && files[f + 1])) {
-        mg -= sign * 10 * files[f];
-        eg -= sign * 15 * files[f];
+      if (!(f > 0 && pawnFiles[fb + f - 1]) && !(f < 7 && pawnFiles[fb + f + 1])) {
+        mg -= sign * 10 * cnt;
+        eg -= sign * 15 * cnt;
       }
     }
-    for (const sq of pawnRanks[color]) {
+    const enemy = color ^ 1;
+    const nEnemy = pawnCount[enemy];
+    for (let i = 0; i < pawnCount[color]; i++) {
+      const sq = pawnSq[color * 16 + i];
       const file = sq & 7;
       const rank = sq >> 4;
       let passed = true;
-      for (const esq of pawnRanks[enemy]) {
-        const ef = esq & 7;
-        if (Math.abs(ef - file) > 1) continue;
+      for (let j = 0; j < nEnemy; j++) {
+        const esq = pawnSq[enemy * 16 + j];
+        const df = (esq & 7) - file;
+        if (df > 1 || df < -1) continue;
         const er = esq >> 4;
         if (color === WHITE ? er > rank : er < rank) {
           passed = false;
@@ -615,16 +693,16 @@ export function evaluate(pos: Position): number {
         }
       }
       if (passed) {
-        const rel = color === WHITE ? rank : 7 - rank;
-        mg += sign * PASSED_BONUS[rel] * 0.5;
-        eg += sign * PASSED_BONUS[rel];
+        const bonus = PASSED[color === WHITE ? rank : 7 - rank];
+        mg += (sign * bonus) >> 1;
+        eg += sign * bonus;
       }
     }
   }
 
-  const p = Math.min(phase, 24);
-  const score = (mg * p + eg * (24 - p)) / 24;
-  return Math.round(pos.side === WHITE ? score : -score);
+  const ph = phase > 24 ? 24 : phase;
+  const score = ((mg * ph + eg * (24 - ph)) / 24) | 0;
+  return pos.side === WHITE ? score : -score;
 }
 
 // ---------------------------------------------------------------- Busca
@@ -633,18 +711,30 @@ const MATE = 100000;
 const INF = 1000000;
 const MAX_PLY = 64;
 
-const TT_EXACT = 0;
-const TT_LOWER = 1;
-const TT_UPPER = 2;
+const TT_SIZE = 1 << 18;
+const TT_MASK = TT_SIZE - 1;
+const TT_EXACT = 1;
+const TT_LOWER = 2;
+const TT_UPPER = 3;
 
-interface TTEntry {
-  depth: number;
-  score: number;
-  flag: number;
-  move: number;
+/** Sinal de "tempo esgotado" (objeto simples: lançar Error captura pilha, o que é caro). */
+const TIME_UP = { timeUp: true };
+
+const yieldToUI = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+/** Memória da busca, alocada uma vez e reaproveitada (a tabela de transposição persiste entre lances). */
+class SearchMemory {
+  ttKey = new Int32Array(TT_SIZE);
+  ttMove = new Int32Array(TT_SIZE);
+  ttScore = new Int32Array(TT_SIZE);
+  ttDepth = new Int8Array(TT_SIZE);
+  ttFlag = new Int8Array(TT_SIZE);
+  killers = new Int32Array((MAX_PLY + 2) * 2);
+  history = new Int32Array(128 * 128);
+  moves = new Int32Array((MAX_PLY + 2) * MAX_MOVES);
+  scores = new Int32Array((MAX_PLY + 2) * MAX_MOVES);
 }
-
-class TimeUp extends Error {}
+let memory: SearchMemory | null = null;
 
 export interface SearchOptions {
   /** Profundidade máxima (em meio-lances). */
@@ -663,142 +753,190 @@ export interface SearchResult {
 export class Searcher {
   nodes = 0;
   private deadline = 0;
-  private tt = new Map<number, TTEntry>();
-  private killers: number[][] = Array.from({ length: MAX_PLY + 1 }, () => [0, 0]);
-  private historyTable = new Int32Array(128 * 128);
+  private rootBest = 0;
+  private m: SearchMemory;
 
-  constructor(private pos: Position) {}
-
-  private checkTime() {
-    if ((this.nodes & 1023) === 0 && Date.now() > this.deadline) throw new TimeUp();
+  constructor(private pos: Position) {
+    memory ??= new SearchMemory();
+    this.m = memory;
+    this.m.killers.fill(0);
+    this.m.history.fill(0);
   }
 
-  private orderMoves(moves: number[], ttMove: number, ply: number): number[] {
+  private ttStore(depth: number, score: number, flag: number, move: number, ply: number) {
+    const m = this.m;
+    const i = this.pos.hash & TT_MASK;
+    // Prefere manter entradas mais profundas da mesma posição.
+    if (m.ttFlag[i] && m.ttKey[i] === this.pos.hash && m.ttDepth[i] > depth && flag !== TT_EXACT) return;
+    // Notas de mate guardadas relativas à posição, não à raiz.
+    if (score > MATE - 1000) score += ply;
+    else if (score < -MATE + 1000) score -= ply;
+    m.ttKey[i] = this.pos.hash;
+    m.ttDepth[i] = depth > 127 ? 127 : depth;
+    m.ttScore[i] = score;
+    m.ttFlag[i] = flag;
+    m.ttMove[i] = move;
+  }
+
+  /** Dá notas para ordenar os lances [base, end). */
+  private scoreMoves(base: number, end: number, ttMove: number, ply: number) {
     const b = this.pos.board;
-    const killers = this.killers[ply] ?? [0, 0];
-    const scored = moves.map((m) => {
+    const mv = this.m.moves;
+    const sc = this.m.scores;
+    const k0 = this.m.killers[ply * 2];
+    const k1 = this.m.killers[ply * 2 + 1];
+    const hist = this.m.history;
+    for (let i = base; i < end; i++) {
+      const m = mv[i];
       let s = 0;
       if (m === ttMove) s = 10_000_000;
       else {
-        const victim = b[moveTo(m)];
-        const promo = movePromo(m);
-        if (victim) s = 1_000_000 + VALUE[pieceType(victim)] * 10 - VALUE[pieceType(b[moveFrom(m)])] / 10;
-        else if (moveFlags(m) & F_EP) s = 1_000_000 + 1000;
+        const victim = b[(m >> 7) & 127];
+        const promo = (m >> 14) & 7;
+        if (victim) s = 1_000_000 + VALUE[victim & 7] * 10 - ((VALUE[b[m & 127] & 7] / 10) | 0);
+        else if ((m >> 17) & F_EP) s = 1_001_000;
         if (promo) s += 900_000 + VALUE[promo];
         if (!s) {
-          if (m === killers[0]) s = 800_000;
-          else if (m === killers[1]) s = 700_000;
-          else s = this.historyTable[moveFrom(m) * 128 + moveTo(m)];
+          if (m === k0) s = 800_000;
+          else if (m === k1) s = 700_000;
+          else s = hist[(m & 127) * 128 + ((m >> 7) & 127)];
         }
       }
-      return { m, s };
-    });
-    scored.sort((a, c) => c.s - a.s);
-    return scored.map((x) => x.m);
+      sc[i] = s;
+    }
+  }
+
+  /** Traz para a posição i o lance de maior nota em [i, end). */
+  private pickBest(i: number, end: number) {
+    const mv = this.m.moves;
+    const sc = this.m.scores;
+    let best = i;
+    for (let j = i + 1; j < end; j++) if (sc[j] > sc[best]) best = j;
+    if (best !== i) {
+      const tm = mv[i];
+      mv[i] = mv[best];
+      mv[best] = tm;
+      const ts = sc[i];
+      sc[i] = sc[best];
+      sc[best] = ts;
+    }
+  }
+
+  private tick() {
+    this.nodes++;
+    if ((this.nodes & 1023) === 0 && Date.now() > this.deadline) throw TIME_UP;
   }
 
   private quiesce(alpha: number, beta: number, ply: number): number {
-    this.nodes++;
-    this.checkTime();
-    const standPat = evaluate(this.pos);
+    this.tick();
+    const pos = this.pos;
+    const standPat = evaluate(pos);
     if (ply >= MAX_PLY) return standPat;
     if (standPat >= beta) return standPat;
     if (standPat > alpha) alpha = standPat;
 
-    const moves = this.orderMoves(this.pos.generate(true), 0, ply);
-    for (const m of moves) {
-      // Poda delta: captura não consegue recuperar a diferença.
-      const victim = this.pos.board[moveTo(m)];
-      const gain = (victim ? VALUE[pieceType(victim)] : 100) + (movePromo(m) ? 800 : 0);
+    const base = ply * MAX_MOVES;
+    const end = pos.genInto(this.m.moves, base, true);
+    this.scoreMoves(base, end, 0, ply);
+    const b = pos.board;
+    for (let i = base; i < end; i++) {
+      this.pickBest(i, end);
+      const m = this.m.moves[i];
+      // Poda delta: a captura não consegue recuperar a diferença.
+      const victim = b[(m >> 7) & 127];
+      const gain = (victim ? VALUE[victim & 7] : 100) + ((m >> 14) & 7 ? 800 : 0);
       if (standPat + gain + 200 < alpha) continue;
-      if (!this.pos.make(m)) continue;
+      if (!pos.make(m)) continue;
       const score = -this.quiesce(-beta, -alpha, ply + 1);
-      this.pos.unmake();
+      pos.unmake();
       if (score >= beta) return score;
       if (score > alpha) alpha = score;
     }
     return alpha;
   }
 
-  private search(depth: number, alpha: number, beta: number, ply: number): number {
+  private search(depth: number, alpha: number, beta: number, ply: number, allowNull: boolean): number {
     const pos = this.pos;
     if (ply > 0 && (pos.halfmove >= 100 || pos.isRepetition())) return 0;
     const inCheck = pos.inCheck();
     if (inCheck && ply < MAX_PLY) depth++;
     if (depth <= 0) return this.quiesce(alpha, beta, ply);
+    this.tick();
+    if (ply >= MAX_PLY) return evaluate(pos);
 
-    this.nodes++;
-    this.checkTime();
-
+    const m = this.m;
     const alphaOrig = alpha;
-    const entry = this.tt.get(pos.hash);
+    const ti = pos.hash & TT_MASK;
     let ttMove = 0;
-    if (entry) {
-      ttMove = entry.move;
-      if (ply > 0 && entry.depth >= depth) {
-        if (entry.flag === TT_EXACT) return entry.score;
-        if (entry.flag === TT_LOWER && entry.score >= beta) return entry.score;
-        if (entry.flag === TT_UPPER && entry.score <= alpha) return entry.score;
+    if (m.ttFlag[ti] && m.ttKey[ti] === pos.hash) {
+      ttMove = m.ttMove[ti];
+      if (ply > 0 && m.ttDepth[ti] >= depth) {
+        let s = m.ttScore[ti];
+        if (s > MATE - 1000) s -= ply;
+        else if (s < -MATE + 1000) s += ply;
+        const f = m.ttFlag[ti];
+        if (f === TT_EXACT) return s;
+        if (f === TT_LOWER && s >= beta) return s;
+        if (f === TT_UPPER && s <= alpha) return s;
       }
     }
 
-    // Null move pruning (fora de xeque, com material suficiente).
-    if (!inCheck && ply > 0 && depth >= 3 && beta < MATE - 1000 && this.hasPieces()) {
-      const ep = pos.ep;
-      const prevHash = pos.hash;
-      pos.side = (pos.side ^ 1) as Color;
-      pos.hash ^= Z_SIDE ^ (ep !== -1 ? Z_EP[ep] : 0);
-      pos.ep = -1;
-      pos.history.push(pos.hash);
-      let score: number;
-      try {
-        score = -this.search(depth - 3, -beta, -beta + 1, ply + 1);
-      } finally {
-        pos.history.pop();
-        pos.ep = ep;
-        pos.hash = prevHash;
-        pos.side = (pos.side ^ 1) as Color;
-      }
+    // Poda de lance nulo (fora de xeque, com material suficiente).
+    if (allowNull && !inCheck && ply > 0 && depth >= 3 && beta < MATE - 1000 && this.hasPieces()) {
+      pos.makeNull();
+      const score = -this.search(depth - 3, -beta, -beta + 1, ply + 1, false);
+      pos.unmakeNull();
       if (score >= beta) return beta;
     }
 
-    const moves = this.orderMoves(pos.generate(), ttMove, ply);
+    const base = ply * MAX_MOVES;
+    const end = pos.genInto(m.moves, base, false);
+    this.scoreMoves(base, end, ttMove, ply);
+    const b = pos.board;
     let best = -INF;
     let bestMove = 0;
     let legal = 0;
-    for (const m of moves) {
-      if (!pos.make(m)) continue;
+    for (let i = base; i < end; i++) {
+      this.pickBest(i, end);
+      const mv = m.moves[i];
+      const quiet = !b[(mv >> 7) & 127] && !((mv >> 14) & 7) && !((mv >> 17) & F_EP);
+      if (!pos.make(mv)) continue;
       legal++;
       let score: number;
-      try {
-        score = -this.search(depth - 1, -beta, -alpha, ply + 1);
-      } finally {
-        pos.unmake();
+      if (legal === 1) {
+        score = -this.search(depth - 1, -beta, -alpha, ply + 1, true);
+      } else {
+        // Redução de lances tardios: lances quietos no fim da lista quase nunca são os melhores.
+        const reduce =
+          depth >= 3 && legal > 3 && quiet && !inCheck && mv !== m.killers[ply * 2] && mv !== m.killers[ply * 2 + 1]
+            ? 1
+            : 0;
+        score = -this.search(depth - 1 - reduce, -alpha - 1, -alpha, ply + 1, true);
+        if (score > alpha && reduce) score = -this.search(depth - 1, -alpha - 1, -alpha, ply + 1, true);
+        if (score > alpha && score < beta) score = -this.search(depth - 1, -beta, -alpha, ply + 1, true);
       }
+      pos.unmake();
       if (score > best) {
         best = score;
-        bestMove = m;
+        bestMove = mv;
+        if (ply === 0) this.rootBest = mv;
       }
       if (score > alpha) alpha = score;
       if (alpha >= beta) {
-        const quiet = !pos.board[moveTo(m)] && !movePromo(m) && !(moveFlags(m) & F_EP);
         if (quiet && ply <= MAX_PLY) {
-          const k = this.killers[ply];
-          if (k[0] !== m) {
-            k[1] = k[0];
-            k[0] = m;
+          const k = ply * 2;
+          if (m.killers[k] !== mv) {
+            m.killers[k + 1] = m.killers[k];
+            m.killers[k] = mv;
           }
-          this.historyTable[moveFrom(m) * 128 + moveTo(m)] += depth * depth;
+          m.history[(mv & 127) * 128 + ((mv >> 7) & 127)] += depth * depth;
         }
         break;
       }
     }
 
     if (legal === 0) return inCheck ? -MATE + ply : 0;
-
-    const flag = best <= alphaOrig ? TT_UPPER : best >= beta ? TT_LOWER : TT_EXACT;
-    if (this.tt.size > 400_000) this.tt.clear();
-    this.tt.set(pos.hash, { depth, score: best, flag, move: bestMove });
+    this.ttStore(depth, best, best <= alphaOrig ? TT_UPPER : best >= beta ? TT_LOWER : TT_EXACT, bestMove, ply);
     return best;
   }
 
@@ -806,59 +944,113 @@ export class Searcher {
     const b = this.pos.board;
     const side = this.pos.side;
     for (let sq = 0; sq < 128; sq++) {
-      if (sq & 0x88) continue;
+      if (sq & 0x88) {
+        sq += 7;
+        continue;
+      }
       const p = b[sq];
-      if (p && pieceColor(p) === side) {
-        const t = pieceType(p);
+      if (p && p >> 3 === side) {
+        const t = p & 7;
         if (t !== PAWN && t !== KING) return true;
       }
     }
     return false;
   }
 
-  /** Aprofundamento iterativo; devolve o melhor lance da última iteração completa. */
-  think({ depth, timeMs }: SearchOptions): SearchResult {
+  /** Executa uma iteração; em caso de tempo esgotado, restaura a posição e devolve null. */
+  private iterate(d: number): number | null {
+    const sp = this.pos.stackDepth();
+    try {
+      return this.search(d, -INF, INF, 0, true);
+    } catch (e) {
+      if (e !== TIME_UP) throw e;
+      this.pos.rewind(sp);
+      return null;
+    }
+  }
+
+  private begin(timeMs: number) {
     this.nodes = 0;
+    this.rootBest = 0;
     this.deadline = Date.now() + timeMs;
     const legal = this.pos.legalMoves();
+    return legal;
+  }
+
+  /** Aprofundamento iterativo; devolve o melhor lance da última iteração completa. */
+  think({ depth, timeMs }: SearchOptions): SearchResult {
+    const legal = this.begin(timeMs);
     if (legal.length === 0) return { move: 0, score: 0, depth: 0, nodes: 0 };
     let result: SearchResult = { move: legal[0], score: 0, depth: 0, nodes: 0 };
     if (legal.length === 1) return { ...result, depth: 1 };
-
     for (let d = 1; d <= depth; d++) {
-      try {
-        const score = this.search(d, -INF, INF, 0);
-        const entry = this.tt.get(this.pos.hash);
-        if (entry?.move) result = { move: entry.move, score, depth: d, nodes: this.nodes };
-        if (Math.abs(score) > MATE - 100) break; // mate encontrado
-      } catch (e) {
-        if (e instanceof TimeUp) break;
-        throw e;
-      }
+      const score = this.iterate(d);
+      if (score === null) break;
+      if (this.rootBest) result = { move: this.rootBest, score, depth: d, nodes: this.nodes };
+      if (Math.abs(score) > MATE - 100) break;
     }
     result.nodes = this.nodes;
     return result;
   }
 
+  /** Igual a think(), mas devolve o controle à interface entre as iterações. */
+  async thinkAsync({ depth, timeMs }: SearchOptions): Promise<SearchResult> {
+    const legal = this.begin(timeMs);
+    if (legal.length === 0) return { move: 0, score: 0, depth: 0, nodes: 0 };
+    let result: SearchResult = { move: legal[0], score: 0, depth: 0, nodes: 0 };
+    if (legal.length === 1) return { ...result, depth: 1 };
+    for (let d = 1; d <= depth; d++) {
+      await yieldToUI();
+      if (Date.now() > this.deadline) break;
+      const score = this.iterate(d);
+      if (score === null) break;
+      if (this.rootBest) result = { move: this.rootBest, score, depth: d, nodes: this.nodes };
+      if (Math.abs(score) > MATE - 100) break;
+    }
+    result.nodes = this.nodes;
+    return result;
+  }
+
+  private scoreRoot(mv: number, depth: number, timedOut: boolean): { score: number; timedOut: boolean } {
+    const sp = this.pos.stackDepth();
+    this.pos.make(mv);
+    let score = -evaluate(this.pos);
+    if (!timedOut) {
+      try {
+        score = -this.search(depth - 1, -INF, INF, 1, true);
+      } catch (e) {
+        if (e !== TIME_UP) throw e;
+        timedOut = true;
+      }
+    }
+    // Sem tempo, os lances restantes ficam só com a avaliação estática.
+    this.pos.rewind(sp);
+    return { score, timedOut };
+  }
+
   /** Pontua cada lance da raiz com janela cheia (usado pelos níveis "humanos"). */
   scoreRootMoves({ depth, timeMs }: SearchOptions): { move: number; score: number }[] {
-    this.nodes = 0;
-    this.deadline = Date.now() + timeMs;
+    const legal = this.begin(timeMs);
     const out: { move: number; score: number }[] = [];
     let timedOut = false;
-    for (const m of this.pos.legalMoves()) {
-      this.pos.make(m);
-      let score = -evaluate(this.pos);
-      try {
-        // Sem tempo: os lances restantes ficam só com a avaliação estática.
-        if (!timedOut) score = -this.search(depth - 1, -INF, INF, 1);
-      } catch (e) {
-        if (!(e instanceof TimeUp)) throw e;
-        timedOut = true;
-      } finally {
-        this.pos.unmake();
-      }
-      out.push({ move: m, score });
+    for (const mv of legal) {
+      const r = this.scoreRoot(mv, depth, timedOut);
+      timedOut = r.timedOut;
+      out.push({ move: mv, score: r.score });
+    }
+    return out;
+  }
+
+  /** Igual a scoreRootMoves(), devolvendo o controle à interface entre os lances. */
+  async scoreRootMovesAsync({ depth, timeMs }: SearchOptions): Promise<{ move: number; score: number }[]> {
+    const legal = this.begin(timeMs);
+    const out: { move: number; score: number }[] = [];
+    let timedOut = false;
+    for (const mv of legal) {
+      await yieldToUI();
+      const r = this.scoreRoot(mv, depth, timedOut);
+      timedOut = r.timedOut;
+      out.push({ move: mv, score: r.score });
     }
     return out;
   }

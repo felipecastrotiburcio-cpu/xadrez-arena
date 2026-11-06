@@ -112,3 +112,11 @@ test('bônus de sequência de vitórias', async () => {
   const { streakBonus } = await import('./catalog.js');
   assert.deepEqual([1, 2, 3, 4, 5, 10].map(streakBonus), [0, 0, 10, 20, 30, 50]);
 });
+
+test('catálogo do app é igual ao do servidor', async () => {
+  const server = await import('./catalog.js');
+  const app = await import('../../app/src/lib/catalog.ts');
+  assert.deepEqual(app.CATALOG, server.CATALOG);
+  assert.deepEqual(app.DEFAULT_EQUIPPED, server.DEFAULT_EQUIPPED);
+  assert.equal(app.STARTING_COINS, server.STARTING_COINS);
+});

@@ -3,7 +3,8 @@ import { router } from 'expo-router';
 import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Segmented, TimeControlPicker } from '../components/TimeControlPicker';
 import { Avatar, Button, Card, EmptyState, LevelBadge, Screen, SectionTitle } from '../components/ui';
-import { api } from '../lib/api';
+import { api, isLocalMode } from '../lib/api';
+import { ONLINE_ONLY } from '../lib/localDevice';
 import { useAuth } from '../lib/auth';
 import { useSocket } from '../lib/socket';
 import { colors, radius } from '../lib/theme';
@@ -21,7 +22,7 @@ export default function Friends() {
   const [challenge, setChallenge] = useState<PublicUser | null>(null);
 
   const load = useCallback(async () => {
-    if (!token) return;
+    if (!token || isLocalMode()) return;
     try {
       setData(await api('/friends'));
     } catch (e) {
@@ -44,6 +45,13 @@ export default function Friends() {
   };
 
   if (!user) return null;
+  if (isLocalMode()) {
+    return (
+      <Screen>
+        <EmptyState icon="🌐" text={ONLINE_ONLY} />
+      </Screen>
+    );
+  }
   const outgoingInvites = invites.filter((i) => i.from.id === user.id);
   const requestCount = data?.incoming.length ?? 0;
 

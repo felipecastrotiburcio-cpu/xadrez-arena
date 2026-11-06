@@ -42,6 +42,8 @@ export function Finale({ visible, winner, loser, move, moveName, title, subtitle
 
   useEffect(() => {
     if (!visible) return;
+    // Com o tempo da cena fixado por um teste automático, a finalização não fecha sozinha.
+    if ((globalThis as { __xaSceneTime?: number }).__xaSceneTime !== undefined) return;
     const t = setTimeout(() => onDoneRef.current(), durationMs);
     return () => clearTimeout(t);
   }, [visible, durationMs]);

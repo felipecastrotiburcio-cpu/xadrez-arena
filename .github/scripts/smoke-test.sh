@@ -43,6 +43,19 @@ tap() {
   return 1
 }
 board() { dump; python3 "$UI" board "$OUT/ui.xml" | sort; }
+# Toca no último elemento que casa (ex.: botão "Criar conta" abaixo da aba de mesmo nome).
+taplast() {
+  for _ in $(seq 1 10); do
+    dump
+    if xy=$(python3 "$UI" findlast "$OUT/ui.xml" "$1"); then
+      adb shell input tap $xy
+      return 0
+    fi
+    sleep 2
+  done
+  return 1
+}
+seen() { dump; python3 "$UI" find "$OUT/ui.xml" "$1" > /dev/null; }
 alive() { adb shell pidof "$PKG" > /dev/null; }
 
 log "Dispositivo: $(adb shell getprop ro.product.model | tr -d '\r') · Android $(adb shell getprop ro.build.version.release | tr -d '\r') (API $(adb shell getprop ro.build.version.sdk | tr -d '\r'))"
@@ -114,17 +127,48 @@ else
   fail "Botão Desistir não encontrado"
 fi
 
-# 4. Tela de login (modo online sem servidor configurado)
+# 4. Criar conta no aparelho (sem servidor online) e usar a loja
 adb shell am force-stop "$PKG"
 adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 > /dev/null 2>&1
 sleep 10
 if tap 'Criar conta'; then
-  sleep 3; shot 10-login
+  sleep 3
+  shot 10-login
+  if seen '.*neste aparelho.*'; then ok "Login explica que a conta fica salva no aparelho"; else log "⚠️  Aviso de conta local não encontrado"; fi
+  tap 'Criar conta'   # aba "Criar conta"
+  sleep 1
+  USERNAME="robo$(date +%s | tail -c 5)"
   dump
-  if python3 "$UI" find "$OUT/ui.xml" '.*modo online ainda não está disponível.*' > /dev/null; then
-    ok "Login avisa que o servidor online não está configurado"
+  if xy=$(python3 "$UI" edit "$OUT/ui.xml" 0); then adb shell input tap $xy; sleep 1; adb shell input text "$USERNAME"; fi
+  dump
+  if xy=$(python3 "$UI" edit "$OUT/ui.xml" 1); then adb shell input tap $xy; sleep 1; adb shell input text "segredo123"; fi
+  adb shell input keyevent KEYCODE_BACK   # fecha o teclado
+  sleep 1
+  taplast 'Criar conta'
+  CREATED=0
+  for _ in $(seq 1 15); do
+    sleep 2
+    if seen "$USERNAME"; then CREATED=1; break; fi
+  done
+  shot 11-conta-criada
+  if [ "$CREATED" = "1" ]; then ok "Conta '$USERNAME' criada e tela inicial mostra o nome"; else fail "Conta não foi criada"; fi
+  if seen '.*300.*'; then ok "Conta nova começa com 300 moedas"; else log "⚠️  Saldo inicial não encontrado"; fi
+
+  # Loja: comprar "Verde Torneio" (150 moedas)
+  if tap 'Loja'; then
+    sleep 4
+    shot 12-loja
+    if tap '🪙 150'; then
+      sleep 2
+      tap 'comprar' || true   # botão do diálogo de confirmação
+      sleep 3
+      shot 13-compra
+      if seen '.*153.*|.*150.*' && seen '.*Equipado.*'; then ok "Compra na loja feita e item equipado (saldo atualizado)"; else fail "Compra na loja não confirmada"; fi
+    else
+      fail "Item de 150 moedas não encontrado na loja"
+    fi
   else
-    log "⚠️  Aviso de servidor não encontrado na tela de login"
+    fail "Botão 'Loja' não encontrado"
   fi
 else
   fail "Botão 'Criar conta' não encontrado na tela inicial"

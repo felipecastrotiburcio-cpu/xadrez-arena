@@ -1,5 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
+import { ApiError } from './apiError';
+import { localApi } from './localDevice';
 
 const SERVER_KEY = 'xadrez.serverUrl';
 
@@ -9,6 +11,8 @@ const SERVER_KEY = 'xadrez.serverUrl';
  * EXPO_PUBLIC_SERVER_URL.
  */
 function defaultServerUrl() {
+  // "none" força o modo local (contas no aparelho), útil para testes.
+  if (process.env.EXPO_PUBLIC_SERVER_URL === 'none') return '';
   if (process.env.EXPO_PUBLIC_SERVER_URL) return process.env.EXPO_PUBLIC_SERVER_URL;
   const host = Constants.expoConfig?.hostUri?.split(':')[0];
   if (host) return `http://${host}:3001`;
@@ -48,23 +52,20 @@ export async function setServerUrl(url: string) {
 export const getServerUrl = () => serverUrl;
 /** Há um servidor online configurado? (sem ele, só o modo contra a IA funciona) */
 export const isServerConfigured = () => serverUrl !== '';
+/** Sem servidor online, contas, loja e notificações ficam salvas no próprio aparelho. */
+export const isLocalMode = () => !isServerConfigured();
 export const SERVER_NOT_CONFIGURED =
   'O modo online ainda não está disponível: nenhum servidor foi configurado nesta versão. Você pode jogar contra a IA normalmente.';
 export const setAuthToken = (token: string | null) => {
   authToken = token;
 };
 
-export class ApiError extends Error {
-  constructor(
-    message: string,
-    public status: number,
-  ) {
-    super(message);
-  }
-}
+export { ApiError };
 
 export async function api<T = any>(path: string, opts: { method?: string; body?: unknown } = {}): Promise<T> {
-  if (!serverUrl) throw new ApiError(SERVER_NOT_CONFIGURED, 0);
+  if (!serverUrl) {
+    return localApi<T>(path, opts.method ?? (opts.body !== undefined ? 'POST' : 'GET'), opts.body, authToken);
+  }
   const insecure = validateServerUrl(serverUrl);
   if (insecure) throw new ApiError(insecure, 0);
   let res: Response;

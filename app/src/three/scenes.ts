@@ -1,6 +1,23 @@
 import * as THREE from 'three';
 import type { BoardStyle, CharacterStyle } from '../lib/types';
-import { buildAvatar, buildCrown, disposeTree, type Avatar } from './avatar';
+import { Animator, applyPose, type Clip } from './anim';
+import { buildAvatar, buildCrown, disposeTree } from './avatar';
+import {
+  DANCES,
+  FLYING_KICK,
+  GUARD_IDLE,
+  HIT_FALL,
+  IDLE,
+  KO,
+  KO_FAR,
+  LAUNCHED,
+  PUNCH,
+  RUN,
+  SHOCKED,
+  SUMMON,
+  WALK,
+  WAVE,
+} from './clips';
 import type { SceneFactory } from './Scene3D';
 
 // ------------------------------------------------------------------ utilidades
@@ -241,110 +258,6 @@ function digit(n: 6 | 7) {
   return group;
 }
 
-// ------------------------------------------------------------------ animações do boneco
-/** Ciclo de caminhada (ph em radianos). */
-function walk(a: Avatar, ph: number, amount = 1) {
-  a.legL.rotation.x = Math.sin(ph) * 0.7 * amount;
-  a.legR.rotation.x = -Math.sin(ph) * 0.7 * amount;
-  a.armL.rotation.x = -Math.sin(ph) * 0.6 * amount;
-  a.armR.rotation.x = Math.sin(ph) * 0.6 * amount;
-  a.body.position.y = Math.abs(Math.cos(ph)) * 0.12 * amount;
-}
-
-/** Comemorações (τ = segundos desde o início da dança). */
-export function dance(a: Avatar, move: string, tau: number) {
-  const w = PI * 2 * 2; // 2 batidas por segundo
-  const s = Math.sin(tau * w);
-  switch (move) {
-    case '67': {
-      // Mãos para a frente, palmas para cima, subindo e descendo alternadas: "six… seven!"
-      a.armL.rotation.x = -1.35 - s * 0.5;
-      a.armR.rotation.x = -1.35 + s * 0.5;
-      a.armL.rotation.z = -0.3;
-      a.armR.rotation.z = 0.3;
-      a.body.rotation.z = s * 0.06;
-      a.head.rotation.z = -s * 0.15;
-      a.head.rotation.x = Math.abs(s) * 0.12;
-      a.body.position.y = Math.abs(s) * 0.12;
-      break;
-    }
-    case 'spin': {
-      a.armL.rotation.z = -PI / 2 + 0.2;
-      a.armR.rotation.z = PI / 2 - 0.2;
-      a.body.rotation.y = tau * PI * 3;
-      a.body.position.y = Math.abs(Math.sin(tau * PI * 1.5)) * 0.5;
-      a.legL.rotation.z = -0.15;
-      a.legR.rotation.z = 0.15;
-      break;
-    }
-    case 'flex': {
-      const pump = (Math.sin(tau * PI * 2.5) + 1) / 2;
-      a.armL.rotation.z = -2.5 + pump * 0.4;
-      a.armR.rotation.z = 2.5 - pump * 0.4;
-      a.armL.rotation.x = -0.4;
-      a.armR.rotation.x = -0.4;
-      a.torso.scale.setScalar(1 + pump * 0.1);
-      a.body.position.y = pump * 0.1;
-      a.head.rotation.x = -0.15;
-      break;
-    }
-    case 'kick':
-    case 'lightning': {
-      // Polichinelo comemorando.
-      const j = (Math.sin(tau * PI * 3) + 1) / 2;
-      a.armL.rotation.z = -0.3 - j * 2.4;
-      a.armR.rotation.z = 0.3 + j * 2.4;
-      a.legL.rotation.z = -j * 0.35;
-      a.legR.rotation.z = j * 0.35;
-      a.body.position.y = j * 0.7;
-      break;
-    }
-    case 'crown': {
-      a.armL.rotation.z = -2.6 + s * 0.3;
-      a.armR.rotation.z = 2.6 - s * 0.3;
-      a.body.rotation.y = Math.sin(tau * PI) * 0.4;
-      a.body.position.y = Math.abs(s) * 0.15;
-      break;
-    }
-    case 'jamal':
-    default: {
-      // Passinho do Jamal: pra lá e pra cá, pés alternando, braços no contratempo e quadril balançando.
-      const step = Math.sin(tau * w * 0.5);
-      a.body.position.x = step * 0.55;
-      a.body.position.y = Math.abs(s) * 0.22;
-      a.legL.rotation.x = Math.max(0, s) * -0.9;
-      a.legR.rotation.x = Math.max(0, -s) * -0.9;
-      a.legL.rotation.z = -0.12;
-      a.legR.rotation.z = 0.12;
-      a.armL.rotation.x = -s * 0.9;
-      a.armR.rotation.x = s * 0.9;
-      a.armL.rotation.z = -0.35;
-      a.armR.rotation.z = 0.35;
-      a.body.rotation.y = step * 0.45;
-      a.body.rotation.z = -step * 0.1;
-      a.head.rotation.z = s * 0.12;
-    }
-  }
-}
-
-/** Pose parada com respiração e um aceno de vez em quando. */
-function idle(a: Avatar, t: number) {
-  const breath = Math.sin(t * 2.2);
-  a.torso.scale.set(1 + breath * 0.015, 1 + breath * 0.02, 1);
-  a.armL.rotation.z = -0.08 - breath * 0.03;
-  a.head.rotation.y = Math.sin(t * 0.7) * 0.25;
-  a.head.rotation.x = Math.sin(t * 1.1) * 0.05;
-  const cycle = t % 5;
-  if (cycle > 3.4) {
-    const k = Math.sin(((cycle - 3.4) / 1.6) * PI);
-    a.armR.rotation.z = 2.6 * k;
-    a.armR.rotation.x = Math.sin(t * 14) * 0.35 * k;
-  } else {
-    a.armR.rotation.z = 0.08 + breath * 0.03;
-    a.armR.rotation.x = 0;
-  }
-}
-
 // ------------------------------------------------------------------ cenas
 export interface FinaleOptions {
   winner: CharacterStyle;
@@ -354,9 +267,13 @@ export interface FinaleOptions {
   bg: string;
 }
 
+const tmpV = new THREE.Vector3();
+const worldX = (o: THREE.Object3D) => o.getWorldPosition(tmpV).x;
+
 /**
- * Finalização: os dois entram caminhando, o vencedor derruba o rival (soco,
- * voadora ou raio, conforme o movimento) e comemora com o movimento especial
+ * Finalização: os dois entram caminhando, o rival fica em guarda, o vencedor
+ * ataca (soco, voadora ou raios, conforme o movimento), o rival cambaleia e cai,
+ * e o vencedor se vira para a câmera e comemora com o movimento especial
  * enquanto a câmera gira ao redor.
  */
 export const createFinaleScene =
@@ -369,6 +286,8 @@ export const createFinaleScene =
     const wShadow = blobShadow();
     const lShadow = blobShadow();
     scene.add(W.root, L.root, wShadow, lShadow);
+    const wAnim = new Animator(WALK);
+    const lAnim = new Animator(WALK, 0.31);
 
     const fx = burst();
     const bolt = lightning();
@@ -389,116 +308,106 @@ export const createFinaleScene =
       scene.add(six, seven);
     }
 
-    const ATTACK = 1.1;
-    const IMPACT = move === 'lightning' ? 1.85 : 1.55;
-    const DANCE = 2.5;
-    const target = new THREE.Vector3();
+    const style = move === 'kick' ? 'kick' : move === 'lightning' ? 'lightning' : 'punch';
+    const ARRIVE = 1.1;
+    const ATTACK = 1.3;
+    const DASH_END = 1.62;
+    const IMPACT = style === 'kick' ? ATTACK + 0.55 : style === 'lightning' ? 1.75 : DASH_END + 0.34;
+    const TURN = style === 'lightning' ? 2.9 : style === 'kick' ? 2.6 : 2.6;
+    const DANCE = TURN + 0.45;
+    const dance = DANCES[move] ?? DANCES.jamal;
     let shake = 0;
+    const strikes = [1.75, 1.95, 2.15, 3.2, 4.1, 5.0, 5.9, 6.8];
+    const headPos = new THREE.Vector3();
+
+    // Agenda de cada boneco: [a partir de (s), clipe, duração da transição].
+    type Slot = [number, Clip, number];
+    const wPlan: Slot[] = [[0, WALK, 0], [ARRIVE, IDLE, 0.3]];
+    const lPlan: Slot[] = [[0, WALK, 0], [ARRIVE, GUARD_IDLE, 0.3]];
+    if (style === 'punch') {
+      wPlan.push([ATTACK, RUN, 0.15], [DASH_END, PUNCH, 0.1]);
+      lPlan.push([IMPACT - 0.02, HIT_FALL, 0.05], [IMPACT - 0.02 + HIT_FALL.duration, KO, 0.2]);
+    } else if (style === 'kick') {
+      wPlan.push([ATTACK, FLYING_KICK, 0.12]);
+      lPlan.push([IMPACT, LAUNCHED, 0.05], [IMPACT + LAUNCHED.duration, KO_FAR, 0.2]);
+    } else {
+      wPlan.push([ATTACK, SUMMON, 0.2]);
+      lPlan.push([IMPACT, SHOCKED, 0.08], [2.35, HIT_FALL, 0.12], [2.35 + HIT_FALL.duration, KO, 0.2]);
+    }
+    wPlan.push([TURN, IDLE, 0.35], [DANCE, dance, 0.4]);
+    const follow = (anim: Animator, plan: Slot[], t: number) => {
+      let slot = plan[0];
+      for (const s of plan) if (t >= s[0]) slot = s;
+      if (anim.current() !== slot[1]) anim.play(slot[1], slot[0], slot[2]);
+    };
 
     return {
       update(t, dt) {
-        W.resetPose();
-        L.resetPose();
+        follow(wAnim, wPlan, t);
+        follow(lAnim, lPlan, t);
 
-        // ---- entrada caminhando
-        const intro = easeInOut(phase(t, 0, 0.9));
-        let wx = lerp(-10, -2.3, intro);
-        let lx = lerp(10, 2.3, intro);
-        let wy = 0;
-        W.root.rotation.y = PI / 2;
-        L.root.rotation.y = -PI / 2;
-        if (t < 0.9) {
-          walk(W, t * 14);
-          walk(L, t * 14 + 1);
-        } else if (t < ATTACK) {
-          // encarada: o rival se prepara
-          L.armL.rotation.x = L.armR.rotation.x = -0.9;
-          W.head.rotation.x = -0.1;
-        }
-
-        // ---- ataque
-        if (move === 'kick') {
-          const run = easeInOut(phase(t, ATTACK, 0.3));
-          const air = phase(t, ATTACK + 0.2, 0.55);
-          wx = lerp(-2.3, -0.4, run);
-          wy = Math.sin(air * PI) * 1.6;
-          if (t > ATTACK && t < ATTACK + 0.3) walk(W, t * 18);
-          if (air > 0 && air < 1) {
-            W.legR.rotation.x = -1.7 * Math.sin(clamp01(air * 1.6) * PI * 0.6);
-            W.legL.rotation.x = 0.6;
-            W.armL.rotation.x = 0.8;
-            W.armR.rotation.x = 0.8;
-          }
-        } else if (move === 'lightning') {
-          const up = easeOutBack(phase(t, ATTACK, 0.35));
-          W.armL.rotation.z = -2.7 * up;
-          W.armR.rotation.z = 2.7 * up;
-        } else {
-          const dash = easeInOut(phase(t, ATTACK, 0.3));
-          const back = easeInOut(phase(t, IMPACT + 0.25, 0.6));
-          wx = lerp(lerp(-2.3, 0.1, dash), -1.6, back);
-          if (t > ATTACK && t < ATTACK + 0.3) walk(W, t * 18);
-          const punch = phase(t, ATTACK + 0.22, 0.2) - phase(t, IMPACT + 0.2, 0.25);
-          W.armR.rotation.x = -PI / 2 * clamp01(punch);
-          W.armL.rotation.x = 0.5 * clamp01(punch);
-          W.body.rotation.x = 0.15 * clamp01(punch);
-        }
-
-        // ---- rival derrubado
-        const hit = phase(t, IMPACT, move === 'kick' ? 0.9 : 0.55);
-        if (t >= IMPACT) {
-          if (move === 'kick') {
-            lx = 2.3 + easeInOut(hit) * 2.2;
-            L.body.position.y = Math.sin(hit * PI) * 2.6;
-            L.body.rotation.x = -hit * PI * 2.5;
+        // ---- deslocamentos no chão
+        const intro = easeInOut(phase(t, 0, ARRIVE));
+        const lx = lerp(10, 2.4, intro);
+        let wx = lerp(-10, -2.4, intro);
+        if (t >= ARRIVE) {
+          if (style === 'punch') {
+            wx = lerp(-2.4, 0.05, easeInOut(phase(t, ATTACK, DASH_END - ATTACK)));
+            wx = lerp(wx, -1.4, easeInOut(phase(t, IMPACT + 0.45, 0.6)));
+          } else if (style === 'kick') {
+            wx = lerp(-2.4, 0.2, easeInOut(phase(t, ATTACK + 0.18, 0.5)));
+            wx = lerp(wx, -1.2, easeInOut(phase(t, ATTACK + 1.1, 0.6)));
           } else {
-            lx = 2.3 + easeInOut(hit) * 0.8;
-            L.body.rotation.x = (-PI / 2) * easeOutBounce(hit);
-            // apoia as costas no chão enquanto tomba (o tronco tem 1 de espessura)
-            L.body.position.y = 0.5 * Math.sin(-L.body.rotation.x);
+            wx = lerp(-2.4, -1.6, easeInOut(phase(t, ATTACK, 0.8)));
           }
-          if (hit >= 1) {
-            // caído e tonto, de braços abertos
-            L.body.rotation.x = -PI / 2;
-            L.body.position.y = 0.5;
-            L.armL.rotation.z = -1.2;
-            L.armR.rotation.z = 1.2;
-            L.head.rotation.y = Math.sin(t * 6) * 0.4;
-          }
-        } else if (move === 'lightning' && t > 1.3) {
-          L.body.position.x = Math.sin(t * 60) * 0.08; // tremendo com os raios
         }
-        if (move === 'lightning') {
-          const strikes = [1.4, 1.62, 1.82, 2.6, 3.5, 4.4, 5.3];
-          const on = strikes.some((s) => t > s && t < s + 0.12);
-          target.set(lx, 1.5, 0);
-          bolt.strike(target, on);
-          if (on) shake = Math.max(shake, 0.25);
-        } else {
-          bolt.strike(target, false);
-        }
-        const k = (t - IMPACT) / 0.45;
-        fx.group.position.set(lerp(wx, lx, 0.65), 3.4, 0.6);
-        fx.set(clamp01(k));
-        if (t > IMPACT && t < IMPACT + 0.05) shake = 0.45;
 
-        // ---- comemoração
-        const turn = easeInOut(phase(t, DANCE - 0.4, 0.4));
-        W.root.rotation.y = lerp(PI / 2, 0.25, turn);
+        // ---- vira para a câmera e comemora
+        let yaw = lerp(PI / 2, 0.25, easeInOut(phase(t, TURN, 0.45)));
+        let wz = 0;
+        if (move === 'airplane' && t >= DANCE) {
+          // Voa em círculo em volta do ponto entre os dois, inclinando nas curvas.
+          const a = (t - DANCE) * 1.6;
+          const r = easeInOut(phase(t, DANCE, 0.6)) * 2.0;
+          wx = -1.4 + 1.6 - Math.cos(a) * r;
+          wz = Math.sin(a) * r;
+          yaw = lerp(0.25, a + PI, easeInOut(phase(t, DANCE, 0.6)));
+        }
+
+        applyPose(W, wAnim.evaluate(t));
+        applyPose(L, lAnim.evaluate(t));
+        W.root.position.set(wx, 0, wz);
+        W.root.rotation.y = yaw;
+        L.root.position.set(lx, 0, 0);
+        L.root.rotation.y = -PI / 2;
+        scene.updateMatrixWorld();
+
+        // ---- efeitos
+        if (style === 'lightning') {
+          const on = strikes.some((s) => t > s && t < s + 0.11);
+          L.neck.getWorldPosition(headPos);
+          bolt.strike(headPos.clone().setY(Math.max(1, headPos.y)), on);
+          if (on) shake = Math.max(shake, 0.22);
+        } else {
+          bolt.strike(headPos, false);
+        }
+        L.neck.getWorldPosition(headPos);
+        fx.group.position.set(headPos.x - 0.3, Math.max(1.5, headPos.y + 0.4), 0.6);
+        fx.set(clamp01((t - IMPACT) / 0.45));
+        if (t > IMPACT && t < IMPACT + 0.05) shake = style === 'kick' ? 0.6 : 0.45;
+
         if (t > DANCE) {
-          dance(W, move, t - DANCE);
           party.group.visible = true;
           party.update(dt, t);
           if (crown) {
             const c = easeOutBounce(phase(t, DANCE + 0.2, 1.1));
             crown.visible = true;
-            const headPos = new THREE.Vector3();
-            W.head.getWorldPosition(headPos);
-            crown.position.set(headPos.x, lerp(headPos.y + 7, headPos.y + 0.78, c), headPos.z);
+            W.neck.getWorldPosition(headPos);
+            crown.position.set(headPos.x, lerp(headPos.y + 7, headPos.y + 1.45, c), headPos.z);
             crown.rotation.y = t * 1.5;
           }
           if (six && seven) {
-            const beat = Math.sin((t - DANCE) * PI * 4);
+            const beat = Math.sin(((t - DANCE) / DANCES['67'].duration) * PI * 2);
             six.visible = seven.visible = true;
             six.position.set(wx - 1.7, 6.7, 0.6);
             seven.position.set(wx + 1.7, 6.7, 0.6);
@@ -508,24 +417,24 @@ export const createFinaleScene =
           }
         }
 
-        W.root.position.set(wx, wy, 0);
-        L.root.position.set(lx, 0, 0);
-        wShadow.position.x = wx + W.body.position.x;
-        wShadow.scale.setScalar(1 - Math.min(0.6, (wy + W.body.position.y) * 0.25));
-        const lying = L.body.rotation.x < -1;
-        lShadow.position.x = lx + (lying ? 2.4 : 0);
-        lShadow.scale.set(lying ? 2.4 : 1, 1, 1);
+        // ---- sombras acompanham o quadril (e se alongam com o rival deitado)
+        W.pelvis.getWorldPosition(headPos);
+        wShadow.position.set(headPos.x, 0.02, headPos.z);
+        wShadow.scale.setScalar(Math.max(0.45, 1 - W.body.position.y * 0.18));
+        L.spine.getWorldPosition(headPos);
+        const lying = Math.abs(Math.sin(L.body.rotation.x)) > 0.8;
+        lShadow.position.set(lying ? headPos.x : worldX(L.pelvis), 0.02, 0);
+        lShadow.scale.set(lying ? 2.3 : 1, 1, 1);
 
         // ---- câmera: de lado durante a luta, depois gira ao redor do vencedor
-        const orbit = easeInOut(phase(t, DANCE - 0.6, 1.2));
-        const ang = lerp(0, 0.35, orbit) + (t > DANCE ? Math.sin((t - DANCE) * 0.5) * 0.45 : 0);
-        // Durante a luta enquadra de x=-4 a x=9 (incluindo o rival caído); depois aproxima do vencedor.
-        const fightDist = Math.min(24, 5.8 / (Math.tan((camera.fov * PI) / 360) * camera.aspect));
-        // Na dança: largura suficiente para os braços e os números do 67 (±3,6) e altura até ~8.
+        const orbit = easeInOut(phase(t, TURN - 0.2, 1.2));
         const tanHalf = Math.tan((camera.fov * PI) / 360);
+        const fightDist = Math.min(24, 5.8 / (tanHalf * camera.aspect));
         const danceDist = Math.max(11, 3.6 / (tanHalf * camera.aspect), 5 / tanHalf);
-        const focusX = lerp(2.4, wx, orbit);
-        const dist = lerp(fightDist, danceDist, orbit);
+        const ang = lerp(0, 0.35, orbit) + (t > DANCE ? Math.sin((t - DANCE) * 0.5) * 0.45 : 0);
+        const focusX = lerp(2.0, move === 'airplane' ? 0.2 : wx, orbit);
+        // No aviãozinho a câmera se afasta para o círculo inteiro caber no quadro.
+        const dist = lerp(fightDist, danceDist + (move === 'airplane' ? 6 : 0), orbit);
         camera.position.set(focusX + Math.sin(ang) * dist, lerp(4.6, 4.8, orbit), Math.cos(ang) * dist);
         camera.lookAt(focusX, lerp(2.4, 3.4, orbit), 0);
         if (shake > 0) {
@@ -549,7 +458,7 @@ export interface ShowcaseOptions {
   move?: string;
 }
 
-/** Vitrine: o boneco parado (respirando, acenando) ou dançando, com a câmera girando devagar. */
+/** Vitrine: o boneco parado (respirando, acenando de vez em quando) ou dançando, com a câmera girando devagar. */
 export const createShowcaseScene =
   ({ look, board, bg, move }: ShowcaseOptions): SceneFactory =>
   (renderer, width, height) => {
@@ -559,20 +468,29 @@ export const createShowcaseScene =
     const A = buildAvatar(look);
     const shadow = blobShadow();
     scene.add(A.root, shadow);
+    const anim = new Animator(move ? (DANCES[move] ?? IDLE) : IDLE);
+    let nextWave = 2.5;
     const crown = move === 'crown' ? buildCrown('#ffc107', 0) : null;
     if (crown) scene.add(crown);
+    const p = new THREE.Vector3();
     return {
       update(t) {
-        A.resetPose();
-        if (move) dance(A, move, t);
-        else idle(A, t);
+        if (!move) {
+          if (t >= nextWave) {
+            anim.play(WAVE, t, 0.3);
+            nextWave = t + 7;
+          }
+          if (anim.current() === WAVE && anim.finished(t)) anim.play(IDLE, t, 0.4);
+        }
+        applyPose(A, anim.evaluate(t));
+        scene.updateMatrixWorld();
         if (crown) {
-          const hp = new THREE.Vector3();
-          A.head.getWorldPosition(hp);
-          crown.position.set(hp.x, hp.y + 0.78, hp.z);
+          A.neck.getWorldPosition(p);
+          crown.position.set(p.x, p.y + 1.45, p.z);
           crown.rotation.y = t;
         }
-        shadow.position.x = A.body.position.x;
+        A.pelvis.getWorldPosition(p);
+        shadow.position.set(p.x, 0.02, p.z);
         const ang = Math.sin(t * 0.35) * 0.6;
         // Afasta a câmera em telas estreitas para os braços não saírem do quadro.
         const dist = Math.max(10.5, 2.9 / (Math.tan((camera.fov * PI) / 360) * camera.aspect));

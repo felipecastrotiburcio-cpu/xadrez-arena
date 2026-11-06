@@ -54,6 +54,7 @@ jobs:
         run: |
           npx tsc --noEmit
           npm run test:ai
+          npm run test:local
 
       - name: Gerar projeto Android
         working-directory: app
@@ -195,7 +196,7 @@ jobs:
             3. Toque em **Instalar** e depois em **Abrir**.
 
             - Android mínimo: **7.0** · Versão de **teste** (uso pessoal, fora da Play Store)
-            - Funciona **sem internet** no modo contra a IA (5 níveis).
-            - O modo online precisa de um servidor, que **ainda não está configurado** nesta versão.
+            - Funciona **sem internet**: jogo contra a IA (5 níveis), **contas salvas no aparelho**, moedas, **loja**, níveis e notificações.
+            - Partidas online e amigos precisam de um servidor, que **ainda não está configurado** nesta versão.
 
-            Este build foi compilado e testado automaticamente num emulador Android (Pixel 6, Android 14) antes de ser publicado: o app abre, a partida contra a IA funciona, lances ilegais são recusados e a finalização 3D aparece.
+            Este build foi compilado e testado automaticamente num emulador Android (Pixel 6, Android 14) antes de ser publicado: o app abre, a partida contra a IA funciona, lances ilegais são recusados, a finalização 3D aparece, uma conta é criada e um item é comprado na loja.

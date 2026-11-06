@@ -22,8 +22,8 @@ Abra o arquivo baixado, permita "instalar apps desta fonte" se o Android pedir e
 
 O APK é gerado automaticamente pelo GitHub Actions (`.github/workflows/android-apk.yml`) a cada mudança no app: ele compila, **testa num emulador Android** (abre o app, joga contra a IA, confere regras e a finalização 3D) e só então publica em [Releases](https://github.com/felipecastrotiburcio-cpu/xadrez-arena/releases). Para gerar de novo manualmente: aba **Actions → APK Android → Run workflow**.
 
-- **Sem internet:** jogar contra a IA (5 níveis), dicas, desfazer e finalização 3D.
-- **Com servidor:** contas, partidas online, amigos, ranking, loja e notificações. O servidor ainda não está publicado; sem ele essas telas avisam que o modo online não está disponível.
+- **Sem internet:** jogar contra a IA (5 níveis), dicas, desfazer, finalização 3D e **contas salvas no aparelho** com moedas, loja, níveis, ranking do aparelho e notificações.
+- **Com servidor:** partidas online, amigos, convites e ranking global. O servidor ainda não está publicado; sem ele essas telas avisam que precisam do modo online.
 - **Assinatura:** por padrão o APK de teste usa a chave de testes do React Native. Para usar uma chave própria, cadastre em *Settings → Secrets and variables → Actions* os segredos `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` e `ANDROID_KEY_PASSWORD`.
 
 ## Estrutura
@@ -74,6 +74,19 @@ npx expo start     # abra no Expo Go (celular), emulador, ou pressione "w" para 
 
 Em desenvolvimento o app usa automaticamente o IP da máquina que roda o Metro na porta 3001, então funciona direto no celular na mesma rede Wi-Fi. Para outro endereço, use **⚙️ Configurações → Servidor** no app ou defina `EXPO_PUBLIC_SERVER_URL`.
 
+## Contas no aparelho (modo local)
+
+Quando nenhum servidor online está configurado (caso do APK atual), o app usa um **servidor local** (`app/src/lib/localBackend.ts`) que responde às mesmas rotas da API e guarda tudo no celular:
+
+- **Contas** com nome de usuário e senha. A senha é guardada com **PBKDF2-SHA256** (10 mil iterações) e sal aleatório de 16 bytes, gerado por `expo-crypto`. O token da sessão fica no Keychain/Keystore.
+- **Moedas, loja, itens equipados, bônus diário, notificações e histórico** de partidas.
+- **Nível e rating** calculados contra a força de cada nível da IA (Elo).
+- **Ranking** com as contas criadas no aparelho.
+
+Moedas por partida contra a IA: vitória de 15 (nível 1) a 35 (nível 5), empate de 7 a 15, derrota 3, mais o bônus de vitórias seguidas e +100 ao subir de nível. Cada partida paga só uma vez: desfazer e vencer de novo não paga outra vez.
+
+Testes: `cd app && npm run test:local`.
+
 ## Loja e moedas
 
 | Como ganhar | Moedas |
@@ -91,8 +104,10 @@ Categorias (o preço sobe com a raridade: comum → raro → épico → lendári
 - **Tabuleiros** (0 a 3000): Madeira Clássica, Verde Torneio, Nogueira Entalhada, Oceano Profundo, Mármore Carrara, Neon Cyberpunk, Ouro Real, Galáxia. Os mais caros têm moldura e decoração (veios, mármore, grade neon, brilho, estrelas).
 - **Peças** (0 a 2800): Clássicas, Marfim e Ébano, Cristal, Rubi e Esmeralda, Neon, Ouro e Prata, Fogo e Gelo.
 - **Ícones de perfil** (0 a 2500): aparecem nos amigos, no ranking, nos convites e na partida.
-- **Bonecos** (0 a 3000): Recruta (padrão), Estiloso, Descolado, Ninja, Feiticeiro, Rei do Tabuleiro, Astronauta.
-- **Movimentos especiais** (0 a 2200): Passinho do Jamal e Movimento do 67 (grátis), Giro Vitorioso, Muque, Voadora (chute que lança o rival), Coroação (coroa e confete) e Fúria do Trovão (raios no rival).
+- **Bonecos** (0 a 3000): Novato (padrão), Estiloso, Descolado, Atleta, Ninja, Feiticeiro, Rei do Tabuleiro, Robô Dourado, Astronauta.
+- **Movimentos especiais** (0 a 2200): Passinho do Jamal e Movimento do 67 (grátis), Giro Vitorioso, Aviãozinho, Dança do Robô, Muque, Voadora (chute que lança o rival), Mortal para Trás, Coroação (coroa e confete) e Fúria do Trovão (raios no rival).
+
+O catálogo tem 51 itens e existe em duas cópias idênticas: `server/src/catalog.ts` e `app/src/lib/catalog.ts` (usada no modo local). Um teste do servidor falha se as duas divergirem.
 
 O servidor é a fonte da verdade: confere o saldo, quem tem cada item e o que está equipado. O catálogo fica em `server/src/catalog.ts` e o app recebe dele os preços e os visuais.
 
@@ -107,7 +122,10 @@ Em vitória ou derrota (online ou contra a IA), antes do resumo aparece uma cena
 | Movimento | Comemoração |
 |---|---|
 | Passinho do Jamal | pra lá e pra cá, pés alternando, quadril e braços no contratempo |
-| Movimento do 67 | mãos à frente subindo e descendo alternadas, com "6" e "7" em blocos luminosos 3D |
+| Movimento do 67 | antebraços à frente, palmas para cima, subindo e descendo alternados, com "6" e "7" em blocos luminosos 3D |
+| Aviãozinho | braços abertos como asas, voando em círculo e inclinando nas curvas |
+| Dança do Robô | poses travadas (muda de uma vez e segura), cotovelos em 90° |
+| Mortal para Trás | agacha, salta, gira 360° encolhido e aterrissa amortecendo |
 | Giro Vitorioso | giro com braços abertos |
 | Muque | braços para cima "mostrando o muque" |
 | Voadora | salto com chute que lança o rival, depois polichinelos |
@@ -115,6 +133,8 @@ Em vitória ou derrota (online ou contra a IA), antes do resumo aparece uma cena
 | Fúria do Trovão | raios em zigue-zague com clarão atingem o rival |
 
 Em empate a cena não aparece. O botão "Pular" encerra a cena. Na loja, cada movimento tem prévia em 3D e a aba **Bonecos** tem um provador 3D.
+
+**Como a animação funciona** (`app/src/three/anim.ts` e `clips.ts`): o boneco tem esqueleto articulado (pelve, coluna, pescoço, ombros, **cotovelos**, quadris e **joelhos**). Cada movimento é uma sequência de poses-chave interpolada por spline Catmull-Rom, com transições suaves entre movimentos. Os golpes usam antecipação (recuar antes), impacto e recuperação. Quem perde recebe o golpe: a cabeça vai para trás, ele cambaleia, os joelhos cedem e ele cai de costas.
 
 **Bonecos**: modelados em blocos (cabeça, tronco, braços e pernas arredondados, com sombreamento cartoon). O padrão, *Novato*, tem cabeça e braços amarelos, camisa azul e calça verde. Os acessórios são peças 3D (boné, cabelo, cartola, coroa, faixa ninja, capacete de astronauta) e há cinco rostos (sorriso, risada, óculos escuros, máscara, visor).
 
@@ -167,6 +187,9 @@ cd app && npm run typecheck
 | Convites | só entre amigos (ou revanche), expiram em 60 s |
 
 ## A IA
+
+O motor foi otimizado para o Hermes (interpretador JavaScript do celular): nada é alocado durante a busca, e há busca PVS com redução de lances tardios. Na mesma profundidade, ficou cerca de 4,7× mais rápido que a versão anterior, e venceu a versão antiga por 6 a 2. No app, a IA calcula em trechos (a tela não congela) e "pensa" por um intervalo natural de 0,9 a 1,6 s antes de jogar. As peças deslizam até a casa de destino. Medição: `cd app && npm run bench:ai`.
+
 
 Motor próprio em `app/src/ai/engine.ts` (não usa biblioteca externa): tabuleiro 0x88, hash Zobrist, negamax com poda alfa-beta, aprofundamento iterativo, busca de quiescência, tabela de transposição, null-move pruning, ordenação MVV-LVA/killers/history e avaliação com tabelas peça-casa, par de bispos e estrutura de peões. A geração de lances é validada por **perft**.
 

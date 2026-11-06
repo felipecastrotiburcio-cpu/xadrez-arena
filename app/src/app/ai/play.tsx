@@ -3,19 +3,27 @@ import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import { Alert, Platform, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Chess } from 'chess.js';
 import * as Haptics from 'expo-haptics';
-import { ChessBoard, type BoardMove } from '../../components/ChessBoard';
+import { ChessBoard, SLIDE_MS, type BoardMove } from '../../components/ChessBoard';
 import { Finale } from '../../components/Finale';
 import { GameOverModal } from '../../components/GameOverModal';
 import { MoveList } from '../../components/MoveList';
 import { PlayerBar } from '../../components/PlayerBar';
 import { Button, Screen } from '../../components/ui';
-import { AI_LEVELS, findBestMove, suggestMove } from '../../ai';
+import { AI_LEVELS, findBestMoveAsync, suggestMoveAsync } from '../../ai';
 import { recordAiResult } from '../../lib/aiStats';
+import { api, isLocalMode } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import { AI_CHARACTER, useCharacterStyle, useCosmetics, useMyLook } from '../../lib/cosmetics';
 import { materialInfo, resultText } from '../../lib/chessUtils';
 import { colors } from '../../lib/theme';
-import type { Side } from '../../lib/types';
+import type { PrivateUser, Side } from '../../lib/types';
+
+interface Reward {
+  coins: number;
+  ratingChange: number;
+  newRating: number;
+  levelUp: string | null;
+}
 
 function gameResult(chess: Chess): { result: string; reason: string } | null {
   if (chess.isCheckmate()) return { result: chess.turn() === 'w' ? '0-1' : '1-0', reason: 'xeque-mate' };
@@ -26,6 +34,8 @@ function gameResult(chess: Chess): { result: string; reason: string } | null {
   return null;
 }
 
+const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
 const tap = () => {
   if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
 };
@@ -34,7 +44,10 @@ export default function AiGame() {
   const params = useLocalSearchParams<{ level: string; color: Side }>();
   const level = AI_LEVELS.find((l) => l.id === Number(params.level)) ?? AI_LEVELS[1];
   const playerSide: Side = params.color === 'b' ? 'b' : 'w';
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
+  const [reward, setReward] = useState<Reward | null>(null);
+  // Cada partida dá recompensa uma única vez (desfazer e vencer de novo não paga outra vez).
+  const rewarded = useRef(false);
   const look = useMyLook();
   const { get } = useCosmetics();
   const myCharacter = useCharacterStyle(look.equipped.character);
@@ -56,7 +69,6 @@ export default function AiGame() {
     if (result === '1/2-1/2') setShowModal(true);
     else setFinale(true);
   }, []);
-  const gameId = useRef(0);
 
   useEffect(() => {
     navigation.setOptions({ title: `vs ${level.name}` });
@@ -71,15 +83,38 @@ export default function AiGame() {
     setHint(null);
   }, []);
 
+  const report = useCallback(
+    (outcome: 'win' | 'loss' | 'draw', reason: string) => {
+      recordAiResult(level.id, outcome);
+      // Conta do aparelho: moedas e rating (no modo online a IA não paga, pois o servidor não confere a partida).
+      if (!user || !isLocalMode() || rewarded.current) return;
+      rewarded.current = true;
+      const score = outcome === 'win' ? 1 : outcome === 'draw' ? 0.5 : 0;
+      api<{ user: PrivateUser; coins: number; ratingChange: number; levelUp: boolean }>('/ai/result', {
+        body: { level: level.id, score, reason, color: playerSide === 'w' ? 'white' : 'black' },
+      })
+        .then((r) => {
+          setUser(r.user);
+          setReward({
+            coins: r.coins,
+            ratingChange: r.ratingChange,
+            newRating: r.user.rating,
+            levelUp: r.levelUp ? r.user.levelName : null,
+          });
+        })
+        .catch(() => {});
+    },
+    [level.id, playerSide, user, setUser],
+  );
+
   const finishIfOver = useCallback(() => {
     const r = gameResult(chessRef.current);
     if (!r) return false;
     setOver(r);
     announce(r.result);
-    const { outcome } = resultText(r.result, r.reason, playerSide);
-    recordAiResult(level.id, outcome);
+    report(resultText(r.result, r.reason, playerSide).outcome, r.reason);
     return true;
-  }, [level.id, playerSide, announce]);
+  }, [playerSide, announce, report]);
 
   const applyMove = useCallback(
     (m: BoardMove) => {
@@ -98,20 +133,29 @@ export default function AiGame() {
     [sync],
   );
 
-  // Vez da IA: calcula depois de renderizar o lance do jogador.
+  // Vez da IA. Ela "pensa" por um intervalo natural (0,9–1,6 s, variando a cada lance)
+  // e calcula em trechos, para a tela e as animações continuarem fluidas.
   useEffect(() => {
     const c = chessRef.current;
     if (over || c.turn() === playerSide || c.isGameOver()) return;
+    let cancelled = false;
     setThinking(true);
-    const id = gameId.current;
-    const t = setTimeout(() => {
-      const r = findBestMove(c.fen(), { level: level.id, history: fenHistory.current });
-      if (id !== gameId.current) return;
+    const started = Date.now();
+    const minThink = 900 + Math.random() * 700;
+    (async () => {
+      // Deixa a peça do jogador terminar de deslizar antes de começar a calcular.
+      await wait(SLIDE_MS + 60);
+      const r = await findBestMoveAsync(c.fen(), { level: level.id, history: fenHistory.current });
+      const rest = minThink - (Date.now() - started);
+      if (rest > 0) await wait(rest);
+      if (cancelled) return;
       if (r.move) applyMove(r.move);
       setThinking(false);
       finishIfOver();
-    }, 250);
-    return () => clearTimeout(t);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [fen, over, playerSide, level.id, applyMove, finishIfOver]);
 
   const onPlayerMove = (m: BoardMove) => {
@@ -128,24 +172,26 @@ export default function AiGame() {
       c.undo();
       fenHistory.current.pop();
     }
-    if (c.turn() !== playerSide) {
-      // Jogador de pretas desfez tudo: a IA joga de novo.
-      gameId.current++;
-    }
     setOver(null);
     sync();
   };
 
-  const showHint = () => {
-    if (thinking || over) return;
-    const m = suggestMove(chessRef.current.fen(), fenHistory.current);
-    if (m) setHint({ from: m.from, to: m.to });
+  const [hinting, setHinting] = useState(false);
+  const showHint = async () => {
+    if (thinking || over || hinting) return;
+    setHinting(true);
+    const fenNow = chessRef.current.fen();
+    const m = await suggestMoveAsync(fenNow, fenHistory.current);
+    setHinting(false);
+    // Só mostra se a posição não mudou enquanto calculava.
+    if (m && chessRef.current.fen() === fenNow) setHint({ from: m.from, to: m.to });
   };
 
   const restart = () => {
-    gameId.current++;
     chessRef.current = new Chess();
     fenHistory.current = [];
+    rewarded.current = false;
+    setReward(null);
     setOver(null);
     setShowModal(false);
     setFinale(false);
@@ -158,7 +204,7 @@ export default function AiGame() {
       const r = { result: playerSide === 'w' ? '0-1' : '1-0', reason: 'desistência' };
       setOver(r);
       announce(r.result);
-      recordAiResult(level.id, 'loss');
+      report('loss', 'desistência');
     };
     if (Platform.OS === 'web') confirm();
     else Alert.alert('Desistir?', 'A partida contará como derrota.', [
@@ -211,7 +257,7 @@ export default function AiGame() {
       )}
       <View style={styles.actions}>
         <Button small variant="secondary" title="Desfazer" icon="↶" style={styles.action} onPress={undo} disabled={thinking} />
-        <Button small variant="secondary" title="Dica" icon="💡" style={styles.action} onPress={showHint} disabled={thinking || !!over} />
+        <Button small variant="secondary" title="Dica" icon="💡" style={styles.action} onPress={showHint} disabled={thinking || hinting || !!over} loading={hinting} />
         {over ? (
           <Button small title="Nova" icon="↻" style={styles.action} onPress={restart} />
         ) : (
@@ -243,7 +289,19 @@ export default function AiGame() {
         />
       )}
       {text && (
-        <GameOverModal visible={showModal} outcome={text.outcome} title={text.title} subtitle={text.subtitle}>
+        <GameOverModal
+          visible={showModal}
+          outcome={text.outcome}
+          title={text.title}
+          subtitle={text.subtitle}
+          ratingChange={reward?.ratingChange}
+          newRating={reward?.newRating}
+          coins={reward?.coins}
+          levelUp={reward?.levelUp}
+        >
+          {!user && (
+            <Button title="Criar conta e ganhar moedas" variant="gold" onPress={() => router.push('/login')} />
+          )}
           <Button title="Jogar novamente" onPress={restart} />
           <Button title="Analisar tabuleiro" variant="secondary" onPress={() => setShowModal(false)} />
           <Button title="Trocar adversário" variant="ghost" onPress={() => router.back()} />

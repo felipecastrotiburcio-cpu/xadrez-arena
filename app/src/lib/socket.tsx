@@ -1,7 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { router } from 'expo-router';
 import { io, type Socket } from 'socket.io-client';
-import { getServerUrl } from './api';
+import { api, getServerUrl, isLocalMode } from './api';
+import { localEvents } from './localDevice';
 import { useAuth } from './auth';
 import { useToast } from './toast';
 import type { Ack, AppNotification, GameOver, GameState, Invite } from './types';
@@ -55,6 +56,18 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       setActiveGame(null);
       setUnreadNotifications(0);
       return;
+    }
+    // Modo local (sem servidor): não há socket; as notificações vêm do servidor local do aparelho.
+    if (isLocalMode()) {
+      setSocket(null);
+      setConnected(false);
+      api<{ unread: number }>('/notifications')
+        .then((r) => setUnreadNotifications(r.unread))
+        .catch(() => {});
+      return localEvents.onNotification(({ notification, unread }) => {
+        setUnreadNotifications(unread);
+        if (notification.type !== 'game_result' && notification.type !== 'reward') toast(`🔔 ${notification.title}`, 'success');
+      });
     }
     const s = io(getServerUrl(), { auth: { token }, transports: ['websocket'] });
     setSocket(s);

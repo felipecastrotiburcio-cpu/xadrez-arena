@@ -6,7 +6,7 @@ import { SquarePattern } from '../components/ChessBoard';
 import { ChessPiece, type PieceType } from '../components/ChessPiece';
 import { Finale } from '../components/Finale';
 import { Avatar, Button, Card, Coins, Screen } from '../components/ui';
-import { api } from '../lib/api';
+import { api, isLocalMode } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { confirmAction } from '../lib/confirm';
 import { AI_CHARACTER, RARITY, useCharacterStyle, useCosmetics, useMyLook } from '../lib/cosmetics';
@@ -96,7 +96,11 @@ export default function Shop() {
           <Text style={styles.muted}>Bônus de hoje{'\n'}já resgatado ✓</Text>
         )}
       </Card>
-      <Text style={styles.hint}>Ganhe moedas jogando online: vitória 30 · empate 15 · derrota 5 (amistosas valem metade).</Text>
+      <Text style={styles.hint}>
+        {isLocalMode()
+          ? 'Ganhe moedas vencendo a IA: de 15 (nível 1) a 35 (nível 5) por vitória, mais bônus por vitórias seguidas.'
+          : 'Ganhe moedas jogando online: vitória 30 · empate 15 · derrota 5 (amistosas valem metade).'}
+      </Text>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
         {TABS.map((t) => (

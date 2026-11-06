@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CharacterThumb } from '../components/Character';
 import { Button, Coins, LevelBadge, Screen } from '../components/ui';
+import { isLocalMode } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { useCharacterStyle, useMyLook } from '../lib/cosmetics';
 import { levelProgress } from '../lib/levels';
@@ -36,6 +37,16 @@ export default function Home() {
   }
 
   const pendingInvites = invites.filter((i) => i.to.id === user?.id).length;
+  // Sem servidor online, o botão principal leva à IA (que dá moedas para contas do aparelho).
+  const local = isLocalMode();
+  const playTarget = local ? '/ai' : user ? '/play' : '/login';
+  const playSub = local
+    ? user
+      ? 'Contra a IA · ganhe moedas'
+      : 'Contra a IA · crie conta e ganhe moedas'
+    : user
+      ? 'Partida ranqueada online'
+      : 'Entre para jogar online';
   const lp = user ? levelProgress(user.rating) : null;
 
   return (
@@ -125,7 +136,7 @@ export default function Home() {
         )}
 
         <Pressable
-          onPress={() => router.push(user ? '/play' : '/login')}
+          onPress={() => router.push(playTarget)}
           accessibilityRole="button"
           style={({ pressed }) => [pressed && { transform: [{ scale: 0.97 }] }]}
         >
@@ -133,7 +144,7 @@ export default function Home() {
             <Text style={styles.playIcon}>⚔️</Text>
             <View>
               <Text style={styles.playTitle}>JOGAR!</Text>
-              <Text style={styles.playSub}>{user ? 'Partida ranqueada online' : 'Entre para jogar online'}</Text>
+              <Text style={styles.playSub}>{playSub}</Text>
             </View>
           </LinearGradient>
         </Pressable>
@@ -143,16 +154,17 @@ export default function Home() {
           <Tile
             icon="👥"
             title="Amigos"
-            subtitle={pendingInvites ? `${pendingInvites} desafio(s)!` : 'Convide e desafie'}
+            subtitle={local ? '🌐 Requer servidor online' : pendingInvites ? `${pendingInvites} desafio(s)!` : 'Convide e desafie'}
             colors={gradients.friends}
             locked={!user}
+            dimmed={local}
             badge={pendingInvites}
             onPress={() => router.push('/friends')}
           />
           <Tile
             icon="🏆"
             title="Ranking"
-            subtitle="Os melhores"
+            subtitle={local ? 'Contas deste aparelho' : 'Os melhores'}
             colors={gradients.ranking}
             locked={!user}
             onPress={() => router.push('/leaderboard')}
@@ -180,6 +192,7 @@ function Tile({
   locked,
   colors: tileColors,
   badge,
+  dimmed,
 }: {
   icon: string;
   title: string;
@@ -188,6 +201,7 @@ function Tile({
   locked?: boolean;
   colors: readonly [string, string];
   badge?: number;
+  dimmed?: boolean;
 }) {
   return (
     <Pressable
@@ -199,7 +213,7 @@ function Tile({
         colors={tileColors}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={[styles.tile, locked && { opacity: 0.55 }]}
+        style={[styles.tile, (locked || dimmed) && { opacity: 0.55 }]}
       >
         <Text style={styles.tileIcon}>{icon}</Text>
         <Text style={styles.tileTitle}>{title}</Text>

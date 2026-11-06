@@ -70,49 +70,70 @@ export interface FindMoveResult {
   nodes: number;
 }
 
+function prepare(fen: string, history: string[]) {
+  const pos = new Position(fen);
+  if (history.length) pos.history = [...history.map((f) => new Position(f).hash), pos.hash];
+  return pos;
+}
+
+function pickNoisy(scored: { move: number; score: number }[], noise: number, random: () => number) {
+  let best = scored[0];
+  let bestNoisy = -Infinity;
+  for (const s of scored) {
+    const noisy = s.score + (random() * 2 - 1) * noise;
+    if (noisy > bestNoisy) {
+      bestNoisy = noisy;
+      best = s;
+    }
+  }
+  return best;
+}
+
+/** Versão síncrona (testes e scripts). No app use findBestMoveAsync, que não trava a tela. */
 export function findBestMove(fen: string, { level, history = [], random = Math.random }: FindMoveOptions): FindMoveResult {
   const cfg = AI_LEVELS.find((l) => l.id === level) ?? AI_LEVELS[2];
-  const pos = new Position(fen);
-  if (history.length) {
-    const hashes = history.map((f) => new Position(f).hash);
-    pos.history = [...hashes, pos.hash];
-  }
-
+  const pos = prepare(fen, history);
   const legal = pos.legalMoves();
   if (legal.length === 0) return { move: null, score: 0, depth: 0, nodes: 0 };
-
   if (cfg.blunder > 0 && random() < cfg.blunder) {
-    const m = legal[Math.floor(random() * legal.length)];
-    return { move: toAiMove(m), score: 0, depth: 0, nodes: 0 };
+    return { move: toAiMove(legal[Math.floor(random() * legal.length)]), score: 0, depth: 0, nodes: 0 };
   }
-
   const searcher = new Searcher(pos);
-
   if (cfg.noise > 0) {
-    const scored = searcher.scoreRootMoves({ depth: cfg.depth, timeMs: cfg.timeMs });
-    let best = scored[0];
-    let bestNoisy = -Infinity;
-    for (const s of scored) {
-      const noisy = s.score + (random() * 2 - 1) * cfg.noise;
-      if (noisy > bestNoisy) {
-        bestNoisy = noisy;
-        best = s;
-      }
-    }
+    const best = pickNoisy(searcher.scoreRootMoves({ depth: cfg.depth, timeMs: cfg.timeMs }), cfg.noise, random);
     return { move: toAiMove(best.move), score: best.score, depth: cfg.depth, nodes: searcher.nodes };
   }
-
   const r = searcher.think({ depth: cfg.depth, timeMs: cfg.timeMs });
   return { move: r.move ? toAiMove(r.move) : null, score: r.score, depth: r.depth, nodes: r.nodes };
 }
 
-/** Dica para o jogador: lance sugerido pelo motor com busca curta. */
-export function suggestMove(fen: string, history: string[] = []): AiMove | null {
-  const pos = new Position(fen);
-  if (history.length) pos.history = [...history.map((f) => new Position(f).hash), pos.hash];
-  return toAiMoveOrNull(new Searcher(pos).think({ depth: 8, timeMs: 1200 }).move);
+/**
+ * Calcula o lance da IA devolvendo o controle à interface em pequenos trechos,
+ * para animações e toques continuarem respondendo enquanto ela "pensa".
+ */
+export async function findBestMoveAsync(
+  fen: string,
+  { level, history = [], random = Math.random }: FindMoveOptions,
+): Promise<FindMoveResult> {
+  const cfg = AI_LEVELS.find((l) => l.id === level) ?? AI_LEVELS[2];
+  const pos = prepare(fen, history);
+  const legal = pos.legalMoves();
+  if (legal.length === 0) return { move: null, score: 0, depth: 0, nodes: 0 };
+  if (cfg.blunder > 0 && random() < cfg.blunder) {
+    return { move: toAiMove(legal[Math.floor(random() * legal.length)]), score: 0, depth: 0, nodes: 0 };
+  }
+  const searcher = new Searcher(pos);
+  if (cfg.noise > 0) {
+    const scored = await searcher.scoreRootMovesAsync({ depth: cfg.depth, timeMs: cfg.timeMs });
+    const best = pickNoisy(scored, cfg.noise, random);
+    return { move: toAiMove(best.move), score: best.score, depth: cfg.depth, nodes: searcher.nodes };
+  }
+  const r = await searcher.thinkAsync({ depth: cfg.depth, timeMs: cfg.timeMs });
+  return { move: r.move ? toAiMove(r.move) : null, score: r.score, depth: r.depth, nodes: r.nodes };
 }
 
-function toAiMoveOrNull(m: number) {
-  return m ? toAiMove(m) : null;
+/** Dica para o jogador: lance sugerido pelo motor com busca curta. */
+export async function suggestMoveAsync(fen: string, history: string[] = []): Promise<AiMove | null> {
+  const r = await new Searcher(prepare(fen, history)).thinkAsync({ depth: 8, timeMs: 900 });
+  return r.move ? toAiMove(r.move) : null;
 }

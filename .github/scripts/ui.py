@@ -3,6 +3,8 @@
 
   ui.py find  <ui.xml> <regex>   -> imprime "x y" do centro do 1º elemento cujo texto
                                      ou descrição casa (inteiro, sem diferenciar maiúsculas)
+  ui.py findlast <ui.xml> <regex> -> igual, mas o último elemento que casa
+  ui.py edit  <ui.xml> <n>       -> imprime "x y" do n-ésimo campo de texto (0 = primeiro)
   ui.py board <ui.xml>           -> imprime as peças do tabuleiro, ex: "e2:branco:p"
 """
 import re
@@ -19,16 +21,29 @@ def center(bounds):
     return (x1 + x2) // 2, (y1 + y2) // 2
 
 
-def find(path, pattern):
+def find(path, pattern, last=False):
     rx = re.compile(pattern, re.IGNORECASE | re.DOTALL)
+    found = None
     for n in nodes(path):
         for attr in ('text', 'content-desc'):
             value = (n.get(attr) or '').strip()
             if value and rx.fullmatch(value):
-                x, y = center(n.get('bounds'))
-                print(x, y)
-                return 0
+                found = center(n.get('bounds'))
+                if not last:
+                    print(*found)
+                    return 0
+    if found:
+        print(*found)
+        return 0
     return 1
+
+
+def edit(path, index):
+    fields = [n for n in nodes(path) if n.get('class') == 'android.widget.EditText']
+    if index >= len(fields):
+        return 1
+    print(*center(fields[index].get('bounds')))
+    return 0
 
 
 def board(path):
@@ -42,4 +57,8 @@ def board(path):
 
 if __name__ == '__main__':
     cmd = sys.argv[1]
-    sys.exit(find(sys.argv[2], sys.argv[3]) if cmd == 'find' else board(sys.argv[2]))
+    if cmd == 'board':
+        sys.exit(board(sys.argv[2]))
+    if cmd == 'edit':
+        sys.exit(edit(sys.argv[2], int(sys.argv[3])))
+    sys.exit(find(sys.argv[2], sys.argv[3], last=(cmd == 'findlast')))

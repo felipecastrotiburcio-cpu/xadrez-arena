@@ -148,6 +148,8 @@ export interface GameSummary {
   id: string;
   color: 'white' | 'black';
   opponent: PublicUser | null;
+  /** Nome do adversário quando não é um jogador (ex.: IA). */
+  opponentName?: string;
   result: string;
   outcome: 'win' | 'loss' | 'draw';
   reason: string;

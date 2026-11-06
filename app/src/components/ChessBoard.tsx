@@ -1,7 +1,7 @@
-import { memo, useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Easing, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Chess, type Square } from 'chess.js';
-import { ChessPiece } from './ChessPiece';
+import { ChessPiece, type PieceType } from './ChessPiece';
 import { colors } from '../lib/theme';
 import type { BoardStyle, PieceStyle, Side } from '../lib/types';
 
@@ -59,7 +59,9 @@ function ChessBoardBase({ fen, size: outerSize, orientation, movableColor, lastM
 
   const sq = size / 8;
 
-  const handlePress = (square: Square) => {
+  // O handler muda a cada render; as casas recebem uma função estável que lê a versão atual.
+  const handlerRef = useRef<(square: Square) => void>(() => {});
+  handlerRef.current = (square: Square) => {
     if (!canMove) return;
     const target = targets.get(square);
     if (selected && target) {
@@ -75,6 +77,16 @@ function ChessBoardBase({ fen, size: outerSize, orientation, movableColor, lastM
     if (piece && piece.color === turn && square !== selected) setSelected(square);
     else setSelected(null);
   };
+  const onPressSquare = useCallback((square: Square) => handlerRef.current(square), []);
+
+  // Anima só lances novos (não ao desfazer): compara o número de meio-lances.
+  const ply = plyOf(fen);
+  const prevPly = useRef(ply);
+  const animate = ply > prevPly.current;
+  useEffect(() => {
+    prevPly.current = ply;
+  }, [ply]);
+  const moving = lastMove ? chess.get(lastMove.to as Square) : null;
 
   const ranks = orientation === 'w' ? [8, 7, 6, 5, 4, 3, 2, 1] : [1, 2, 3, 4, 5, 6, 7, 8];
   const files = orientation === 'w' ? FILES.split('') : FILES.split('').reverse();
@@ -95,56 +107,47 @@ function ChessBoardBase({ fen, size: outerSize, orientation, movableColor, lastM
         <View key={rank} style={styles.row}>
           {files.map((file, fi) => {
             const square = `${file}${rank}` as Square;
-            const light = (FILES.indexOf(file) + rank) % 2 === 1;
             const piece = chess.get(square);
             const target = targets.get(square);
-            const isLast = lastMove && (lastMove.from === square || lastMove.to === square);
-            const isHint = hint && (hint.from === square || hint.to === square);
             return (
-              <Pressable
+              <BoardSquare
                 key={square}
-                onPress={() => handlePress(square)}
-                accessibilityLabel={`${square}${piece ? ` ${piece.color === 'w' ? 'branco' : 'preto'} ${piece.type}` : ''}`}
-                style={{ width: sq, height: sq, backgroundColor: light ? boardStyle.light : boardStyle.dark, overflow: 'hidden' }}
-              >
-                <SquarePattern style={boardStyle} index={FILES.indexOf(file) * 8 + rank} size={sq} light={light} />
-                {isLast && <View style={[StyleSheet.absoluteFill, { backgroundColor: boardStyle.highlight }]} />}
-                {isHint && <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.hint }]} />}
-                {selected === square && <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.selected }]} />}
-                {checkSquare === square && (
-                  <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.check, borderRadius: sq / 2 }]} />
-                )}
-                {fi === 0 && (
-                  <Text style={[styles.coord, styles.rankCoord, { color: light ? boardStyle.coord.light : boardStyle.coord.dark }]}>
-                    {rank}
-                  </Text>
-                )}
-                {ri === 7 && (
-                  <Text style={[styles.coord, styles.fileCoord, { color: light ? boardStyle.coord.light : boardStyle.coord.dark }]}>
-                    {file}
-                  </Text>
-                )}
-                {piece && (
-                  <View style={[StyleSheet.absoluteFill, styles.pieceBox]} pointerEvents="none">
-                    <ChessPiece type={piece.type} color={piece.color} style={pieceStyle} size={sq} />
-                  </View>
-                )}
-                {target &&
-                  (target.capture ? (
-                    <View style={[styles.captureRing, { borderRadius: sq / 2, borderWidth: sq * 0.08 }]} />
-                  ) : (
-                    <View
-                      style={[
-                        styles.dot,
-                        { width: sq * 0.3, height: sq * 0.3, borderRadius: sq, left: sq * 0.35, top: sq * 0.35 },
-                      ]}
-                    />
-                  ))}
-              </Pressable>
+                square={square}
+                light={(FILES.indexOf(file) + rank) % 2 === 1}
+                pieceType={piece ? piece.type : null}
+                pieceColor={piece ? piece.color : null}
+                hidePiece={!!moving && lastMove?.to === square}
+                last={!!lastMove && (lastMove.from === square || lastMove.to === square)}
+                hinted={!!hint && (hint.from === square || hint.to === square)}
+                selected={selected === square}
+                check={checkSquare === square}
+                target={!target ? 0 : target.capture ? 2 : 1}
+                rankLabel={fi === 0 ? String(rank) : ''}
+                fileLabel={ri === 7 ? file : ''}
+                sq={sq}
+                boardStyle={boardStyle}
+                pieceStyle={pieceStyle}
+                onPressSquare={onPressSquare}
+              />
             );
           })}
         </View>
       ))}
+
+      {/* A peça do último lance desliza da casa de origem até a de destino. */}
+      {lastMove && moving && (
+        <MovingPiece
+          key={`${lastMove.from}${lastMove.to}${ply}`}
+          from={lastMove.from}
+          to={lastMove.to}
+          pieceType={moving.type}
+          pieceColor={moving.color}
+          animate={animate}
+          orientation={orientation}
+          sq={sq}
+          pieceStyle={pieceStyle}
+        />
+      )}
 
       {promotion && (
         <Pressable style={styles.promoOverlay} onPress={() => setPromotion(null)}>
@@ -169,6 +172,131 @@ function ChessBoardBase({ fen, size: outerSize, orientation, movableColor, lastM
 }
 
 export const ChessBoard = memo(ChessBoardBase);
+
+/** Duração da animação de deslizar a peça (ms). */
+export const SLIDE_MS = 230;
+
+/** Número de meio-lances já jogados, a partir do FEN. */
+function plyOf(fen: string) {
+  const parts = fen.split(' ');
+  return (Number(parts[5]) - 1) * 2 + (parts[1] === 'b' ? 1 : 0);
+}
+
+const col = (square: string, orientation: Side) => {
+  const f = FILES.indexOf(square[0]);
+  return orientation === 'w' ? f : 7 - f;
+};
+const row = (square: string, orientation: Side) => {
+  const r = Number(square[1]);
+  return orientation === 'w' ? 8 - r : r - 1;
+};
+
+interface SquareProps {
+  square: Square;
+  light: boolean;
+  pieceType: string | null;
+  pieceColor: Side | null;
+  hidePiece: boolean;
+  last: boolean;
+  hinted: boolean;
+  selected: boolean;
+  check: boolean;
+  /** 0 = nada, 1 = casa livre de destino, 2 = captura possível */
+  target: 0 | 1 | 2;
+  rankLabel: string;
+  fileLabel: string;
+  sq: number;
+  boardStyle: BoardStyle;
+  pieceStyle: PieceStyle;
+  onPressSquare: (square: Square) => void;
+}
+
+/** Uma casa do tabuleiro. Memorizada: só redesenha quando algo dela muda. */
+const BoardSquare = memo(function BoardSquare(p: SquareProps) {
+  const { sq, boardStyle, light } = p;
+  const coordColor = light ? boardStyle.coord.light : boardStyle.coord.dark;
+  return (
+    <Pressable
+      onPress={() => p.onPressSquare(p.square)}
+      accessibilityLabel={`${p.square}${p.pieceType ? ` ${p.pieceColor === 'w' ? 'branco' : 'preto'} ${p.pieceType}` : ''}`}
+      style={{ width: sq, height: sq, backgroundColor: light ? boardStyle.light : boardStyle.dark, overflow: 'hidden' }}
+    >
+      <SquarePattern style={boardStyle} index={FILES.indexOf(p.square[0]) * 8 + Number(p.square[1])} size={sq} light={light} />
+      {p.last && <View style={[StyleSheet.absoluteFill, { backgroundColor: boardStyle.highlight }]} />}
+      {p.hinted && <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.hint }]} />}
+      {p.selected && <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.selected }]} />}
+      {p.check && <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.check, borderRadius: sq / 2 }]} />}
+      {!!p.rankLabel && <Text style={[styles.coord, styles.rankCoord, { color: coordColor }]}>{p.rankLabel}</Text>}
+      {!!p.fileLabel && <Text style={[styles.coord, styles.fileCoord, { color: coordColor }]}>{p.fileLabel}</Text>}
+      {p.pieceType && p.pieceColor && !p.hidePiece && (
+        <View style={[StyleSheet.absoluteFill, styles.pieceBox]} pointerEvents="none">
+          <ChessPiece type={p.pieceType as PieceType} color={p.pieceColor} style={p.pieceStyle} size={sq} />
+        </View>
+      )}
+      {p.target === 2 && <View style={[styles.captureRing, { borderRadius: sq / 2, borderWidth: sq * 0.08 }]} />}
+      {p.target === 1 && (
+        <View style={[styles.dot, { width: sq * 0.3, height: sq * 0.3, borderRadius: sq, left: sq * 0.35, top: sq * 0.35 }]} />
+      )}
+    </Pressable>
+  );
+});
+
+/** Peça do último lance, desenhada por cima do tabuleiro e animada (no thread nativo). */
+function MovingPiece({
+  from,
+  to,
+  pieceType,
+  pieceColor,
+  animate,
+  orientation,
+  sq,
+  pieceStyle,
+}: {
+  from: string;
+  to: string;
+  pieceType: string;
+  pieceColor: Side;
+  animate: boolean;
+  orientation: Side;
+  sq: number;
+  pieceStyle: PieceStyle;
+}) {
+  const progress = useRef(new Animated.Value(animate ? 0 : 1)).current;
+  useEffect(() => {
+    if (!animate) return;
+    Animated.timing(progress, {
+      toValue: 1,
+      duration: SLIDE_MS,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: Platform.OS !== 'web',
+    }).start();
+  }, [animate, progress]);
+  const dx = (col(from, orientation) - col(to, orientation)) * sq;
+  const dy = (row(from, orientation) - row(to, orientation)) * sq;
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        styles.pieceBox,
+        {
+          position: 'absolute',
+          width: sq,
+          height: sq,
+          left: col(to, orientation) * sq,
+          top: row(to, orientation) * sq,
+          transform: [
+            { translateX: progress.interpolate({ inputRange: [0, 1], outputRange: [dx, 0] }) },
+            { translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [dy, 0] }) },
+            // A peça "levanta" um pouco no meio do caminho.
+            { scale: progress.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 1.12, 1] }) },
+          ],
+        },
+      ]}
+    >
+      <ChessPiece type={pieceType as PieceType} color={pieceColor} style={pieceStyle} size={sq} />
+    </Animated.View>
+  );
+}
 
 // Pseudo-aleatório determinístico por casa (o desenho não "pisca" a cada render).
 const rand = (n: number) => {

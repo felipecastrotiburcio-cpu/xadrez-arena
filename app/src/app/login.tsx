@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput } from 'react-native';
 import { Segmented } from '../components/TimeControlPicker';
 import { Button, Card, Screen } from '../components/ui';
-import { isServerConfigured, SERVER_NOT_CONFIGURED } from '../lib/api';
+import { isLocalMode } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { colors, radius } from '../lib/theme';
 
@@ -44,10 +44,13 @@ export default function Login() {
             { value: 'register', label: 'Criar conta' },
           ]}
         />
-        {!isServerConfigured() && (
-          <Card style={{ borderColor: colors.accent }}>
-            <Text style={styles.notice}>🌐 {SERVER_NOT_CONFIGURED}</Text>
-            <Button title="Jogar contra a IA" variant="gold" onPress={() => router.replace('/ai')} />
+        {isLocalMode() && (
+          <Card style={{ borderColor: colors.primary }}>
+            <Text style={styles.notice}>
+              📱 Sua conta fica salva <Text style={{ fontWeight: '800' }}>neste aparelho</Text>. Com ela você ganha moedas
+              vencendo a IA, compra itens na loja, sobe de nível e recebe notificações.
+            </Text>
+            <Text style={styles.noticeMuted}>Partidas online e amigos ficam disponíveis quando o servidor online for ativado.</Text>
           </Card>
         )}
         <Card>
@@ -76,12 +79,12 @@ export default function Login() {
             title={mode === 'login' ? 'Entrar' : 'Criar conta'}
             onPress={submit}
             loading={loading}
-            disabled={!username || !password || !isServerConfigured()}
+            disabled={!username || !password}
           />
         </Card>
         {mode === 'register' && (
           <Text style={styles.hint}>
-            Você começa com 1000 pontos (Nível 3 · Amador). Vença partidas ranqueadas para subir até Grande Mestre!
+            Você começa com 1000 pontos (Nível 3 · Amador) e 300 moedas. Vença partidas para subir até Grande Mestre!
           </Text>
         )}
         <Button title="Configurar servidor" variant="ghost" small onPress={() => router.push('/settings')} />
@@ -106,4 +109,5 @@ const styles = StyleSheet.create({
   error: { color: colors.danger, fontSize: 14 },
   hint: { color: colors.textMuted, textAlign: 'center', fontSize: 13 },
   notice: { color: colors.text, fontSize: 15, lineHeight: 21 },
+  noticeMuted: { color: colors.textMuted, fontSize: 13 },
 });

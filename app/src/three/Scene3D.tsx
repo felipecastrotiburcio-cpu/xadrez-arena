@@ -121,7 +121,9 @@ export function Scene3D({
       frame.current = requestAnimationFrame(loop);
       const now = performance.now();
       try {
-        h.update((now - start) / 1000, Math.min(0.05, (now - last) / 1000));
+        // Testes automáticos podem fixar o tempo da cena para capturar quadros exatos.
+        const fixed = (globalThis as { __xaSceneTime?: number }).__xaSceneTime;
+        h.update(fixed ?? (now - start) / 1000, Math.min(0.05, (now - last) / 1000));
         gl.endFrameEXP();
       } catch (e) {
         fail(e);
