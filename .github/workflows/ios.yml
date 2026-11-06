@@ -26,7 +26,7 @@ env:
 jobs:
   build:
     name: Compilar e testar no simulador de iPhone
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
@@ -47,6 +47,15 @@ jobs:
           npx tsc --noEmit
           npm run test:ai
           npm run test:local
+
+      - name: Escolher o Xcode mais novo (Expo SDK 58 precisa do Xcode 26 / Swift 6.2)
+        run: |
+          ls -d /Applications/Xcode*.app
+          X=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          [ -z "$X" ] && X=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          sudo xcode-select -s "$X/Contents/Developer"
+          xcodebuild -version
+          xcrun simctl list runtimes | grep -i ios
 
       - name: Gerar projeto iOS (Xcode + CocoaPods)
         working-directory: app
@@ -143,7 +152,7 @@ jobs:
   testflight:
     name: Enviar para o TestFlight (se configurado)
     needs: build
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 120
     env:
       ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
@@ -170,6 +179,16 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: app/package-lock.json
+
+      - name: Escolher o Xcode mais novo (Expo SDK 58 precisa do Xcode 26 / Swift 6.2)
+        if: steps.keys.outputs.ok == 'true'
+        run: |
+          ls -d /Applications/Xcode*.app
+          X=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          [ -z "$X" ] && X=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          sudo xcode-select -s "$X/Contents/Developer"
+          xcodebuild -version
+          xcrun simctl list runtimes | grep -i ios
 
       - name: Gerar projeto iOS
         if: steps.keys.outputs.ok == 'true'
