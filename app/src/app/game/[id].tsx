@@ -26,7 +26,7 @@ export default function OnlineGame() {
   const { socket, emit, gameCache, connected } = useSocket();
   const toast = useToast();
   const { width } = useWindowDimensions();
-  const boardSize = Math.min(width - 24, 520);
+  const boardSize = Math.min(width - 8, 600);
 
   const [state, setState] = useState<GameState | GameOver | null>(gameCache.get(id) ?? null);
   const [showModal, setShowModal] = useState(isOver(gameCache.get(id) ?? null));
@@ -180,7 +180,7 @@ export default function OnlineGame() {
   const adv = (side: Side) => Math.max(0, side === 'w' ? material.advantage : -material.advantage);
 
   return (
-    <Screen style={{ gap: 8, paddingHorizontal: 12 }}>
+    <Screen style={{ gap: 8, paddingHorizontal: 4 }}>
       <Text style={styles.meta}>
         {state.timeControl.label} · {state.rated ? 'Ranqueada' : 'Amistosa'}
         {!state.clocksRunning && !over ? ' · relógio começa após o 1º lance de cada lado' : ''}

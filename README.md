@@ -87,6 +87,12 @@ Moedas por partida contra a IA: vitória de 15 (nível 1) a 35 (nível 5), empat
 
 Testes: `cd app && npm run test:local`.
 
+## Tabuleiro e sons
+
+- Casa a1 escura (padrão oficial: cada dama começa na casa da sua cor).
+- Tabuleiro ocupa quase toda a largura da tela; as peças ocupam mais da casa.
+- Sons próprios (gerados por `app/scripts/gen-sounds.mjs`): lance, captura, xeque e xeque-mate (acorde com batida grave, diferente do xeque). Liga/desliga em **Configurações**. O app usa `expo-audio` sem permissão de microfone.
+
 ## Loja e moedas
 
 | Como ganhar | Moedas |
@@ -101,13 +107,14 @@ Partidas contra a IA não dão moedas: elas rodam no aparelho e o servidor não 
 
 Categorias (o preço sobe com a raridade: comum → raro → épico → lendário):
 
-- **Tabuleiros** (0 a 3000): Madeira Clássica, Verde Torneio, Nogueira Entalhada, Oceano Profundo, Mármore Carrara, Neon Cyberpunk, Ouro Real, Galáxia. Os mais caros têm moldura e decoração (veios, mármore, grade neon, brilho, estrelas).
-- **Peças** (0 a 2800): Clássicas, Marfim e Ébano, Cristal, Rubi e Esmeralda, Neon, Ouro e Prata, Fogo e Gelo.
+- **Tabuleiros** (0 a 3000): Madeira Clássica, Verde Torneio, Nogueira Entalhada, Oceano Profundo, Gelo Ártico, Confeitaria, Mármore Carrara, Neon Cyberpunk, Fliperama, Lava Vulcânica, Ouro Real, Galáxia. Além das cores, cada um tem **formato de casa** (lisa, ladrilho com rejunte, redonda, em relevo ou de vidro) e **moldura** (filete, ornamentos dourados, rebites ou neon).
+- **Peças** (0 a 2800): cada conjunto tem um **modelo próprio** — Clássicas (Staunton), Marfim e Ébano / Ouro e Prata (medieval: torre com bandeira, cúpulas, coroas com joias), Cristal / Rubi e Esmeralda / Fogo e Gelo (lapidadas), Doces (fofinhas, com rostinho), Robôs (LEDs e antenas), Pixel 8-bits, Neon / Sombras (moderno geométrico).
+- **Prévia antes de comprar:** tabuleiros e peças abrem um tabuleiro grande onde dá para mexer as peças (com som) antes de comprar.
 - **Ícones de perfil** (0 a 2500): aparecem nos amigos, no ranking, nos convites e na partida.
 - **Bonecos** (0 a 3000): Novato (padrão), Estiloso, Descolado, Atleta, Ninja, Feiticeiro, Rei do Tabuleiro, Robô Dourado, Astronauta.
 - **Movimentos especiais** (0 a 2200): Passinho do Jamal e Movimento do 67 (grátis), Giro Vitorioso, Aviãozinho, Dança do Robô, Muque, Voadora (chute que lança o rival), Mortal para Trás, Coroação (coroa e confete) e Fúria do Trovão (raios no rival).
 
-O catálogo tem 51 itens e existe em duas cópias idênticas: `server/src/catalog.ts` e `app/src/lib/catalog.ts` (usada no modo local). Um teste do servidor falha se as duas divergirem.
+O catálogo tem 55 itens e existe em duas cópias idênticas: `server/src/catalog.ts` e `app/src/lib/catalog.ts` (usada no modo local). Um teste do servidor falha se as duas divergirem.
 
 O servidor é a fonte da verdade: confere o saldo, quem tem cada item e o que está equipado. O catálogo fica em `server/src/catalog.ts` e o app recebe dele os preços e os visuais.
 

@@ -53,7 +53,7 @@ export default function AiGame() {
   const myCharacter = useCharacterStyle(look.equipped.character);
   const navigation = useNavigation();
   const { width } = useWindowDimensions();
-  const boardSize = Math.min(width - 24, 520);
+  const boardSize = Math.min(width - 8, 600);
 
   const chessRef = useRef(new Chess());
   const fenHistory = useRef<string[]>([]);
@@ -220,7 +220,7 @@ export default function AiGame() {
   const text = over ? resultText(over.result, over.reason, playerSide) : null;
 
   return (
-    <Screen scroll style={{ gap: 8, paddingHorizontal: 12 }}>
+    <Screen scroll style={{ gap: 8, paddingHorizontal: 4 }}>
       <PlayerBar
         name={level.name}
         subtitle={`~${level.elo}`}

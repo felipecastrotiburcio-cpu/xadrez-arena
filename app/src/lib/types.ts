@@ -34,6 +34,9 @@ export interface BoardStyle {
   pattern: 'none' | 'grain' | 'marble' | 'grid' | 'stars' | 'shine';
   patternColor: string;
   highlight: string;
+  /** Opcionais: catálogos antigos (em cache) não têm. */
+  shape?: 'flat' | 'tiles' | 'round' | 'bevel' | 'glass';
+  frameStyle?: 'plain' | 'line' | 'ornate' | 'rivets' | 'neon';
 }
 
 export interface PieceStyle {
@@ -42,6 +45,7 @@ export interface PieceStyle {
   blackFill: string;
   blackOutline: string;
   glow: number;
+  model?: 'staunton' | 'modern' | 'medieval' | 'crystal' | 'cute' | 'robot' | 'pixel';
 }
 
 export interface AvatarStyle {

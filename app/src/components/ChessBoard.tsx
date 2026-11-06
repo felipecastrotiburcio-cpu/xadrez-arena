@@ -1,8 +1,9 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Chess, type Square } from 'chess.js';
-import { ChessPiece, type PieceType } from './ChessPiece';
+import { ChessPiece, tint, type PieceType } from './ChessPiece';
 import { colors } from '../lib/theme';
+import { playSound, preloadSounds, type BoardSound } from '../lib/sound';
 import type { BoardStyle, PieceStyle, Side } from '../lib/types';
 
 export interface BoardMove {
@@ -22,11 +23,13 @@ interface Props {
   onMove: (move: BoardMove) => void;
   boardStyle: BoardStyle;
   pieceStyle: PieceStyle;
+  /** Tocar sons dos lances (padrão: sim). */
+  sounds?: boolean;
 }
 
 const FILES = 'abcdefgh';
 
-function ChessBoardBase({ fen, size: outerSize, orientation, movableColor, lastMove, hint, onMove, boardStyle, pieceStyle }: Props) {
+function ChessBoardBase({ fen, size: outerSize, orientation, movableColor, lastMove, hint, onMove, boardStyle, pieceStyle, sounds = true }: Props) {
   const size = outerSize - boardStyle.frame * 2;
   const chess = useMemo(() => new Chess(fen), [fen]);
   const [selected, setSelected] = useState<Square | null>(null);
@@ -88,21 +91,27 @@ function ChessBoardBase({ fen, size: outerSize, orientation, movableColor, lastM
   }, [ply]);
   const moving = lastMove ? chess.get(lastMove.to as Square) : null;
 
+  // Sons: lance, captura, xeque e xeque-mate (tocam quando a peça chega à casa).
+  const boardPart = fen.split(' ')[0];
+  const prevBoard = useRef({ ply, pieces: countPieces(boardPart) });
+  useEffect(() => {
+    preloadSounds();
+  }, []);
+  useEffect(() => {
+    const prev = prevBoard.current;
+    const pieces = countPieces(boardPart);
+    prevBoard.current = { ply, pieces };
+    if (!sounds || ply !== prev.ply + 1) return;
+    const kind: BoardSound = chess.isCheckmate() ? 'mate' : chess.inCheck() ? 'check' : pieces < prev.pieces ? 'capture' : 'move';
+    const t = setTimeout(() => playSound(kind), SLIDE_MS * 0.7);
+    return () => clearTimeout(t);
+  }, [ply, boardPart, chess, sounds]);
+
   const ranks = orientation === 'w' ? [8, 7, 6, 5, 4, 3, 2, 1] : [1, 2, 3, 4, 5, 6, 7, 8];
   const files = orientation === 'w' ? FILES.split('') : FILES.split('').reverse();
 
   return (
-    <View
-      style={{
-        width: outerSize,
-        height: outerSize,
-        borderRadius: 6 + boardStyle.frame / 2,
-        borderWidth: boardStyle.frame,
-        borderColor: boardStyle.border,
-        overflow: 'hidden',
-        backgroundColor: boardStyle.border,
-      }}
-    >
+    <BoardFrame style={boardStyle} size={outerSize}>
       {ranks.map((rank, ri) => (
         <View key={rank} style={styles.row}>
           {files.map((file, fi) => {
@@ -113,7 +122,7 @@ function ChessBoardBase({ fen, size: outerSize, orientation, movableColor, lastM
               <BoardSquare
                 key={square}
                 square={square}
-                light={(FILES.indexOf(file) + rank) % 2 === 1}
+                light={isLight(square)}
                 pieceType={piece ? piece.type : null}
                 pieceColor={piece ? piece.color : null}
                 hidePiece={!!moving && lastMove?.to === square}
@@ -167,7 +176,7 @@ function ChessBoardBase({ fen, size: outerSize, orientation, movableColor, lastM
           </View>
         </Pressable>
       )}
-    </View>
+    </BoardFrame>
   );
 }
 
@@ -175,6 +184,11 @@ export const ChessBoard = memo(ChessBoardBase);
 
 /** Duração da animação de deslizar a peça (ms). */
 export const SLIDE_MS = 230;
+
+/** Casa clara? (a1 é escura: cada dama começa na casa da sua cor). */
+export const isLight = (square: string) => (FILES.indexOf(square[0]) + Number(square[1])) % 2 === 0;
+
+const countPieces = (board: string) => board.replace(/[^a-zA-Z]/g, '').length;
 
 /** Número de meio-lances já jogados, a partir do FEN. */
 function plyOf(fen: string) {
@@ -219,20 +233,20 @@ const BoardSquare = memo(function BoardSquare(p: SquareProps) {
     <Pressable
       onPress={() => p.onPressSquare(p.square)}
       accessibilityLabel={`${p.square}${p.pieceType ? ` ${p.pieceColor === 'w' ? 'branco' : 'preto'} ${p.pieceType}` : ''}`}
-      style={{ width: sq, height: sq, backgroundColor: light ? boardStyle.light : boardStyle.dark, overflow: 'hidden' }}
+      style={{ width: sq, height: sq, overflow: 'hidden' }}
     >
-      <SquarePattern style={boardStyle} index={FILES.indexOf(p.square[0]) * 8 + Number(p.square[1])} size={sq} light={light} />
+      <SquareSurface style={boardStyle} index={FILES.indexOf(p.square[0]) * 8 + Number(p.square[1])} size={sq} light={light} />
       {p.last && <View style={[StyleSheet.absoluteFill, { backgroundColor: boardStyle.highlight }]} />}
       {p.hinted && <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.hint }]} />}
       {p.selected && <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.selected }]} />}
       {p.check && <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.check, borderRadius: sq / 2 }]} />}
-      {!!p.rankLabel && <Text style={[styles.coord, styles.rankCoord, { color: coordColor }]}>{p.rankLabel}</Text>}
-      {!!p.fileLabel && <Text style={[styles.coord, styles.fileCoord, { color: coordColor }]}>{p.fileLabel}</Text>}
       {p.pieceType && p.pieceColor && !p.hidePiece && (
         <View style={[StyleSheet.absoluteFill, styles.pieceBox]} pointerEvents="none">
           <ChessPiece type={p.pieceType as PieceType} color={p.pieceColor} style={p.pieceStyle} size={sq} />
         </View>
       )}
+      {!!p.rankLabel && <Text style={[styles.coord, styles.rankCoord, { color: coordColor, fontSize: Math.max(9, sq * 0.2) }]}>{p.rankLabel}</Text>}
+      {!!p.fileLabel && <Text style={[styles.coord, styles.fileCoord, { color: coordColor, fontSize: Math.max(9, sq * 0.2) }]}>{p.fileLabel}</Text>}
       {p.target === 2 && <View style={[styles.captureRing, { borderRadius: sq / 2, borderWidth: sq * 0.08 }]} />}
       {p.target === 1 && (
         <View style={[styles.dot, { width: sq * 0.3, height: sq * 0.3, borderRadius: sq, left: sq * 0.35, top: sq * 0.35 }]} />
@@ -296,6 +310,133 @@ function MovingPiece({
       <ChessPiece type={pieceType as PieceType} color={pieceColor} style={pieceStyle} size={sq} />
     </Animated.View>
   );
+}
+
+/** Moldura do tabuleiro com acabamento (filete, ornamentos, rebites ou neon). */
+export function BoardFrame({ style, size, children }: { style: BoardStyle; size: number; children: React.ReactNode }) {
+  const f = style.frame;
+  const kind = f >= 4 ? style.frameStyle ?? 'plain' : 'plain';
+  const inner = size - f * 2;
+  const deco: React.ReactNode[] = [];
+  if (kind === 'line' || kind === 'ornate') {
+    const inset = f * 0.38;
+    deco.push(
+      <View
+        key="line"
+        pointerEvents="none"
+        style={{
+          position: 'absolute', left: inset, top: inset, right: inset, bottom: inset, borderRadius: 4 + inset / 2,
+          borderWidth: kind === 'ornate' ? 1.5 : 1, borderColor: kind === 'ornate' ? '#f5d27a' : tint(style.border, 0.4),
+        }}
+      />,
+    );
+  }
+  if (kind === 'ornate') {
+    const d = f * 1.5;
+    const spots = [[f / 2, f / 2], [size - f / 2, f / 2], [f / 2, size - f / 2], [size - f / 2, size - f / 2], [size / 2, f / 2], [size / 2, size - f / 2], [f / 2, size / 2], [size - f / 2, size / 2]];
+    spots.forEach(([x, y], i) => {
+      const k = i < 4 ? d : d * 0.6;
+      deco.push(
+        <View
+          key={`o${i}`}
+          pointerEvents="none"
+          style={{
+            position: 'absolute', left: x - k / 2, top: y - k / 2, width: k, height: k, backgroundColor: '#f5d27a',
+            borderWidth: 1, borderColor: '#8a6508', transform: [{ rotate: '45deg' }],
+          }}
+        />,
+      );
+    });
+  }
+  if (kind === 'rivets') {
+    const d = Math.max(3, f * 0.42);
+    for (let i = 0; i <= 8; i++) {
+      const t = f + (inner * i) / 8;
+      for (const [x, y] of [[t, f / 2], [t, size - f / 2], [f / 2, t], [size - f / 2, t]]) {
+        deco.push(
+          <View
+            key={`r${i}-${x}-${y}`}
+            pointerEvents="none"
+            style={{
+              position: 'absolute', left: x - d / 2, top: y - d / 2, width: d, height: d, borderRadius: d,
+              backgroundColor: tint(style.border, 0.45), borderWidth: 0.75, borderColor: tint(style.border, -0.5),
+            }}
+          />,
+        );
+      }
+    }
+  }
+  if (kind === 'neon') {
+    deco.push(
+      <View key="n1" pointerEvents="none" style={{ position: 'absolute', left: 1, top: 1, right: 1, bottom: 1, borderRadius: 6 + f / 2, borderWidth: 1.5, borderColor: style.coord.dark, opacity: 0.8 }} />,
+      <View key="n2" pointerEvents="none" style={{ position: 'absolute', left: f - 2.5, top: f - 2.5, right: f - 2.5, bottom: f - 2.5, borderRadius: 3, borderWidth: 2, borderColor: style.coord.light }} />,
+    );
+  }
+  return (
+    <View style={{ width: size, height: size, borderRadius: 6 + f / 2, backgroundColor: style.border, padding: f, overflow: 'hidden' }}>
+      {deco}
+      <View style={{ width: inner, height: inner, borderRadius: f ? 2 : 0, overflow: 'hidden' }}>{children}</View>
+    </View>
+  );
+}
+
+/** Superfície de uma casa: cor, formato (liso, ladrilho, redondo, relevo, vidro) e decoração. */
+export function SquareSurface({ style, index, size, light }: { style: BoardStyle; index: number; size: number; light: boolean }) {
+  const color = light ? style.light : style.dark;
+  const pattern = <SquarePattern style={style} index={index} size={size} light={light} />;
+  switch (style.shape ?? 'flat') {
+    case 'tiles':
+    case 'round': {
+      const round = style.shape === 'round';
+      const gap = Math.max(1, size * (round ? 0.05 : 0.035));
+      return (
+        <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: style.border }]}>
+          <View
+            style={{
+              position: 'absolute', left: gap, top: gap, right: gap, bottom: gap, backgroundColor: color,
+              borderRadius: size * (round ? 0.32 : 0.12), overflow: 'hidden',
+            }}
+          >
+            {pattern}
+            <View style={{ position: 'absolute', left: '12%', right: '12%', top: '7%', height: '22%', borderRadius: size, backgroundColor: '#ffffff', opacity: round ? 0.28 : 0.12 }} />
+            <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '14%', backgroundColor: '#000000', opacity: 0.12 }} />
+          </View>
+        </View>
+      );
+    }
+    case 'bevel': {
+      const b = Math.max(2, size * 0.085);
+      return (
+        <View
+          pointerEvents="none"
+          style={[
+            StyleSheet.absoluteFill,
+            {
+              backgroundColor: color, overflow: 'hidden', borderWidth: b,
+              borderTopColor: tint(color, 0.35), borderLeftColor: tint(color, 0.22),
+              borderBottomColor: tint(color, -0.3), borderRightColor: tint(color, -0.2),
+            },
+          ]}
+        >
+          {pattern}
+        </View>
+      );
+    }
+    case 'glass':
+      return (
+        <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: color, overflow: 'hidden' }]}>
+          {pattern}
+          <View style={{ position: 'absolute', left: -size * 0.2, top: -size * 0.55, width: size * 1.2, height: size, borderRadius: size, backgroundColor: '#ffffff', opacity: 0.2 }} />
+          <View style={[StyleSheet.absoluteFill, { borderWidth: 1, borderColor: 'rgba(255,255,255,0.5)', borderBottomColor: 'rgba(0,0,0,0.18)', borderRightColor: 'rgba(0,0,0,0.12)' }]} />
+        </View>
+      );
+    default:
+      return (
+        <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: color, overflow: 'hidden' }]}>
+          {pattern}
+        </View>
+      );
+  }
 }
 
 // Pseudo-aleatório determinístico por casa (o desenho não "pisca" a cada render).

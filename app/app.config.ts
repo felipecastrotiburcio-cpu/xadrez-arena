@@ -35,6 +35,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       // Trazidas pelo expo-secure-store para login por digital, recurso que o app não usa.
       'android.permission.USE_BIOMETRIC',
       'android.permission.USE_FINGERPRINT',
+      // O app só toca sons curtos; não grava áudio.
+      'android.permission.RECORD_AUDIO',
     ],
     adaptiveIcon: {
       backgroundColor: '#8b5cff',
@@ -48,6 +50,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   plugins: [
     'expo-router',
     'expo-secure-store',
+    // Sons das jogadas: sem microfone e sem tocar em segundo plano.
+    ['expo-audio', { recordAudioAndroid: false, enableBackgroundPlayback: false, enableBackgroundRecording: false }],
     [
       'expo-splash-screen',
       { image: './assets/splash-icon.png', imageWidth: 220, resizeMode: 'contain', backgroundColor: '#110d2e' },

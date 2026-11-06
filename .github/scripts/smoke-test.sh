@@ -164,6 +164,16 @@ if tap 'Criar conta'; then
       sleep 3
       shot 13-compra
       if seen '.*153.*|.*150.*' && seen '.*Equipado.*'; then ok "Compra na loja feita e item equipado (saldo atualizado)"; else fail "Compra na loja não confirmada"; fi
+      # Prévia de tabuleiro antes de comprar
+      if tap 'Nogueira Entalhada'; then
+        sleep 3
+        shot 14-previa-tabuleiro
+        if seen 'Toque nas peças.*' && seen 'Comprar · .*'; then ok "Prévia do tabuleiro abriu com botão de compra"; else fail "Prévia do tabuleiro não abriu"; fi
+        tap 'Fechar' || true
+        sleep 2
+      else
+        fail "Tabuleiro 'Nogueira Entalhada' não encontrado na loja"
+      fi
     else
       fail "Item de 150 moedas não encontrado na loja"
     fi

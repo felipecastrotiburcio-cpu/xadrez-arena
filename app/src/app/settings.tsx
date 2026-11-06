@@ -1,20 +1,38 @@
 import { useState } from 'react';
 import { router } from 'expo-router';
-import { StyleSheet, Text, TextInput } from 'react-native';
+import { StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { Button, Card, Screen, SectionTitle } from '../components/ui';
 import { api, getServerUrl, setServerUrl } from '../lib/api';
 import { confirmAction } from '../lib/confirm';
 import { useAuth } from '../lib/auth';
 import { colors, radius } from '../lib/theme';
 import { useToast } from '../lib/toast';
+import { isSoundEnabled, playSound, setSoundEnabled } from '../lib/sound';
 
 export default function Settings() {
   const { user, logout } = useAuth();
   const toast = useToast();
   const [url, setUrl] = useState(getServerUrl());
+  const [sound, setSound] = useState(isSoundEnabled());
 
   return (
     <Screen>
+      <SectionTitle>Sons</SectionTitle>
+      <Card>
+        <View style={styles.row}>
+          <Text style={[styles.text, { flex: 1 }]}>Sons das jogadas (lance, captura, xeque e xeque-mate)</Text>
+          <Switch
+            value={sound}
+            onValueChange={async (on) => {
+              setSound(on);
+              await setSoundEnabled(on);
+              if (on) playSound('move');
+            }}
+            trackColor={{ true: colors.primary, false: colors.border }}
+          />
+        </View>
+      </Card>
+
       <SectionTitle>Servidor</SectionTitle>
       <Card>
         <Text style={styles.muted}>
@@ -78,6 +96,7 @@ export default function Settings() {
 }
 
 const styles = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   muted: { color: colors.textMuted, fontSize: 13 },
   text: { color: colors.text, fontSize: 16 },
   input: {

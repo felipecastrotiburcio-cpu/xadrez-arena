@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { CharacterThumb } from '../components/Character';
-import { SquarePattern } from '../components/ChessBoard';
+import { BoardFrame, isLight, SquareSurface } from '../components/ChessBoard';
+import { ItemPreviewModal } from '../components/ItemPreviewModal';
 import { ChessPiece, type PieceType } from '../components/ChessPiece';
 import { Finale } from '../components/Finale';
 import { Avatar, Button, Card, Coins, Screen } from '../components/ui';
@@ -132,7 +133,10 @@ export default function Shop() {
         return (
           <Pressable
             key={item.id}
-            onPress={() => item.type === 'character' && setTrying(item.id)}
+            onPress={() => {
+              if (item.type === 'character') setTrying(item.id);
+              else if (item.type === 'board' || item.type === 'pieces' || item.type === 'move') setPreview(item);
+            }}
             style={[styles.item, { borderColor: equipped ? colors.accent : trying === item.id ? colors.primary : colors.border }]}
           >
             <View style={styles.preview}>
@@ -143,8 +147,8 @@ export default function Shop() {
               <Text style={[styles.rarity, { color: rarity.color }]}>{rarity.label}</Text>
               {item.description ? <Text style={styles.muted}>{item.description}</Text> : null}
               <View style={styles.actions}>
-                {item.type === 'move' && (
-                  <Button small variant="secondary" title="Ver" icon="▶" onPress={() => setPreview(item)} />
+                {(item.type === 'move' || item.type === 'board' || item.type === 'pieces') && (
+                  <Button small variant="secondary" title="Ver" icon={item.type === 'move' ? '▶' : '👁'} onPress={() => setPreview(item)} />
                 )}
                 {equipped ? (
                   <Text style={styles.equipped}>✓ Equipado</Text>
@@ -167,6 +171,23 @@ export default function Shop() {
           </Pressable>
         );
       })}
+
+      {preview && (preview.type === 'board' || preview.type === 'pieces') && (
+        <ItemPreviewModal
+          item={preview}
+          board={look.board}
+          pieces={look.pieces}
+          owned={user.inventory.includes(preview.id)}
+          equipped={user.equipped[preview.type] === preview.id}
+          coins={user.coins}
+          busy={busy === preview.id}
+          onBuy={() =>
+            confirmAction(`Comprar ${preview.name}?`, `Custa ${preview.price} moedas. Você tem ${user.coins}.`, () => run(preview.id, 'buy'), 'Comprar')
+          }
+          onEquip={() => run(preview.id, 'equip')}
+          onClose={() => setPreview(null)}
+        />
+      )}
 
       {preview && preview.type === 'move' && (
         <Finale
@@ -217,25 +238,28 @@ const MINI_PIECES: (null | [string, 'w' | 'b'])[] = [
 ];
 
 function MiniBoard({ board, pieces }: { board: BoardStyle; pieces: PieceStyle }) {
-  const size = 84;
-  const frame = Math.min(board.frame, 5);
-  const sq = (size - frame * 2) / 4;
+  const size = 88;
+  const style = { ...board, frame: Math.min(board.frame, 5) };
+  const sq = (size - style.frame * 2) / 4;
   return (
-    <View
-      style={{ width: size, height: size, borderWidth: frame, borderColor: board.border, borderRadius: 6, overflow: 'hidden', flexDirection: 'row', flexWrap: 'wrap' }}
-    >
-      {MINI_PIECES.map((p, i) => {
-        const light = (Math.floor(i / 4) + i) % 2 === 0;
-        return (
-          <View key={i} style={{ width: sq, height: sq, backgroundColor: light ? board.light : board.dark, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
-            <SquarePattern style={board} index={i * 3 + 7} size={sq} light={light} />
-            {p && (
-              <ChessPiece type={p[0] as PieceType} color={p[1]} style={pieces} size={sq * 0.95} />
-            )}
-          </View>
-        );
-      })}
-    </View>
+    <BoardFrame style={style} size={size}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+        {MINI_PIECES.map((p, i) => {
+          // Canto inferior esquerdo escuro, como no tabuleiro de verdade.
+          const light = isLight(`${'abcd'[i % 4]}${4 - Math.floor(i / 4)}`);
+          return (
+            <View key={i} style={{ width: sq, height: sq, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
+              <SquareSurface style={style} index={i * 3 + 7} size={sq} light={light} />
+              {p && (
+                <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}>
+                  <ChessPiece type={p[0] as PieceType} color={p[1]} style={pieces} size={sq} />
+                </View>
+              )}
+            </View>
+          );
+        })}
+      </View>
+    </BoardFrame>
   );
 }
 
@@ -262,7 +286,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderWidth: 2,
   },
-  preview: { width: 88, minHeight: 88, alignItems: 'center', justifyContent: 'center' },
+  preview: { width: 92, minHeight: 92, alignItems: 'center', justifyContent: 'center' },
   name: { color: colors.text, fontSize: 19, fontFamily: fonts.bold },
   rarity: { fontSize: 12, fontFamily: fonts.black, textTransform: 'uppercase', letterSpacing: 0.5 },
   actions: { flexDirection: 'row', gap: 8, alignItems: 'center', marginTop: 6, flexWrap: 'wrap' },

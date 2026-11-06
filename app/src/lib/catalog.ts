@@ -22,6 +22,10 @@ export interface BoardStyle {
   pattern: 'none' | 'grain' | 'marble' | 'grid' | 'stars' | 'shine';
   patternColor: string;
   highlight: string;
+  /** Formato das casas: lisas, ladrilhos com rejunte, redondas, em relevo ou de vidro. */
+  shape: 'flat' | 'tiles' | 'round' | 'bevel' | 'glass';
+  /** Acabamento da moldura. */
+  frameStyle: 'plain' | 'line' | 'ornate' | 'rivets' | 'neon';
 }
 
 export interface PieceStyle {
@@ -31,6 +35,8 @@ export interface PieceStyle {
   blackOutline: string;
   /** Raio do brilho em volta da peça (0 = contorno simples). */
   glow: number;
+  /** Modelo (formato) das peças — cada conjunto tem um desenho próprio. */
+  model: 'staunton' | 'modern' | 'medieval' | 'crystal' | 'cute' | 'robot' | 'pixel';
 }
 
 export interface AvatarStyle {
@@ -91,80 +97,108 @@ export const CATALOG: ShopItem[] = [
     light: '#efd9b4', dark: '#b5835a', border: '#7a5232', frame: 0,
     coord: { light: '#b5835a', dark: '#efd9b4' }, pattern: 'none', patternColor: 'transparent',
     highlight: 'rgba(240, 210, 60, 0.55)',
+    shape: 'flat', frameStyle: 'plain',
   }),
   board('board_tournament', 'Verde Torneio', 'As cores dos clubes e torneios.', 150, 'comum', {
     light: '#eeeed2', dark: '#769656', border: '#4b6236', frame: 0,
     coord: { light: '#769656', dark: '#eeeed2' }, pattern: 'none', patternColor: 'transparent',
     highlight: 'rgba(246, 246, 105, 0.6)',
+    shape: 'flat', frameStyle: 'plain',
   }),
   board('board_walnut', 'Nogueira Entalhada', 'Madeira nobre com veios e moldura.', 300, 'raro', {
     light: '#d9b48a', dark: '#7b4a2b', border: '#4a2a15', frame: 6,
     coord: { light: '#7b4a2b', dark: '#d9b48a' }, pattern: 'grain', patternColor: 'rgba(60, 30, 10, 0.18)',
     highlight: 'rgba(255, 200, 80, 0.5)',
+    shape: 'bevel', frameStyle: 'line',
   }),
   board('board_ocean', 'Oceano Profundo', 'Tons de azul calmos como o mar.', 450, 'raro', {
     light: '#dbe9f4', dark: '#4a7fa8', border: '#24506f', frame: 6,
     coord: { light: '#4a7fa8', dark: '#dbe9f4' }, pattern: 'shine', patternColor: 'rgba(255,255,255,0.18)',
     highlight: 'rgba(120, 220, 255, 0.55)',
+    shape: 'round', frameStyle: 'line',
   }),
   board('board_marble', 'Mármore Carrara', 'Pedra polida com veios elegantes.', 800, 'epico', {
     light: '#f3f1ec', dark: '#8f9399', border: '#c9a96e', frame: 8,
     coord: { light: '#8f9399', dark: '#f3f1ec' }, pattern: 'marble', patternColor: 'rgba(80, 80, 90, 0.22)',
     highlight: 'rgba(201, 169, 110, 0.6)',
+    shape: 'flat', frameStyle: 'ornate',
   }),
   board('board_neon', 'Neon Cyberpunk', 'Grade luminosa de uma cidade futurista.', 1200, 'epico', {
     light: '#2b1a4a', dark: '#120a24', border: '#ff2fd6', frame: 4,
     coord: { light: '#00f0ff', dark: '#ff2fd6' }, pattern: 'grid', patternColor: 'rgba(0, 240, 255, 0.35)',
     highlight: 'rgba(255, 47, 214, 0.45)',
+    shape: 'tiles', frameStyle: 'neon',
   }),
   board('board_ice', 'Gelo Ártico', 'Cristais de gelo com brilho polar.', 600, 'raro', {
     light: '#eef9ff', dark: '#7fb8d9', border: '#3d7ea6', frame: 6,
     coord: { light: '#3d7ea6', dark: '#eef9ff' }, pattern: 'shine', patternColor: 'rgba(255,255,255,0.4)',
     highlight: 'rgba(0, 200, 255, 0.45)',
+    shape: 'glass', frameStyle: 'line',
   }),
   board('board_lava', 'Lava Vulcânica', 'Rocha negra com rios de lava brilhando.', 1600, 'epico', {
     light: '#3a2320', dark: '#1a0f0e', border: '#ff5a1f', frame: 6,
     coord: { light: '#ffb347', dark: '#ff5a1f' }, pattern: 'grid', patternColor: 'rgba(255, 110, 30, 0.55)',
     highlight: 'rgba(255, 170, 40, 0.5)',
+    shape: 'tiles', frameStyle: 'rivets',
+  }),
+  board('board_candy', 'Confeitaria', 'Casas redondinhas de chiclete e menta.', 700, 'raro', {
+    light: '#ffe3f1', dark: '#ff8cc6', border: '#7ee8c4', frame: 8,
+    coord: { light: '#d6337a', dark: '#fff4fa' }, pattern: 'shine', patternColor: 'rgba(255,255,255,0.35)',
+    highlight: 'rgba(255, 230, 90, 0.6)',
+    shape: 'round', frameStyle: 'line',
+  }),
+  board('board_arcade', 'Fliperama', 'Blocos em relevo de videogame antigo.', 1000, 'epico', {
+    light: '#ffd23f', dark: '#3a86ff', border: '#1b1b3a', frame: 8,
+    coord: { light: '#1b1b3a', dark: '#ffffff' }, pattern: 'none', patternColor: 'transparent',
+    highlight: 'rgba(255, 60, 120, 0.5)',
+    shape: 'bevel', frameStyle: 'rivets',
   }),
   board('board_royal', 'Ouro Real', 'Marfim e ouro dignos de um rei.', 2000, 'lendario', {
     light: '#fff6dc', dark: '#d4a72c', border: '#8a6508', frame: 10,
     coord: { light: '#a37c10', dark: '#fff6dc' }, pattern: 'shine', patternColor: 'rgba(255, 255, 255, 0.35)',
     highlight: 'rgba(255, 120, 60, 0.45)',
+    shape: 'bevel', frameStyle: 'ornate',
   }),
   board('board_galaxy', 'Galáxia', 'Jogue entre as estrelas.', 3000, 'lendario', {
     light: '#3d2c7a', dark: '#140f33', border: '#8f7bff', frame: 8,
     coord: { light: '#c9bfff', dark: '#8f7bff' }, pattern: 'stars', patternColor: 'rgba(255, 255, 255, 0.85)',
     highlight: 'rgba(143, 123, 255, 0.55)',
+    shape: 'round', frameStyle: 'neon',
   }),
 
   // ----------------------------------------------------------- peças
   pieces('pieces_classic', 'Clássicas', 'Brancas e pretas tradicionais.', 0, 'comum', {
-    whiteFill: '#fbf8f1', whiteOutline: '#2a1d10', blackFill: '#1d1a17', blackOutline: 'rgba(255,255,255,0.35)', glow: 0,
+    whiteFill: '#fbf8f1', whiteOutline: '#2a1d10', blackFill: '#1d1a17', blackOutline: 'rgba(255,255,255,0.35)', glow: 0, model: 'staunton',
   }),
   pieces('pieces_ivory', 'Marfim e Ébano', 'Acabamento nobre e discreto.', 150, 'comum', {
-    whiteFill: '#fff3d6', whiteOutline: '#6b4a1f', blackFill: '#2b1b12', blackOutline: '#c9a46b', glow: 0,
+    whiteFill: '#fff3d6', whiteOutline: '#6b4a1f', blackFill: '#2b1b12', blackOutline: '#c9a46b', glow: 0, model: 'medieval',
   }),
   pieces('pieces_crystal', 'Cristal', 'Peças translúcidas de cristal.', 350, 'raro', {
-    whiteFill: '#e6fbff', whiteOutline: '#3aa7c9', blackFill: '#28536b', blackOutline: '#a8e9ff', glow: 2,
+    whiteFill: '#e6fbff', whiteOutline: '#3aa7c9', blackFill: '#28536b', blackOutline: '#a8e9ff', glow: 2, model: 'crystal',
   }),
   pieces('pieces_gems', 'Rubi e Esmeralda', 'Pedras preciosas lapidadas.', 600, 'raro', {
-    whiteFill: '#ff5a6e', whiteOutline: '#5c0010', blackFill: '#1fa86b', blackOutline: '#003d22', glow: 2,
+    whiteFill: '#ff5a6e', whiteOutline: '#5c0010', blackFill: '#1fa86b', blackOutline: '#003d22', glow: 2, model: 'crystal',
   }),
   pieces('pieces_candy', 'Doces', 'Morango e menta, de dar água na boca.', 450, 'raro', {
-    whiteFill: '#ffd1e8', whiteOutline: '#d6337a', blackFill: '#7ee8c4', blackOutline: '#0f7a5a', glow: 2,
+    whiteFill: '#ffd1e8', whiteOutline: '#d6337a', blackFill: '#7ee8c4', blackOutline: '#0f7a5a', glow: 2, model: 'cute',
+  }),
+  pieces('pieces_pixel', 'Pixel 8-bits', 'Peças quadriculadas de videogame retrô.', 500, 'raro', {
+    whiteFill: '#f4f4f4', whiteOutline: '#202040', blackFill: '#3b3b6d', blackOutline: '#0d0d1f', glow: 0, model: 'pixel',
+  }),
+  pieces('pieces_robot', 'Robôs', 'Exército de metal com olhos de LED.', 1100, 'epico', {
+    whiteFill: '#dfe7ef', whiteOutline: '#33424f', blackFill: '#3c4652', blackOutline: '#11161c', glow: 0, model: 'robot',
   }),
   pieces('pieces_neon', 'Neon', 'Peças que brilham no escuro.', 1000, 'epico', {
-    whiteFill: '#e8fdff', whiteOutline: '#00f0ff', blackFill: '#ffd9f6', blackOutline: '#ff2fd6', glow: 8,
+    whiteFill: '#e8fdff', whiteOutline: '#00f0ff', blackFill: '#ffd9f6', blackOutline: '#ff2fd6', glow: 8, model: 'modern',
   }),
   pieces('pieces_shadow', 'Sombras', 'Peças sombrias com brilho violeta.', 1400, 'epico', {
-    whiteFill: '#e9dcff', whiteOutline: '#8b5cff', blackFill: '#2a1747', blackOutline: '#c58bff', glow: 7,
+    whiteFill: '#e9dcff', whiteOutline: '#8b5cff', blackFill: '#2a1747', blackOutline: '#c58bff', glow: 7, model: 'modern',
   }),
   pieces('pieces_gold', 'Ouro e Prata', 'Metais preciosos polidos.', 1800, 'lendario', {
-    whiteFill: '#ffd34d', whiteOutline: '#7a5500', blackFill: '#c7ced6', blackOutline: '#2e3640', glow: 5,
+    whiteFill: '#ffd34d', whiteOutline: '#7a5500', blackFill: '#c7ced6', blackOutline: '#2e3640', glow: 5, model: 'medieval',
   }),
   pieces('pieces_elements', 'Fogo e Gelo', 'O confronto dos elementos.', 2800, 'lendario', {
-    whiteFill: '#ffb347', whiteOutline: '#ff3d00', blackFill: '#9be7ff', blackOutline: '#0066ff', glow: 10,
+    whiteFill: '#ffb347', whiteOutline: '#ff3d00', blackFill: '#9be7ff', blackOutline: '#0066ff', glow: 10, model: 'crystal',
   }),
 
   // ----------------------------------------------------------- ícones de perfil
