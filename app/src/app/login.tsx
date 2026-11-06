@@ -62,6 +62,7 @@ export default function Login() {
             autoCapitalize="none"
             autoCorrect={false}
             placeholder="ex: rei_do_xadrez"
+            testID="login-username"
             placeholderTextColor={colors.textMuted}
           />
           <Text style={styles.label}>Senha</Text>
@@ -71,6 +72,7 @@ export default function Login() {
             onChangeText={setPassword}
             secureTextEntry
             placeholder="mínimo 8 caracteres"
+            testID="login-password"
             placeholderTextColor={colors.textMuted}
             onSubmitEditing={submit}
           />
@@ -80,6 +82,7 @@ export default function Login() {
             onPress={submit}
             loading={loading}
             disabled={!username || !password}
+            testID="login-submit"
           />
         </Card>
         {mode === 'register' && (

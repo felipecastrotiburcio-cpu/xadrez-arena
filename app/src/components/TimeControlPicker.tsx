@@ -37,6 +37,7 @@ export function Segmented<T extends string>({
       {options.map((o) => (
         <Pressable
           key={o.value}
+          testID={`seg-${o.value}`}
           onPress={() => onChange(o.value)}
           style={[styles.segment, o.value === value && styles.segmentActive]}
         >

@@ -31,7 +31,9 @@ export function Button({
   icon,
   style,
   small,
+  testID,
 }: {
+  testID?: string;
   title: string;
   onPress?: () => void;
   variant?: Variant;
@@ -46,6 +48,7 @@ export function Button({
   const textColor = variant === 'gold' ? colors.accentText : colors.text;
   return (
     <Pressable
+      testID={testID}
       onPress={onPress}
       disabled={inactive}
       accessibilityRole="button"

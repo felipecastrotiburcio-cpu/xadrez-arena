@@ -126,6 +126,7 @@ jobs:
           cp ../app/build-*.log . 2>/dev/null || true
           if [ "${{ job.status }}" = "success" ]; then R=SUCESSO; else R=FALHOU; fi
           echo "build #${{ github.run_number }}: iOS $R" > status.txt
+          find . -type f -size +40M -delete
           git init -q -b ci-results-ios && git add -A
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -qm "iOS build #${{ github.run_number }}: $R"
           git push -fq "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" ci-results-ios
