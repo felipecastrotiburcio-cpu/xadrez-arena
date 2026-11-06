@@ -73,15 +73,26 @@ appId: app.xadrezarena
     id: "seg-register"
 - tapOn:
     id: "login-username"
+# Na primeira vez o iOS mostra o tutorial do teclado ("deslize para digitar"): fecha.
+- tapOn:
+    text: "Continue|Continuar"
+    optional: true
 - inputText: ${USERNAME}
 - tapOn:
     id: "login-password"
+- tapOn:
+    text: "Continue|Continuar"
+    optional: true
 - inputText: "segredo123"
 # "Enter" no campo de senha envia o formulário (o hideKeyboard do Maestro falha no iOS)
 - pressKey: Enter
+# Conta criada: volta para a tela inicial, com o nome e o saldo de 300 moedas
 - extendedWaitUntil:
-    visible: ".*${USERNAME}.*"
+    visible: ".*JOGAR!.*"
     timeout: 30000
+- assertVisible: ".*${USERNAME}.*"
+- assertNotVisible:
+    id: "login-username"
 - assertVisible: ".*300.*"
 - takeScreenshot: ${OUT}/06-conta-criada
 
