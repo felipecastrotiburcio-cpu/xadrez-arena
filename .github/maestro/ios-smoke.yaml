@@ -8,6 +8,8 @@ appId: app.xadrezarena
 - extendedWaitUntil:
     visible: ".*JOGAR!.*"
     timeout: 90000
+- waitForAnimationToEnd:
+    timeout: 8000
 - takeScreenshot: ${OUT}/01-inicio
 
 # Partida contra a IA com relógio de 5 minutos
@@ -45,6 +47,10 @@ appId: app.xadrezarena
 - extendedWaitUntil:
     visible: ".*Pular.*"
     timeout: 20000
+- swipe:   # gesto neutro só para esperar a cena 3D (~4 s) sem fechar a finalização
+    start: 50%, 20%
+    end: 50%, 21%
+    duration: 4000
 - takeScreenshot: ${OUT}/04-finalizacao-3d
 - tapOn: ".*Pular.*"
 - extendedWaitUntil:
@@ -71,9 +77,8 @@ appId: app.xadrezarena
 - tapOn:
     id: "login-password"
 - inputText: "segredo123"
-- hideKeyboard
-- tapOn:
-    id: "login-submit"
+# "Enter" no campo de senha envia o formulário (o hideKeyboard do Maestro falha no iOS)
+- pressKey: Enter
 - extendedWaitUntil:
     visible: ".*${USERNAME}.*"
     timeout: 30000

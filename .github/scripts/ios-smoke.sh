@@ -64,6 +64,7 @@ else
   # Árvore de elementos da tela no momento da falha (para diagnóstico)
   maestro --device "$UDID" hierarchy > "$OUT/tela-na-falha.json" 2>/dev/null || true
 fi
+find "$OUT/maestro" -path "*takeScreenshot*" -name "*.png" -exec cp {} "$OUT/" \; 2>/dev/null || true
 # Os registros completos do Maestro são enormes: guarda só as capturas e o resumo.
 find "$OUT/maestro" -type f ! -name "*.png" ! -name "commands*.json" ! -name "maestro.log" -delete 2>/dev/null || true
 find "$OUT/maestro" -type f -size +20M -delete 2>/dev/null || true
@@ -77,8 +78,11 @@ if [ -n "$CRASHES" ]; then
 else
   ok "Nenhum relatório de travamento"
 fi
-xcrun simctl spawn "$UDID" log show --last 5m --style compact --predicate 'process == "XadrezArena" AND (subsystem == "com.facebook.react.log" OR messageType == error OR messageType == fault)' 2>/dev/null \
+xcrun simctl spawn "$UDID" log show --last 15m --style compact --predicate 'process == "XadrezArena" AND (subsystem == "com.facebook.react.log" OR messageType == error OR messageType == fault)' 2>/dev/null \
   | grep -iE "error|exception|fatal" | grep -viE "nw_|networkd|Failed to send|CFNetwork|tcp_" | head -60 > "$OUT/js-errors.txt" || true
+# Tudo o que o JavaScript do app escreveu (console.log/warn/error), para diagnóstico
+xcrun simctl spawn "$UDID" log show --last 15m --style compact --predicate 'process == "XadrezArena" AND subsystem == "com.facebook.react.log"' 2>/dev/null \
+  | tail -300 > "$OUT/js-console.txt" || true
 [ -s "$OUT/js-errors.txt" ] && log "⚠️  Mensagens de erro no log: ver js-errors.txt"
 
 if [ "$FAILED" = "0" ]; then log "RESULTADO: SUCESSO"; else log "RESULTADO: FALHOU"; fi
