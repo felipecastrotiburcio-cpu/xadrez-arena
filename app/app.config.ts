@@ -18,9 +18,18 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   userInterfaceStyle: 'dark',
   backgroundColor: '#110d2e',
   ios: {
-    supportsTablet: true,
     bundleIdentifier: 'app.xadrezarena',
-    ...(isProd ? {} : { infoPlist: { NSAppTransportSecurity: { NSAllowsArbitraryLoads: true } } }),
+    // Cada compilação no GitHub Actions recebe um número maior (exigência do TestFlight/App Store).
+    buildNumber: process.env.APP_VERSION_CODE ?? '1',
+    // iPad: roda em tela cheia, só em pé (a App Store exige isso para apps só em retrato).
+    supportsTablet: true,
+    requireFullScreen: true,
+    infoPlist: {
+      // Só usa HTTPS padrão do sistema: isento da declaração de criptografia.
+      ITSAppUsesNonExemptEncryption: false,
+      // Em desenvolvimento, permite HTTP para falar com o servidor na rede local.
+      ...(isProd ? {} : { NSAppTransportSecurity: { NSAllowsArbitraryLoads: true } }),
+    },
   },
   android: {
     package: 'app.xadrezarena',
@@ -49,9 +58,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   web: { favicon: './assets/favicon.png' },
   plugins: [
     'expo-router',
-    'expo-secure-store',
-    // Sons das jogadas: sem microfone e sem tocar em segundo plano.
-    ['expo-audio', { recordAudioAndroid: false, enableBackgroundPlayback: false, enableBackgroundRecording: false }],
+    // Sem Face ID / digital: o app só guarda o login de forma segura.
+    ['expo-secure-store', { faceIDPermission: false }],
+    // Sons das jogadas: sem microfone e sem tocar em segundo plano (Android e iOS).
+    [
+      'expo-audio',
+      { microphonePermission: false, recordAudioAndroid: false, enableBackgroundPlayback: false, enableBackgroundRecording: false },
+    ],
     [
       'expo-splash-screen',
       { image: './assets/splash-icon.png', imageWidth: 220, resizeMode: 'contain', backgroundColor: '#110d2e' },

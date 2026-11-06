@@ -1,0 +1,207 @@
+# Compila o Xadrez Arena para iPhone num Mac do GitHub, testa no simulador de iPhone
+# e publica em Releases. Se as chaves da Apple estiverem configuradas (veja IOS.md),
+# também envia uma versão assinada para o TestFlight.
+name: App iOS
+
+on:
+  push:
+    branches: [main]
+    paths: ['app/**', '.github/workflows/ios.yml', '.github/scripts/ios-smoke.sh']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ios
+  cancel-in-progress: true
+
+env:
+  APP_ENV: production
+  APP_VERSION_CODE: ${{ github.run_number }}
+  APP_VERSION_NAME: 1.2.0
+  EXPO_NO_TELEMETRY: 1
+  CI: 1
+
+jobs:
+  build:
+    name: Compilar e testar no simulador de iPhone
+    runs-on: macos-15
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Instalar dependências
+        working-directory: app
+        run: npm ci
+
+      - name: Verificar tipos e testar a IA
+        working-directory: app
+        run: |
+          npx tsc --noEmit
+          npm run test:ai
+          npm run test:local
+
+      - name: Gerar projeto iOS (Xcode + CocoaPods)
+        working-directory: app
+        run: |
+          xcodebuild -version
+          npx expo prebuild --platform ios --clean
+
+      - name: Compilar para o simulador
+        working-directory: app/ios
+        run: |
+          set -o pipefail
+          xcodebuild -workspace XadrezArena.xcworkspace -scheme XadrezArena -configuration Release \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath ../build/sim \
+            CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO > ../build-sim.log 2>&1 \
+            || { grep -E "error:|BUILD FAILED" ../build-sim.log | head -60; tail -80 ../build-sim.log; exit 1; }
+          tail -3 ../build-sim.log
+
+      - name: Testar no simulador de iPhone
+        run: bash .github/scripts/ios-smoke.sh app/build/sim/Build/Products/Release-iphonesimulator/XadrezArena.app ios-results
+
+      - name: Compilar para iPhone (sem assinatura)
+        working-directory: app/ios
+        run: |
+          set -o pipefail
+          xcodebuild archive -workspace XadrezArena.xcworkspace -scheme XadrezArena -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath ../build/XadrezArena.xcarchive \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" COMPILER_INDEX_STORE_ENABLE=NO \
+            > ../build-device.log 2>&1 \
+            || { grep -E "error:|ARCHIVE FAILED" ../build-device.log | head -60; tail -80 ../build-device.log; exit 1; }
+          cd ..
+          rm -rf Payload && mkdir Payload
+          cp -R build/XadrezArena.xcarchive/Products/Applications/XadrezArena.app Payload/
+          zip -qry xadrez-arena-ios.ipa Payload
+          {
+            echo "IPA para iPhone (sem assinatura — assine com seu Apple ID, veja IOS.md)"
+            echo "Tamanho: $(du -h xadrez-arena-ios.ipa | cut -f1) ($(stat -f%z xadrez-arena-ios.ipa) bytes)"
+            echo "Versão: $APP_VERSION_NAME (build $APP_VERSION_CODE)"
+            echo "iOS mínimo: $(/usr/libexec/PlistBuddy -c 'Print :MinimumOSVersion' Payload/XadrezArena.app/Info.plist)"
+            echo "Arquiteturas: $(lipo -archs Payload/XadrezArena.app/XadrezArena)"
+            echo "Permissões pedidas ao usuário:"
+            /usr/libexec/PlistBuddy -c 'Print' Payload/XadrezArena.app/Info.plist | grep -E "Usage(Description)? =" || echo "  nenhuma"
+          } | tee ../ios-results/ipa-info.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios
+          path: |
+            app/xadrez-arena-ios.ipa
+            ios-results/
+            app/build-*.log
+          if-no-files-found: ignore
+
+      - name: Publicar resultados do teste
+        if: always()
+        run: |
+          mkdir -p ios-results && cd ios-results
+          cp ../app/build-*.log . 2>/dev/null || true
+          if [ "${{ job.status }}" = "success" ]; then R=SUCESSO; else R=FALHOU; fi
+          echo "build #${{ github.run_number }}: iOS $R" > status.txt
+          git init -q -b ci-results-ios && git add -A
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -qm "iOS build #${{ github.run_number }}: $R"
+          git push -fq "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" ci-results-ios
+
+  release:
+    name: Publicar IPA em Releases
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ios
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ios-v${{ env.APP_VERSION_NAME }}-build.${{ github.run_number }}
+          name: Xadrez Arena iOS ${{ env.APP_VERSION_NAME }} (build ${{ github.run_number }})
+          # O "latest" continua sendo o APK do Android (o link de download dele não muda).
+          make_latest: false
+          files: app/xadrez-arena-ios.ipa
+          body: |
+            ## 🍎 Versão para iPhone e iPad (teste)
+            O arquivo **xadrez-arena-ios.ipa** não vem assinado: a Apple só deixa instalar apps
+            assinados com uma conta Apple. Escolha um caminho no guia **IOS.md** do repositório:
+
+            1. **Grátis, com seu Apple ID:** instale pelo Sideloadly ou AltStore num computador
+               (o app vale por 7 dias e depois é só reinstalar).
+            2. **TestFlight (recomendado):** com a conta de desenvolvedor da Apple (US$ 99/ano),
+               cada compilação vai sozinha para o TestFlight e você instala pelo app TestFlight.
+
+            - iOS mínimo: **16.4** (iPhone 8 ou mais novo) · Testado no simulador de iPhone a cada compilação.
+            - Funciona **sem internet**: IA, contas no aparelho, moedas, loja e finalizações 3D.
+
+  testflight:
+    name: Enviar para o TestFlight (se configurado)
+    needs: build
+    runs-on: macos-15
+    timeout-minutes: 120
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    steps:
+      - name: Conferir chaves da Apple
+        id: keys
+        run: |
+          if [ -n "$ASC_KEY_ID" ] && [ -n "$ASC_ISSUER_ID" ] && [ -n "$ASC_KEY_P8_BASE64" ] && [ -n "$APPLE_TEAM_ID" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::TestFlight não configurado (faltam os segredos ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8_BASE64 e APPLE_TEAM_ID). Veja IOS.md."
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.keys.outputs.ok == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.keys.outputs.ok == 'true'
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Gerar projeto iOS
+        if: steps.keys.outputs.ok == 'true'
+        working-directory: app
+        run: |
+          npm ci
+          npx expo prebuild --platform ios --clean
+
+      - name: Assinar e enviar ao TestFlight
+        if: steps.keys.outputs.ok == 'true'
+        working-directory: app/ios
+        run: |
+          set -o pipefail
+          KEY="$RUNNER_TEMP/AuthKey_$ASC_KEY_ID.p8"
+          echo "$ASC_KEY_P8_BASE64" | base64 --decode > "$KEY"
+          AUTH=(-allowProvisioningUpdates -authenticationKeyPath "$KEY" -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID")
+          xcodebuild archive -workspace XadrezArena.xcworkspace -scheme XadrezArena -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/XadrezArena.xcarchive" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CODE_SIGN_STYLE=Automatic "${AUTH[@]}" > "$RUNNER_TEMP/archive.log" 2>&1 \
+            || { grep -E "error:" "$RUNNER_TEMP/archive.log" | head -40; tail -60 "$RUNNER_TEMP/archive.log"; exit 1; }
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>$APPLE_TEAM_ID</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict></plist>
+          PLIST
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/XadrezArena.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" -exportPath "$RUNNER_TEMP/export" "${AUTH[@]}"
+          rm -f "$KEY"
+          echo "::notice::Build $APP_VERSION_CODE enviado ao App Store Connect; aparece no TestFlight após o processamento da Apple (5–30 min)."
