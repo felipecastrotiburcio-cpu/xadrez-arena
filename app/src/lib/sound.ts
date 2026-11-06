@@ -63,3 +63,41 @@ export function playSound(name: BoardSound) {
     players = { ...players, [name]: undefined };
   }
 }
+
+// ------------------------------------------------------------------ músicas das finalizações
+
+/** Música de cada movimento especial (composições originais em scripts/gen-sounds.mjs). */
+const MUSIC = {
+  '67': require('../../assets/sounds/music_67.wav'),
+  jamal: require('../../assets/sounds/music_jamal.wav'),
+  victory: require('../../assets/sounds/music_victory.wav'),
+} as const;
+
+let music: AudioPlayer | null = null;
+
+/** Toca (em loop) a música do movimento; os que não têm música própria usam a fanfarra. */
+export function playMusic(move: string) {
+  stopMusic();
+  if (!enabled) return;
+  try {
+    const src = MUSIC[move as keyof typeof MUSIC] ?? MUSIC.victory;
+    music = createAudioPlayer(src);
+    music.loop = true;
+    music.volume = 0.85;
+    music.play();
+  } catch {
+    music = null;
+  }
+}
+
+export function stopMusic() {
+  const m = music;
+  music = null;
+  if (!m) return;
+  try {
+    m.pause();
+    m.remove();
+  } catch {
+    // já liberado
+  }
+}

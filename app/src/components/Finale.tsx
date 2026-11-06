@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useMyLook } from '../lib/cosmetics';
+import { playMusic, stopMusic } from '../lib/sound';
 import { colors, fonts } from '../lib/theme';
 import type { CharacterStyle } from '../lib/types';
 import { Scene3D } from '../three/Scene3D';
@@ -29,7 +30,7 @@ interface Props {
  * Finalização em 3D: os bonecos entram na arena (com o piso do seu tabuleiro),
  * o vencedor derruba o rival e comemora com o movimento especial equipado.
  */
-export function Finale({ visible, winner, loser, move, moveName, title, subtitle, onDone, durationMs = 7500 }: Props) {
+export function Finale({ visible, winner, loser, move, moveName, title, subtitle, onDone, durationMs = 9000 }: Props) {
   const { width, height } = useWindowDimensions();
   const { board } = useMyLook();
   const onDoneRef = useRef(onDone);
@@ -47,6 +48,16 @@ export function Finale({ visible, winner, loser, move, moveName, title, subtitle
     const t = setTimeout(() => onDoneRef.current(), durationMs);
     return () => clearTimeout(t);
   }, [visible, durationMs]);
+
+  // Música do movimento especial: começa quando o vencedor vira para dançar.
+  useEffect(() => {
+    if (!visible) return;
+    const t = setTimeout(() => playMusic(move), 2600);
+    return () => {
+      clearTimeout(t);
+      stopMusic();
+    };
+  }, [visible, move]);
 
   return (
     <Modal visible={visible} animationType="fade" statusBarTranslucent onRequestClose={onDone}>

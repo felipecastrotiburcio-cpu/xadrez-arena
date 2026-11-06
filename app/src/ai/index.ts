@@ -60,6 +60,8 @@ export interface FindMoveOptions {
   /** FENs das posições anteriores (para o motor reconhecer repetições). */
   history?: string[];
   random?: () => number;
+  /** Limite de tempo de cálculo (partidas com relógio). */
+  maxTimeMs?: number;
 }
 
 export interface FindMoveResult {
@@ -113,9 +115,10 @@ export function findBestMove(fen: string, { level, history = [], random = Math.r
  */
 export async function findBestMoveAsync(
   fen: string,
-  { level, history = [], random = Math.random }: FindMoveOptions,
+  { level, history = [], random = Math.random, maxTimeMs }: FindMoveOptions,
 ): Promise<FindMoveResult> {
-  const cfg = AI_LEVELS.find((l) => l.id === level) ?? AI_LEVELS[2];
+  const base = AI_LEVELS.find((l) => l.id === level) ?? AI_LEVELS[2];
+  const cfg = maxTimeMs ? { ...base, timeMs: Math.max(50, Math.min(base.timeMs, maxTimeMs)) } : base;
   const pos = prepare(fen, history);
   const legal = pos.legalMoves();
   if (legal.length === 0) return { move: null, score: 0, depth: 0, nodes: 0 };
@@ -136,4 +139,10 @@ export async function findBestMoveAsync(
 export async function suggestMoveAsync(fen: string, history: string[] = []): Promise<AiMove | null> {
   const r = await new Searcher(prepare(fen, history)).thinkAsync({ depth: 8, timeMs: 900 });
   return r.move ? toAiMove(r.move) : null;
+}
+
+/** Avaliação da posição (centipeões, do ponto de vista de quem joga). Usada para a IA decidir sobre empate. */
+export async function evaluateAsync(fen: string, history: string[] = []): Promise<number> {
+  const r = await new Searcher(prepare(fen, history)).thinkAsync({ depth: 6, timeMs: 700 });
+  return r.score;
 }

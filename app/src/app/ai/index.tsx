@@ -12,6 +12,7 @@ const ICONS = ['♙', '♘', '♗', '♖', '♕'];
 export default function AiSetup() {
   const [level, setLevel] = useState(2);
   const [color, setColor] = useState<'w' | 'b' | 'random'>('w');
+  const [time, setTime] = useState<'0' | '10' | '5' | '3'>('0');
   const [stats, setStats] = useState<AiStats>({});
 
   useFocusEffect(
@@ -56,12 +57,24 @@ export default function AiSetup() {
         ]}
       />
 
+      <SectionTitle>Tempo de partida</SectionTitle>
+      <Segmented
+        value={time}
+        onChange={setTime}
+        options={[
+          { value: '0', label: '∞ Livre' },
+          { value: '10', label: '10 min' },
+          { value: '5', label: '5 min' },
+          { value: '3', label: '3 min' },
+        ]}
+      />
+
       <Button
         title="Começar partida"
         icon="▶"
         onPress={() => {
           const c = color === 'random' ? (Math.random() < 0.5 ? 'w' : 'b') : color;
-          router.push({ pathname: '/ai/play', params: { level: String(level), color: c } });
+          router.push({ pathname: '/ai/play', params: { level: String(level), color: c, time } });
         }}
       />
       <Text style={styles.footnote}>Partidas contra a IA funcionam offline e não alteram seu rating.</Text>

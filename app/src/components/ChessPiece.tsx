@@ -768,6 +768,153 @@ function pixel(type: PieceType, p: Paint): ReactNode {
   );
 }
 
+// =================================================================== CAVALEIROS MEDIEVAIS (figuras de armadura)
+
+const GOLD = '#f2c94c';
+
+const KnightsBase = ({ p }: { p: Paint }) => (
+  <>
+    <Path d="M16 91 L20 81 L80 81 L84 91 Z" {...solid(p)} />
+    {!p.outline && <Path d="M22 86 L78 86" stroke={p.accent} strokeWidth={2.4} strokeLinecap="round" />}
+  </>
+);
+
+/** Escudo com a cruz do exército (cor de destaque). */
+function Shield({ x, y, s = 1, p }: { x: number; y: number; s?: number; p: Paint }) {
+  const d = `M${x - 10 * s} ${y} L${x + 10 * s} ${y} L${x + 10 * s} ${y + 10 * s} C${x + 10 * s} ${y + 18 * s} ${x} ${y + 23 * s} ${x} ${y + 23 * s} C${x} ${y + 23 * s} ${x - 10 * s} ${y + 18 * s} ${x - 10 * s} ${y + 10 * s} Z`;
+  return (
+    <>
+      <Path d={d} fill={p.outline ? 'none' : p.accent} stroke={p.stroke} strokeWidth={p.width} strokeLinejoin="round" />
+      {!p.outline && <Path d={`M${x} ${y + 3 * s} L${x} ${y + 19 * s} M${x - 6 * s} ${y + 9 * s} L${x + 6 * s} ${y + 9 * s}`} stroke="#ffffff" strokeWidth={2.6 * s} strokeLinecap="round" />}
+    </>
+  );
+}
+
+function knights(type: PieceType, p: Paint): ReactNode {
+  const c = solid(p);
+  const accentFill = { fill: p.outline ? 'none' : p.accent, stroke: p.stroke, strokeWidth: p.width, strokeLinejoin: 'round' as const };
+  const goldFill = { fill: p.outline ? 'none' : GOLD, stroke: p.stroke, strokeWidth: p.width * 0.8, strokeLinejoin: 'round' as const };
+  switch (type) {
+    case 'p':
+      // soldado a pé: elmo de aba (chapéu de ferro), cota e escudo
+      return (
+        <>
+          <KnightsBase p={p} />
+          <Path d="M34 82 L39 54 L61 54 L66 82 Z" {...c} />
+          <Circle cx={50} cy={44} r={10} {...c} />
+          <Path d="M34 39 C36 34 64 34 66 39 C62 41 38 41 34 39 Z" {...c} />
+          <Path d="M39 37 C39 24 61 24 61 37 Z" {...c} />
+          {!p.outline && <Path d="M43 45 L57 45" stroke={p.stroke} strokeWidth={2} strokeLinecap="round" />}
+          <Shield x={44} y={58} s={0.75} p={p} />
+          <Shine d="M43 30 C45 27 48 26 51 26" p={p} />
+        </>
+      );
+    case 'r':
+      // torre de castelo: pedras, portão em arco, telhado cônico e bandeira
+      return (
+        <>
+          <KnightsBase p={p} />
+          <Path d="M31 82 L33 40 L67 40 L69 82 Z" {...c} />
+          <Path d="M29 42 L29 32 L36 32 L36 36 L43 36 L43 32 L57 32 L57 36 L64 36 L64 32 L71 32 L71 42 Z" {...c} />
+          <Path d="M33 33 L50 8 L67 33 Z" {...accentFill} />
+          <Path d="M50 8 L50 1" stroke={p.stroke} strokeWidth={1.8} />
+          {!p.outline && <Path d="M50.8 1.5 L60 4 L50.8 6.5 Z" fill={GOLD} />}
+          <Lines d="M33 52 L67 52 M33 63 L67 63 M33 73 L67 73 M41 42 L41 52 M58 42 L58 52 M48 52 L48 63 M38 63 L38 73 M62 63 L62 73" p={p} w={1.2} o={0.5} />
+          {!p.outline && <Path d="M44 82 L44 72 C44 64 56 64 56 72 L56 82 Z" fill={p.dark} stroke={p.stroke} strokeWidth={1.2} />}
+          <Shine d="M36 78 L37 46" p={p} />
+        </>
+      );
+    case 'n':
+      // cavalo de guerra: testeira de metal, penacho e manta com a cor do exército
+      return (
+        <>
+          <KnightsBase p={p} />
+          <Path d="M32 82 C32 72 36 64 40 57 C43 50 41 47 37 47 C33 48 30 51 25 50 C20 49 18 44 20 38 C23 30 29 22 37 19 L46 12 L45 21 C52 22 59 27 64 34 C71 44 72 60 70 82 Z" {...c} />
+          {/* manta (caparazão) */}
+          <Path d="M36 82 C38 72 42 66 46 62 L68 62 L69 82 Z" {...accentFill} />
+          {!p.outline && <Path d="M40 74 L46 68 L52 74 L58 68 L64 74" stroke="#ffffff" strokeWidth={1.6} fill="none" strokeLinejoin="round" />}
+          {/* testeira */}
+          <Path d="M22 41 C24 32 30 25 38 22 L44 24 C40 30 34 36 29 44 Z" fill={p.outline ? 'none' : p.light} stroke={p.stroke} strokeWidth={p.width * 0.8} strokeLinejoin="round" />
+          {/* penacho */}
+          <Path d="M46 13 C52 4 62 2 70 6 C64 7 59 11 56 17 C53 14 49 13 46 13 Z" {...accentFill} />
+          {!p.outline && (
+            <>
+              <Circle cx={36} cy={30} r={2.4} fill={p.stroke} />
+              <Circle cx={23} cy={45} r={1.4} fill={p.stroke} />
+            </>
+          )}
+          <Lines d="M50 26 C58 30 64 40 66 52" p={p} w={2} o={0.45} />
+          <Shine d="M27 34 C30 28 34 24 38 22" p={p} />
+        </>
+      );
+    case 'b':
+      // monge de capuz com estola e cruz
+      return (
+        <>
+          <KnightsBase p={p} />
+          <Path d="M31 82 C33 66 38 56 42 50 L58 50 C62 56 67 66 69 82 Z" {...c} />
+          <Path d="M45 52 L44 82 L50 82 L49 52 Z M51 52 L50 82 L56 82 L55 52 Z" {...accentFill} />
+          <Path d="M36 52 C32 36 38 18 50 14 C62 18 68 36 64 52 C58 56 42 56 36 52 Z" {...c} />
+          <Path d="M50 14 C53 9 56 7 60 8 C57 10 55 12 54 16" {...c} />
+          {!p.outline && <Path d="M42 48 C40 38 44 28 50 26 C56 28 60 38 58 48 C54 51 46 51 42 48 Z" fill={p.dark} />}
+          {!p.outline && (
+            <>
+              <Circle cx={46} cy={38} r={1.6} fill={p.light} />
+              <Circle cx={54} cy={38} r={1.6} fill={p.light} />
+            </>
+          )}
+          <Path d="M47 60 L53 60 M50 56 L50 67" stroke={p.outline ? p.stroke : GOLD} strokeWidth={2.6} strokeLinecap="round" />
+          <Shine d="M39 46 C37 36 40 26 46 20" p={p} />
+        </>
+      );
+    case 'q':
+      // rainha: vestido longo, coroa e chapéu cônico (hennin) com véu
+      return (
+        <>
+          <KnightsBase p={p} />
+          <Path d="M28 82 C30 64 38 54 43 49 L57 49 C62 54 70 64 72 82 Z" {...c} />
+          <Path d="M43 49 L57 49 L55 60 L45 60 Z" {...accentFill} />
+          <Lines d="M38 72 C44 68 56 68 62 72 M35 78 C44 74 56 74 65 78" p={p} w={1.4} o={0.5} />
+          <Circle cx={50} cy={40} r={9} {...c} />
+          {/* véu esvoaçante */}
+          <Path d="M62 12 C70 22 72 36 66 50 C64 42 62 34 58 28 Z" fill={p.outline ? 'none' : p.light} stroke={p.stroke} strokeWidth={p.width * 0.7} strokeLinejoin="round" />
+          {/* hennin */}
+          <Path d="M41 34 L59 32 L64 6 Z" {...accentFill} />
+          <Path d="M40 35 L41 29 L45 32 L50 27 L55 31 L59 28 L60 34 Z" {...goldFill} />
+          {!p.outline && (
+            <>
+              <Circle cx={46.5} cy={41} r={1.3} fill={p.stroke} />
+              <Circle cx={53.5} cy={41} r={1.3} fill={p.stroke} />
+            </>
+          )}
+          <Shine d="M36 76 C37 66 40 59 44 54" p={p} />
+        </>
+      );
+    case 'k':
+      // rei de armadura: elmo fechado com coroa, sobreveste e espada à frente
+      return (
+        <>
+          <KnightsBase p={p} />
+          <Path d="M30 82 L36 52 C40 48 60 48 64 52 L70 82 Z" {...c} />
+          <Path d="M42 51 L58 51 L60 82 L40 82 Z" {...accentFill} />
+          {/* ombreiras */}
+          <Circle cx={36} cy={53} r={6} {...c} />
+          <Circle cx={64} cy={53} r={6} {...c} />
+          {/* espada */}
+          <Rect x={47.6} y={50} width={4.8} height={30} rx={1} fill={p.outline ? 'none' : p.light} stroke={p.stroke} strokeWidth={p.width * 0.7} />
+          <Rect x={41} y={56} width={18} height={4} rx={1.5} {...goldFill} />
+          <Circle cx={50} cy={53} r={2.4} {...goldFill} />
+          {/* elmo */}
+          <Path d="M39 26 L61 26 L61 44 C57 49 43 49 39 44 Z" {...c} />
+          {!p.outline && <Path d="M42 35 L58 35 M50 35 L50 45" stroke={p.stroke} strokeWidth={2.2} strokeLinecap="round" />}
+          <Path d="M38 27 L38 16 L44 21 L50 12 L56 21 L62 16 L62 27 Z" {...goldFill} />
+          {!p.outline && <Circle cx={50} cy={21} r={1.8} fill={p.accent} />}
+          <Shine d="M42 41 C41 36 42 31 44 29" p={p} />
+        </>
+      );
+  }
+}
+
 // ===================================================================
 
 const MODELS: Record<PieceModel, (type: PieceType, p: Paint) => ReactNode> = {
@@ -778,6 +925,7 @@ const MODELS: Record<PieceModel, (type: PieceType, p: Paint) => ReactNode> = {
   cute,
   robot,
   pixel,
+  knights,
 };
 
 interface Props {
@@ -795,7 +943,12 @@ function ChessPieceBase({ type, color, style, size }: Props) {
   // Detalhes contrastam com o corpo: escuros nas brancas, claros nas pretas.
   const detail = white ? outline : tint(base, 0.55);
   const id = `pc-${color}-${base.replace(/[^0-9a-z]/gi, '')}`;
-  const accent = style.model === 'robot' ? (white ? '#29d3ff' : '#ff4d5e') : white ? '#ff4d6d' : '#46e0ff';
+  const accent =
+    style.model === 'robot'
+      ? white ? '#29d3ff' : '#ff4d5e'
+      : style.model === 'knights'
+        ? white ? '#2f6fdb' : '#c62828'
+        : white ? '#ff4d6d' : '#46e0ff';
   const paint: Paint = {
     fill: `url(#${id})`,
     stroke: outline,
@@ -812,7 +965,7 @@ function ChessPieceBase({ type, color, style, size }: Props) {
 
   return (
     // viewBox recortado nas margens: as peças ocupam mais da casa.
-    <Svg width={size} height={size} viewBox="4 3 92 92" pointerEvents="none">
+    <Svg width={size} height={size} viewBox="6 4 88 88" pointerEvents="none">
       <Defs>
         <LinearGradient id={id} x1="0" y1="0" x2="1" y2="0.35">
           <Stop offset="0" stopColor={tint(base, white ? 0.35 : 0.3)} />

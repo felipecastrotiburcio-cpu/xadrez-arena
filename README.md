@@ -87,11 +87,14 @@ Moedas por partida contra a IA: vitória de 15 (nível 1) a 35 (nível 5), empat
 
 Testes: `cd app && npm run test:local`.
 
-## Tabuleiro e sons
+## Tabuleiro, regras e sons
 
-- Casa a1 escura (padrão oficial: cada dama começa na casa da sua cor).
-- Tabuleiro ocupa quase toda a largura da tela; as peças ocupam mais da casa.
-- Sons próprios (gerados por `app/scripts/gen-sounds.mjs`): lance, captura, xeque e xeque-mate (acorde com batida grave, diferente do xeque). Liga/desliga em **Configurações**. O app usa `expo-audio` sem permissão de microfone.
+- Casa a1 escura (padrão oficial: cada dama começa na casa da sua cor). Tabuleiro de ponta a ponta na tela.
+- **Relógio contra a IA:** livre, 10, 5 ou 3 minutos. A IA gasta no máximo ~1/40 do tempo que lhe resta por lance. Online: 1, 3, 3+2, 5, 10 e 15+10.
+- **Pré-lance:** na vez do adversário você já escolhe o próximo lance (casas em rosa); ele sai na hora se ainda for legal, senão é descartado. Tocar em outra casa cancela.
+- **En passant:** ao selecionar o peão, a casa de destino e o peão que será capturado (contorno tracejado) ficam marcados; ao capturar aparece o aviso "En passant!".
+- **Empates (como Lichess/Chess.com):** automáticos por afogamento, material insuficiente, repetição tripla e regra dos 50 lances; quem perde no tempo empata se o adversário não tiver material para dar mate. Proposta de empate: online o adversário aceita ou recusa; contra a IA ela aceita a partir do 10º lance se não estiver melhor (avaliação ≤ +0,3 peão para ela).
+- **Sons** (síntese própria em `app/scripts/gen-sounds.mjs`): toc de madeira no tabuleiro, captura (peça contra peça + tabuleiro), xeque e xeque-mate. **Músicas originais** nas finalizações: phonk de cowbell no Movimento do 67, funk tamborzão no Passinho do Jamal e fanfarra 8 bits nos demais. Liga/desliga em **Configurações**. O app usa `expo-audio` sem permissão de microfone.
 
 ## Loja e moedas
 
@@ -107,14 +110,14 @@ Partidas contra a IA não dão moedas: elas rodam no aparelho e o servidor não 
 
 Categorias (o preço sobe com a raridade: comum → raro → épico → lendário):
 
-- **Tabuleiros** (0 a 3000): Madeira Clássica, Verde Torneio, Nogueira Entalhada, Oceano Profundo, Gelo Ártico, Confeitaria, Mármore Carrara, Neon Cyberpunk, Fliperama, Lava Vulcânica, Ouro Real, Galáxia. Além das cores, cada um tem **formato de casa** (lisa, ladrilho com rejunte, redonda, em relevo ou de vidro) e **moldura** (filete, ornamentos dourados, rebites ou neon).
-- **Peças** (0 a 2800): cada conjunto tem um **modelo próprio** — Clássicas (Staunton), Marfim e Ébano / Ouro e Prata (medieval: torre com bandeira, cúpulas, coroas com joias), Cristal / Rubi e Esmeralda / Fogo e Gelo (lapidadas), Doces (fofinhas, com rostinho), Robôs (LEDs e antenas), Pixel 8-bits, Neon / Sombras (moderno geométrico).
+- **Tabuleiros** (0 a 3000): Madeira Clássica, Verde Torneio, Nogueira Entalhada, Oceano Profundo, Gelo Ártico, Confeitaria, Mármore Carrara, Neon Cyberpunk, Fliperama, Lava Vulcânica, Ouro Real, Fortaleza dos Cavaleiros, Galáxia. Além das cores, cada um tem **formato de casa** (lisa, ladrilho com rejunte, redonda, em relevo ou de vidro) e **borda no tema** (`app/src/components/FrameArt.tsx`): madeira com veios, ondas, neve e flocos, listras de doce, rocha com lava, céu estrelado, neon, ornamentos de ouro, rebites e a **muralha de castelo** com ameias, torres, bandeiras e ponte levadiça.
+- **Peças** (0 a 2800): cada conjunto tem um **modelo próprio** — Clássicas (Staunton), Marfim e Ébano / Ouro e Prata (medieval: torre com bandeira, cúpulas, coroas com joias), Cristal / Rubi e Esmeralda / Fogo e Gelo (lapidadas), Doces (fofinhas, com rostinho), Robôs (LEDs e antenas), Pixel 8-bits, Neon / Sombras (moderno geométrico) e **Cavaleiros Medievais** (soldados de escudo, cavalos de guerra com penacho, monges, rainha de hennin e rei de armadura com espada; azul contra vermelho).
 - **Prévia antes de comprar:** tabuleiros e peças abrem um tabuleiro grande onde dá para mexer as peças (com som) antes de comprar.
 - **Ícones de perfil** (0 a 2500): aparecem nos amigos, no ranking, nos convites e na partida.
 - **Bonecos** (0 a 3000): Novato (padrão), Estiloso, Descolado, Atleta, Ninja, Feiticeiro, Rei do Tabuleiro, Robô Dourado, Astronauta.
 - **Movimentos especiais** (0 a 2200): Passinho do Jamal e Movimento do 67 (grátis), Giro Vitorioso, Aviãozinho, Dança do Robô, Muque, Voadora (chute que lança o rival), Mortal para Trás, Coroação (coroa e confete) e Fúria do Trovão (raios no rival).
 
-O catálogo tem 55 itens e existe em duas cópias idênticas: `server/src/catalog.ts` e `app/src/lib/catalog.ts` (usada no modo local). Um teste do servidor falha se as duas divergirem.
+O catálogo tem 57 itens e existe em duas cópias idênticas: `server/src/catalog.ts` e `app/src/lib/catalog.ts` (usada no modo local). Um teste do servidor falha se as duas divergirem.
 
 O servidor é a fonte da verdade: confere o saldo, quem tem cada item e o que está equipado. O catálogo fica em `server/src/catalog.ts` e o app recebe dele os preços e os visuais.
 

@@ -26,7 +26,8 @@ export default function OnlineGame() {
   const { socket, emit, gameCache, connected } = useSocket();
   const toast = useToast();
   const { width } = useWindowDimensions();
-  const boardSize = Math.min(width - 8, 600);
+  // Tabuleiro de ponta a ponta na tela do celular.
+  const boardSize = Math.min(width, 640);
 
   const [state, setState] = useState<GameState | GameOver | null>(gameCache.get(id) ?? null);
   const [showModal, setShowModal] = useState(isOver(gameCache.get(id) ?? null));
@@ -196,6 +197,7 @@ export default function OnlineGame() {
         active={!over && state.turn === oppSide}
         offline={opponentOffline}
       />
+      <View style={{ marginHorizontal: -4, alignItems: 'center' }}>
       <ChessBoard
         fen={state.fen}
         size={boardSize}
@@ -205,7 +207,9 @@ export default function OnlineGame() {
         onMove={onMove}
         boardStyle={look.board}
         pieceStyle={look.pieces}
+        premoveColor={over ? null : mySide}
       />
+      </View>
       <PlayerBar
         name={players[orientation].username}
         avatar={players[orientation].cosmetics?.avatar}

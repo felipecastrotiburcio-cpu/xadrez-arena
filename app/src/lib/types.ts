@@ -36,7 +36,7 @@ export interface BoardStyle {
   highlight: string;
   /** Opcionais: catálogos antigos (em cache) não têm. */
   shape?: 'flat' | 'tiles' | 'round' | 'bevel' | 'glass';
-  frameStyle?: 'plain' | 'line' | 'ornate' | 'rivets' | 'neon';
+  frameStyle?: 'plain' | 'line' | 'ornate' | 'rivets' | 'neon' | 'wood' | 'waves' | 'frost' | 'candy' | 'lava' | 'stars' | 'castle';
 }
 
 export interface PieceStyle {
@@ -45,7 +45,7 @@ export interface PieceStyle {
   blackFill: string;
   blackOutline: string;
   glow: number;
-  model?: 'staunton' | 'modern' | 'medieval' | 'crystal' | 'cute' | 'robot' | 'pixel';
+  model?: 'staunton' | 'modern' | 'medieval' | 'crystal' | 'cute' | 'robot' | 'pixel' | 'knights';
 }
 
 export interface AvatarStyle {

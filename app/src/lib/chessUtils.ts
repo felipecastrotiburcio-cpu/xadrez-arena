@@ -51,3 +51,17 @@ export function resultText(result: string | null, reason: string, mySide: Side |
     outcome: won ? ('win' as const) : ('loss' as const),
   };
 }
+
+/** O lado ainda consegue dar xeque-mate? (sem isso, quem perde no tempo empata — regra da FIDE usada por Lichess e Chess.com) */
+export function hasMatingMaterial(fen: string, side: Side) {
+  let minors = 0;
+  const board = fen.split(' ')[0];
+  for (const ch of board) {
+    const isWhite = ch >= 'A' && ch <= 'Z';
+    if (!/[a-z]/i.test(ch) || (side === 'w') !== isWhite) continue;
+    const t = ch.toLowerCase();
+    if (t === 'p' || t === 'r' || t === 'q') return true;
+    if (t === 'n' || t === 'b') minors++;
+  }
+  return minors >= 2;
+}

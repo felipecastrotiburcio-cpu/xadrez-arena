@@ -2,6 +2,7 @@ import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from '
 import { Animated, Easing, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Chess, type Square } from 'chess.js';
 import { ChessPiece, tint, type PieceType } from './ChessPiece';
+import { FrameArt } from './FrameArt';
 import { colors } from '../lib/theme';
 import { playSound, preloadSounds, type BoardSound } from '../lib/sound';
 import type { BoardStyle, PieceStyle, Side } from '../lib/types';
@@ -25,11 +26,15 @@ interface Props {
   pieceStyle: PieceStyle;
   /** Tocar sons dos lances (padrão: sim). */
   sounds?: boolean;
+  /** Cor que pode fazer pré-lance enquanto o adversário pensa (null = sem pré-lance). */
+  premoveColor?: Side | null;
 }
 
 const FILES = 'abcdefgh';
 
-function ChessBoardBase({ fen, size: outerSize, orientation, movableColor, lastMove, hint, onMove, boardStyle, pieceStyle, sounds = true }: Props) {
+function ChessBoardBase({
+  fen, size: outerSize, orientation, movableColor, lastMove, hint, onMove, boardStyle, pieceStyle, sounds = true, premoveColor = null,
+}: Props) {
   const size = outerSize - boardStyle.frame * 2;
   const chess = useMemo(() => new Chess(fen), [fen]);
   const [selected, setSelected] = useState<Square | null>(null);
@@ -42,15 +47,28 @@ function ChessBoardBase({ fen, size: outerSize, orientation, movableColor, lastM
 
   const turn = chess.turn();
   const canMove = movableColor === 'both' || movableColor === turn;
+  // Pré-lance: na vez do adversário, o jogador já escolhe o próximo lance; ele sai assim que chegar a vez.
+  const premoving = !canMove && !!premoveColor && premoveColor !== turn;
+  const [premove, setPremove] = useState<BoardMove | null>(null);
 
   const targets = useMemo(() => {
-    if (!selected) return new Map<string, { capture: boolean; promotion: boolean }>();
-    const map = new Map<string, { capture: boolean; promotion: boolean }>();
+    const map = new Map<string, { capture: boolean; promotion: boolean; ep?: string }>();
+    if (!selected) return map;
+    if (premoving && premoveColor) {
+      for (const to of premoveTargets(chess, selected, premoveColor)) map.set(to, { capture: false, promotion: false });
+      return map;
+    }
     for (const m of chess.moves({ square: selected, verbose: true })) {
-      map.set(m.to, { capture: !!m.captured, promotion: !!m.promotion });
+      // En passant: o peão capturado fica ao lado, não na casa de destino.
+      const ep = m.isEnPassant() ? `${m.to[0]}${m.from[1]}` : undefined;
+      map.set(m.to, { capture: !!m.captured, promotion: !!m.promotion, ep });
     }
     return map;
-  }, [chess, selected]);
+  }, [chess, selected, premoving, premoveColor]);
+  const epVictim = useMemo(() => {
+    for (const t of targets.values()) if (t.ep) return t.ep;
+    return null;
+  }, [targets]);
 
   const checkSquare = useMemo(() => {
     if (!chess.inCheck()) return null;
@@ -65,6 +83,20 @@ function ChessBoardBase({ fen, size: outerSize, orientation, movableColor, lastM
   // O handler muda a cada render; as casas recebem uma função estável que lê a versão atual.
   const handlerRef = useRef<(square: Square) => void>(() => {});
   handlerRef.current = (square: Square) => {
+    if (premoving && premoveColor) {
+      if (selected && targets.has(square)) {
+        const piece = chess.get(selected);
+        const last = square[1] === (premoveColor === 'w' ? '8' : '1');
+        setPremove({ from: selected, to: square, ...(piece?.type === 'p' && last ? { promotion: 'q' as const } : {}) });
+        setSelected(null);
+        return;
+      }
+      // Tocar em outra casa cancela o pré-lance; tocar numa peça sua começa outro.
+      setPremove(null);
+      const piece = chess.get(square);
+      setSelected(piece && piece.color === premoveColor && square !== selected ? square : null);
+      return;
+    }
     if (!canMove) return;
     const target = targets.get(square);
     if (selected && target) {
@@ -87,8 +119,36 @@ function ChessBoardBase({ fen, size: outerSize, orientation, movableColor, lastM
   const prevPly = useRef(ply);
   const animate = ply > prevPly.current;
   useEffect(() => {
+    // Lance desfeito ou partida reiniciada: o pré-lance perde o sentido.
+    if (ply < prevPly.current) setPremove(null);
     prevPly.current = ply;
   }, [ply]);
+
+  // Chegou a vez: executa o pré-lance se ele for legal agora (senão é descartado).
+  useEffect(() => {
+    if (!premove) return;
+    if (!premoveColor) {
+      setPremove(null);
+      return;
+    }
+    if (!canMove) return;
+    const legal = chess.moves({ square: premove.from as Square, verbose: true }).some((m) => m.to === premove.to);
+    setPremove(null);
+    if (legal) onMove(premove);
+  }, [premove, canMove, chess, onMove, premoveColor]);
+
+  // Aviso "En passant!" quando um peão captura en passant.
+  const [epFlash, setEpFlash] = useState(0);
+  const prevEp = useRef<{ ply: number; ep: string }>({ ply, ep: fen.split(' ')[3] });
+  useEffect(() => {
+    const prev = prevEp.current;
+    prevEp.current = { ply, ep: fen.split(' ')[3] };
+    if (ply !== prev.ply + 1 || !lastMove || prev.ep === '-' || lastMove.to !== prev.ep) return;
+    if (chess.get(lastMove.to as Square)?.type !== 'p' || lastMove.from[0] === lastMove.to[0]) return;
+    setEpFlash((n) => n + 1);
+    const t = setTimeout(() => setEpFlash(0), 1600);
+    return () => clearTimeout(t);
+  }, [ply, fen, lastMove, chess]);
   const moving = lastMove ? chess.get(lastMove.to as Square) : null;
 
   // Sons: lance, captura, xeque e xeque-mate (tocam quando a peça chega à casa).
@@ -128,6 +188,8 @@ function ChessBoardBase({ fen, size: outerSize, orientation, movableColor, lastM
                 hidePiece={!!moving && lastMove?.to === square}
                 last={!!lastMove && (lastMove.from === square || lastMove.to === square)}
                 hinted={!!hint && (hint.from === square || hint.to === square)}
+                premoved={!!premove && (premove.from === square || premove.to === square)}
+                epVictim={epVictim === square}
                 selected={selected === square}
                 check={checkSquare === square}
                 target={!target ? 0 : target.capture ? 2 : 1}
@@ -158,6 +220,12 @@ function ChessBoardBase({ fen, size: outerSize, orientation, movableColor, lastM
         />
       )}
 
+      {epFlash > 0 && (
+        <View pointerEvents="none" style={styles.flashWrap}>
+          <Text style={styles.flash}>En passant!</Text>
+        </View>
+      )}
+
       {promotion && (
         <Pressable style={styles.promoOverlay} onPress={() => setPromotion(null)}>
           <View style={styles.promoBox}>
@@ -184,6 +252,59 @@ export const ChessBoard = memo(ChessBoardBase);
 
 /** Duração da animação de deslizar a peça (ms). */
 export const SLIDE_MS = 230;
+
+/**
+ * Casas para onde a peça poderia ir num pré-lance. Como o adversário ainda vai jogar,
+ * vale o movimento "geométrico" da peça (como no Lichess): ignora bloqueios e
+ * permite capturas de peão em casas vazias; só não pode cair numa peça da própria cor.
+ */
+function premoveTargets(chess: Chess, from: Square, color: Side): string[] {
+  const piece = chess.get(from);
+  if (!piece || piece.color !== color) return [];
+  const f = FILES.indexOf(from[0]);
+  const r = Number(from[1]);
+  const out: string[] = [];
+  const add = (ff: number, rr: number) => {
+    if (ff < 0 || ff > 7 || rr < 1 || rr > 8) return false;
+    const sqr = `${FILES[ff]}${rr}` as Square;
+    const o = chess.get(sqr);
+    if (!(o && o.color === color)) out.push(sqr);
+    return true;
+  };
+  const ray = (df: number, dr: number) => {
+    for (let k = 1; add(f + df * k, r + dr * k); k++);
+  };
+  switch (piece.type) {
+    case 'n':
+      for (const [a, b] of [[1, 2], [2, 1], [2, -1], [1, -2], [-1, -2], [-2, -1], [-2, 1], [-1, 2]]) add(f + a, r + b);
+      break;
+    case 'k': {
+      for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) if (a || b) add(f + a, r + b);
+      const rights = chess.fen().split(' ')[2];
+      const home = color === 'w' ? 1 : 8;
+      if (f === 4 && r === home) {
+        if (rights.includes(color === 'w' ? 'K' : 'k')) add(6, home);
+        if (rights.includes(color === 'w' ? 'Q' : 'q')) add(2, home);
+      }
+      break;
+    }
+    case 'p': {
+      const dir = color === 'w' ? 1 : -1;
+      add(f, r + dir);
+      if (r === (color === 'w' ? 2 : 7)) add(f, r + 2 * dir);
+      add(f - 1, r + dir);
+      add(f + 1, r + dir);
+      break;
+    }
+    default: {
+      const dirs: [number, number][] = [];
+      if (piece.type !== 'b') dirs.push([1, 0], [-1, 0], [0, 1], [0, -1]);
+      if (piece.type !== 'r') dirs.push([1, 1], [1, -1], [-1, 1], [-1, -1]);
+      for (const [a, b] of dirs) ray(a, b);
+    }
+  }
+  return out;
+}
 
 /** Casa clara? (a1 é escura: cada dama começa na casa da sua cor). */
 export const isLight = (square: string) => (FILES.indexOf(square[0]) + Number(square[1])) % 2 === 0;
@@ -213,6 +334,8 @@ interface SquareProps {
   hidePiece: boolean;
   last: boolean;
   hinted: boolean;
+  premoved: boolean;
+  epVictim: boolean;
   selected: boolean;
   check: boolean;
   /** 0 = nada, 1 = casa livre de destino, 2 = captura possível */
@@ -238,6 +361,7 @@ const BoardSquare = memo(function BoardSquare(p: SquareProps) {
       <SquareSurface style={boardStyle} index={FILES.indexOf(p.square[0]) * 8 + Number(p.square[1])} size={sq} light={light} />
       {p.last && <View style={[StyleSheet.absoluteFill, { backgroundColor: boardStyle.highlight }]} />}
       {p.hinted && <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.hint }]} />}
+      {p.premoved && <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 64, 129, 0.45)' }]} />}
       {p.selected && <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.selected }]} />}
       {p.check && <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.check, borderRadius: sq / 2 }]} />}
       {p.pieceType && p.pieceColor && !p.hidePiece && (
@@ -247,6 +371,9 @@ const BoardSquare = memo(function BoardSquare(p: SquareProps) {
       )}
       {!!p.rankLabel && <Text style={[styles.coord, styles.rankCoord, { color: coordColor, fontSize: Math.max(9, sq * 0.2) }]}>{p.rankLabel}</Text>}
       {!!p.fileLabel && <Text style={[styles.coord, styles.fileCoord, { color: coordColor, fontSize: Math.max(9, sq * 0.2) }]}>{p.fileLabel}</Text>}
+      {p.epVictim && (
+        <View style={[styles.captureRing, { borderRadius: sq / 2, borderWidth: sq * 0.06, borderColor: 'rgba(230, 40, 60, 0.75)', borderStyle: 'dashed' }]} />
+      )}
       {p.target === 2 && <View style={[styles.captureRing, { borderRadius: sq / 2, borderWidth: sq * 0.08 }]} />}
       {p.target === 1 && (
         <View style={[styles.dot, { width: sq * 0.3, height: sq * 0.3, borderRadius: sq, left: sq * 0.35, top: sq * 0.35 }]} />
@@ -312,70 +439,20 @@ function MovingPiece({
   );
 }
 
-/** Moldura do tabuleiro com acabamento (filete, ornamentos, rebites ou neon). */
+/** Moldura do tabuleiro: cada tema tem a sua borda (veja FrameArt). */
 export function BoardFrame({ style, size, children }: { style: BoardStyle; size: number; children: React.ReactNode }) {
   const f = style.frame;
-  const kind = f >= 4 ? style.frameStyle ?? 'plain' : 'plain';
   const inner = size - f * 2;
-  const deco: React.ReactNode[] = [];
-  if (kind === 'line' || kind === 'ornate') {
-    const inset = f * 0.38;
-    deco.push(
-      <View
-        key="line"
-        pointerEvents="none"
-        style={{
-          position: 'absolute', left: inset, top: inset, right: inset, bottom: inset, borderRadius: 4 + inset / 2,
-          borderWidth: kind === 'ornate' ? 1.5 : 1, borderColor: kind === 'ornate' ? '#f5d27a' : tint(style.border, 0.4),
-        }}
-      />,
-    );
-  }
-  if (kind === 'ornate') {
-    const d = f * 1.5;
-    const spots = [[f / 2, f / 2], [size - f / 2, f / 2], [f / 2, size - f / 2], [size - f / 2, size - f / 2], [size / 2, f / 2], [size / 2, size - f / 2], [f / 2, size / 2], [size - f / 2, size / 2]];
-    spots.forEach(([x, y], i) => {
-      const k = i < 4 ? d : d * 0.6;
-      deco.push(
-        <View
-          key={`o${i}`}
-          pointerEvents="none"
-          style={{
-            position: 'absolute', left: x - k / 2, top: y - k / 2, width: k, height: k, backgroundColor: '#f5d27a',
-            borderWidth: 1, borderColor: '#8a6508', transform: [{ rotate: '45deg' }],
-          }}
-        />,
-      );
-    });
-  }
-  if (kind === 'rivets') {
-    const d = Math.max(3, f * 0.42);
-    for (let i = 0; i <= 8; i++) {
-      const t = f + (inner * i) / 8;
-      for (const [x, y] of [[t, f / 2], [t, size - f / 2], [f / 2, t], [size - f / 2, t]]) {
-        deco.push(
-          <View
-            key={`r${i}-${x}-${y}`}
-            pointerEvents="none"
-            style={{
-              position: 'absolute', left: x - d / 2, top: y - d / 2, width: d, height: d, borderRadius: d,
-              backgroundColor: tint(style.border, 0.45), borderWidth: 0.75, borderColor: tint(style.border, -0.5),
-            }}
-          />,
-        );
-      }
-    }
-  }
-  if (kind === 'neon') {
-    deco.push(
-      <View key="n1" pointerEvents="none" style={{ position: 'absolute', left: 1, top: 1, right: 1, bottom: 1, borderRadius: 6 + f / 2, borderWidth: 1.5, borderColor: style.coord.dark, opacity: 0.8 }} />,
-      <View key="n2" pointerEvents="none" style={{ position: 'absolute', left: f - 2.5, top: f - 2.5, right: f - 2.5, bottom: f - 2.5, borderRadius: 3, borderWidth: 2, borderColor: style.coord.light }} />,
-    );
-  }
+  const castle = style.frameStyle === 'castle';
   return (
-    <View style={{ width: size, height: size, borderRadius: 6 + f / 2, backgroundColor: style.border, padding: f, overflow: 'hidden' }}>
-      {deco}
-      <View style={{ width: inner, height: inner, borderRadius: f ? 2 : 0, overflow: 'hidden' }}>{children}</View>
+    <View
+      style={{
+        width: size, height: size, borderRadius: castle ? 0 : 6 + f / 2, padding: f, overflow: 'hidden',
+        backgroundColor: castle && f >= 3 ? 'transparent' : style.border,
+      }}
+    >
+      <FrameArt style={style} size={size} />
+      <View style={{ width: inner, height: inner, borderRadius: f && !castle ? 2 : 0, overflow: 'hidden' }}>{children}</View>
     </View>
   );
 }
@@ -510,6 +587,17 @@ const styles = StyleSheet.create({
   fileCoord: { bottom: 1, right: 3 },
   dot: { position: 'absolute', backgroundColor: 'rgba(20, 30, 20, 0.35)' },
   captureRing: { ...StyleSheet.absoluteFill, borderColor: 'rgba(20, 30, 20, 0.4)' },
+  flashWrap: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
+  flash: {
+    color: '#fff',
+    fontSize: 26,
+    fontWeight: '900',
+    backgroundColor: 'rgba(124, 77, 255, 0.92)',
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    borderRadius: 999,
+    overflow: 'hidden',
+  },
   promoOverlay: {
     ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0,0,0,0.55)',

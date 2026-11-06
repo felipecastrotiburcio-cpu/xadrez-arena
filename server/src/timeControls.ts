@@ -7,6 +7,7 @@ export interface TimeControl {
 
 export const TIME_CONTROLS: TimeControl[] = [
   { id: '1+0', label: 'Bullet 1 min', initialMs: 60_000, incrementMs: 0 },
+  { id: '3+0', label: 'Blitz 3 min', initialMs: 180_000, incrementMs: 0 },
   { id: '3+2', label: 'Blitz 3 | 2', initialMs: 180_000, incrementMs: 2_000 },
   { id: '5+0', label: 'Blitz 5 min', initialMs: 300_000, incrementMs: 0 },
   { id: '10+0', label: 'Rápida 10 min', initialMs: 600_000, incrementMs: 0 },

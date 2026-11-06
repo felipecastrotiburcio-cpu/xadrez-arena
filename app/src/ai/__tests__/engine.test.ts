@@ -48,3 +48,14 @@ test('todos os níveis devolvem lances legais em partida inteira', () => {
     }
   }
 });
+
+test('en passant: o motor gera a captura e a IA a escolhe quando ganha material', () => {
+  // Brancas: peão em e5; pretas acabaram de jogar d7-d5.
+  const fen = 'rnbqkbnr/1pp1pppp/p7/3pP3/8/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 3';
+  const chess = new Chess(fen);
+  assert.ok(chess.moves({ verbose: true }).some((m) => m.isEnPassant() && m.to === 'd6'));
+  assert.equal(new Position(fen).legalMoves().length, chess.moves().length);
+  // A única captura possível é o en passant, que ganha um peão.
+  const r = findBestMove('7k/8/8/3pP3/8/8/8/K7 w - d6 0 1', { level: 5 });
+  assert.deepEqual(r.move, { from: 'e5', to: 'd6' });
+});

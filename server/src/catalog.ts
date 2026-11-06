@@ -21,7 +21,7 @@ export interface BoardStyle {
   /** Formato das casas: lisas, ladrilhos com rejunte, redondas, em relevo ou de vidro. */
   shape: 'flat' | 'tiles' | 'round' | 'bevel' | 'glass';
   /** Acabamento da moldura. */
-  frameStyle: 'plain' | 'line' | 'ornate' | 'rivets' | 'neon';
+  frameStyle: 'plain' | 'line' | 'ornate' | 'rivets' | 'neon' | 'wood' | 'waves' | 'frost' | 'candy' | 'lava' | 'stars' | 'castle';
 }
 
 export interface PieceStyle {
@@ -32,7 +32,7 @@ export interface PieceStyle {
   /** Raio do brilho em volta da peça (0 = contorno simples). */
   glow: number;
   /** Modelo (formato) das peças — cada conjunto tem um desenho próprio. */
-  model: 'staunton' | 'modern' | 'medieval' | 'crystal' | 'cute' | 'robot' | 'pixel';
+  model: 'staunton' | 'modern' | 'medieval' | 'crystal' | 'cute' | 'robot' | 'pixel' | 'knights';
 }
 
 export interface AvatarStyle {
@@ -90,28 +90,28 @@ const move = (
 export const CATALOG: ShopItem[] = [
   // ----------------------------------------------------------- tabuleiros
   board('board_classic', 'Madeira Clássica', 'O tabuleiro tradicional de madeira.', 0, 'comum', {
-    light: '#efd9b4', dark: '#b5835a', border: '#7a5232', frame: 0,
+    light: '#efd9b4', dark: '#b5835a', border: '#7a5232', frame: 8,
     coord: { light: '#b5835a', dark: '#efd9b4' }, pattern: 'none', patternColor: 'transparent',
     highlight: 'rgba(240, 210, 60, 0.55)',
-    shape: 'flat', frameStyle: 'plain',
+    shape: 'flat', frameStyle: 'wood',
   }),
   board('board_tournament', 'Verde Torneio', 'As cores dos clubes e torneios.', 150, 'comum', {
-    light: '#eeeed2', dark: '#769656', border: '#4b6236', frame: 0,
+    light: '#eeeed2', dark: '#769656', border: '#4b6236', frame: 6,
     coord: { light: '#769656', dark: '#eeeed2' }, pattern: 'none', patternColor: 'transparent',
     highlight: 'rgba(246, 246, 105, 0.6)',
-    shape: 'flat', frameStyle: 'plain',
+    shape: 'flat', frameStyle: 'line',
   }),
   board('board_walnut', 'Nogueira Entalhada', 'Madeira nobre com veios e moldura.', 300, 'raro', {
-    light: '#d9b48a', dark: '#7b4a2b', border: '#4a2a15', frame: 6,
+    light: '#d9b48a', dark: '#7b4a2b', border: '#4a2a15', frame: 10,
     coord: { light: '#7b4a2b', dark: '#d9b48a' }, pattern: 'grain', patternColor: 'rgba(60, 30, 10, 0.18)',
     highlight: 'rgba(255, 200, 80, 0.5)',
-    shape: 'bevel', frameStyle: 'line',
+    shape: 'bevel', frameStyle: 'wood',
   }),
   board('board_ocean', 'Oceano Profundo', 'Tons de azul calmos como o mar.', 450, 'raro', {
-    light: '#dbe9f4', dark: '#4a7fa8', border: '#24506f', frame: 6,
+    light: '#dbe9f4', dark: '#4a7fa8', border: '#24506f', frame: 10,
     coord: { light: '#4a7fa8', dark: '#dbe9f4' }, pattern: 'shine', patternColor: 'rgba(255,255,255,0.18)',
     highlight: 'rgba(120, 220, 255, 0.55)',
-    shape: 'round', frameStyle: 'line',
+    shape: 'round', frameStyle: 'waves',
   }),
   board('board_marble', 'Mármore Carrara', 'Pedra polida com veios elegantes.', 800, 'epico', {
     light: '#f3f1ec', dark: '#8f9399', border: '#c9a96e', frame: 8,
@@ -120,34 +120,40 @@ export const CATALOG: ShopItem[] = [
     shape: 'flat', frameStyle: 'ornate',
   }),
   board('board_neon', 'Neon Cyberpunk', 'Grade luminosa de uma cidade futurista.', 1200, 'epico', {
-    light: '#2b1a4a', dark: '#120a24', border: '#ff2fd6', frame: 4,
+    light: '#2b1a4a', dark: '#120a24', border: '#ff2fd6', frame: 6,
     coord: { light: '#00f0ff', dark: '#ff2fd6' }, pattern: 'grid', patternColor: 'rgba(0, 240, 255, 0.35)',
     highlight: 'rgba(255, 47, 214, 0.45)',
     shape: 'tiles', frameStyle: 'neon',
   }),
   board('board_ice', 'Gelo Ártico', 'Cristais de gelo com brilho polar.', 600, 'raro', {
-    light: '#eef9ff', dark: '#7fb8d9', border: '#3d7ea6', frame: 6,
+    light: '#eef9ff', dark: '#7fb8d9', border: '#3d7ea6', frame: 10,
     coord: { light: '#3d7ea6', dark: '#eef9ff' }, pattern: 'shine', patternColor: 'rgba(255,255,255,0.4)',
     highlight: 'rgba(0, 200, 255, 0.45)',
-    shape: 'glass', frameStyle: 'line',
+    shape: 'glass', frameStyle: 'frost',
   }),
   board('board_lava', 'Lava Vulcânica', 'Rocha negra com rios de lava brilhando.', 1600, 'epico', {
-    light: '#3a2320', dark: '#1a0f0e', border: '#ff5a1f', frame: 6,
+    light: '#3a2320', dark: '#1a0f0e', border: '#ff5a1f', frame: 10,
     coord: { light: '#ffb347', dark: '#ff5a1f' }, pattern: 'grid', patternColor: 'rgba(255, 110, 30, 0.55)',
     highlight: 'rgba(255, 170, 40, 0.5)',
-    shape: 'tiles', frameStyle: 'rivets',
+    shape: 'tiles', frameStyle: 'lava',
   }),
   board('board_candy', 'Confeitaria', 'Casas redondinhas de chiclete e menta.', 700, 'raro', {
-    light: '#ffe3f1', dark: '#ff8cc6', border: '#7ee8c4', frame: 8,
+    light: '#ffe3f1', dark: '#ff8cc6', border: '#7ee8c4', frame: 10,
     coord: { light: '#d6337a', dark: '#fff4fa' }, pattern: 'shine', patternColor: 'rgba(255,255,255,0.35)',
     highlight: 'rgba(255, 230, 90, 0.6)',
-    shape: 'round', frameStyle: 'line',
+    shape: 'round', frameStyle: 'candy',
   }),
   board('board_arcade', 'Fliperama', 'Blocos em relevo de videogame antigo.', 1000, 'epico', {
     light: '#ffd23f', dark: '#3a86ff', border: '#1b1b3a', frame: 8,
     coord: { light: '#1b1b3a', dark: '#ffffff' }, pattern: 'none', patternColor: 'transparent',
     highlight: 'rgba(255, 60, 120, 0.5)',
     shape: 'bevel', frameStyle: 'rivets',
+  }),
+  board('board_castle', 'Fortaleza dos Cavaleiros', 'Pedras de castelo cercadas por muralha com ameias, torres e ponte levadiça.', 2600, 'lendario', {
+    light: '#d9cfb8', dark: '#7d7462', border: '#8a8170', frame: 24,
+    coord: { light: '#5b5346', dark: '#efe8d8' }, pattern: 'marble', patternColor: 'rgba(60, 50, 40, 0.22)',
+    highlight: 'rgba(255, 196, 60, 0.5)',
+    shape: 'bevel', frameStyle: 'castle',
   }),
   board('board_royal', 'Ouro Real', 'Marfim e ouro dignos de um rei.', 2000, 'lendario', {
     light: '#fff6dc', dark: '#d4a72c', border: '#8a6508', frame: 10,
@@ -156,10 +162,10 @@ export const CATALOG: ShopItem[] = [
     shape: 'bevel', frameStyle: 'ornate',
   }),
   board('board_galaxy', 'Galáxia', 'Jogue entre as estrelas.', 3000, 'lendario', {
-    light: '#3d2c7a', dark: '#140f33', border: '#8f7bff', frame: 8,
+    light: '#3d2c7a', dark: '#140f33', border: '#8f7bff', frame: 10,
     coord: { light: '#c9bfff', dark: '#8f7bff' }, pattern: 'stars', patternColor: 'rgba(255, 255, 255, 0.85)',
     highlight: 'rgba(143, 123, 255, 0.55)',
-    shape: 'round', frameStyle: 'neon',
+    shape: 'round', frameStyle: 'stars',
   }),
 
   // ----------------------------------------------------------- peças
@@ -189,6 +195,9 @@ export const CATALOG: ShopItem[] = [
   }),
   pieces('pieces_shadow', 'Sombras', 'Peças sombrias com brilho violeta.', 1400, 'epico', {
     whiteFill: '#e9dcff', whiteOutline: '#8b5cff', blackFill: '#2a1747', blackOutline: '#c58bff', glow: 7, model: 'modern',
+  }),
+  pieces('pieces_knights', 'Cavaleiros Medievais', 'Soldados de escudo, cavalos de guerra, monges, rainha e rei de armadura.', 3200, 'lendario', {
+    whiteFill: '#dfe4ea', whiteOutline: '#28313b', blackFill: '#45474f', blackOutline: '#0d0e11', glow: 0, model: 'knights',
   }),
   pieces('pieces_gold', 'Ouro e Prata', 'Metais preciosos polidos.', 1800, 'lendario', {
     whiteFill: '#ffd34d', whiteOutline: '#7a5500', blackFill: '#c7ced6', blackOutline: '#2e3640', glow: 5, model: 'medieval',

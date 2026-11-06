@@ -5,7 +5,7 @@ import { useAuth } from './auth';
 import type { AvatarStyle, BoardStyle, CharacterStyle, ItemType, PieceStyle, ShopItem } from './types';
 
 // v2: bonecos em blocos (acessórios 3D em vez de emoji).
-const CACHE_KEY = 'xadrez.catalog.v2';
+const CACHE_KEY = 'xadrez.catalog.v3';
 
 /**
  * Itens gratuitos embutidos no app: garantem que tudo seja desenhado mesmo
@@ -15,8 +15,8 @@ const FALLBACK: ShopItem[] = [
   {
     id: 'board_classic', type: 'board', name: 'Madeira Clássica', description: '', price: 0, rarity: 'comum',
     style: {
-      light: '#efd9b4', dark: '#b5835a', border: '#7a5232', frame: 0, coord: { light: '#b5835a', dark: '#efd9b4' },
-      pattern: 'none', patternColor: 'transparent', highlight: 'rgba(240, 210, 60, 0.55)',
+      light: '#efd9b4', dark: '#b5835a', border: '#7a5232', frame: 8, coord: { light: '#b5835a', dark: '#efd9b4' },
+      pattern: 'none', patternColor: 'transparent', highlight: 'rgba(240, 210, 60, 0.55)', shape: 'flat', frameStyle: 'wood',
     },
   },
   {

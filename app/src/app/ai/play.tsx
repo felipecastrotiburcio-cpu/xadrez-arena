@@ -9,12 +9,13 @@ import { GameOverModal } from '../../components/GameOverModal';
 import { MoveList } from '../../components/MoveList';
 import { PlayerBar } from '../../components/PlayerBar';
 import { Button, Screen } from '../../components/ui';
-import { AI_LEVELS, findBestMoveAsync, suggestMoveAsync } from '../../ai';
+import { AI_LEVELS, evaluateAsync, findBestMoveAsync, suggestMoveAsync } from '../../ai';
 import { recordAiResult } from '../../lib/aiStats';
 import { api, isLocalMode } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import { AI_CHARACTER, useCharacterStyle, useCosmetics, useMyLook } from '../../lib/cosmetics';
-import { materialInfo, resultText } from '../../lib/chessUtils';
+import { hasMatingMaterial, materialInfo, resultText } from '../../lib/chessUtils';
+import { useToast } from '../../lib/toast';
 import { colors } from '../../lib/theme';
 import type { PrivateUser, Side } from '../../lib/types';
 
@@ -41,9 +42,18 @@ const tap = () => {
 };
 
 export default function AiGame() {
-  const params = useLocalSearchParams<{ level: string; color: Side }>();
+  const params = useLocalSearchParams<{ level: string; color: Side; time?: string }>();
   const level = AI_LEVELS.find((l) => l.id === Number(params.level)) ?? AI_LEVELS[1];
   const playerSide: Side = params.color === 'b' ? 'b' : 'w';
+  const aiSide: Side = playerSide === 'w' ? 'b' : 'w';
+  // Relógio (10, 5 ou 3 min). Começa a correr depois do primeiro lance, como nas partidas online.
+  const initialMs = Math.max(0, Number(params.time) || 0) * 60_000;
+  const timed = initialMs > 0;
+  const clocks = useRef({ w: initialMs, b: initialMs });
+  const turnStart = useRef(0);
+  const [, setTick] = useState(0);
+  const toast = useToast();
+  const [drawBusy, setDrawBusy] = useState(false);
   const { user, setUser } = useAuth();
   const [reward, setReward] = useState<Reward | null>(null);
   // Cada partida dá recompensa uma única vez (desfazer e vencer de novo não paga outra vez).
@@ -53,7 +63,8 @@ export default function AiGame() {
   const myCharacter = useCharacterStyle(look.equipped.character);
   const navigation = useNavigation();
   const { width } = useWindowDimensions();
-  const boardSize = Math.min(width - 8, 600);
+  // Tabuleiro de ponta a ponta na tela do celular.
+  const boardSize = Math.min(width, 640);
 
   const chessRef = useRef(new Chess());
   const fenHistory = useRef<string[]>([]);
@@ -107,30 +118,52 @@ export default function AiGame() {
     [level.id, playerSide, user, setUser],
   );
 
+  const endGame = useCallback(
+    (r: { result: string; reason: string }) => {
+      setOver(r);
+      announce(r.result);
+      report(resultText(r.result, r.reason, playerSide).outcome, r.reason);
+    },
+    [playerSide, announce, report],
+  );
+
   const finishIfOver = useCallback(() => {
     const r = gameResult(chessRef.current);
     if (!r) return false;
-    setOver(r);
-    announce(r.result);
-    report(resultText(r.result, r.reason, playerSide).outcome, r.reason);
+    endGame(r);
     return true;
-  }, [playerSide, announce, report]);
+  }, [endGame]);
+
+  /** Tempo restante de um lado agora (o relógio de quem joga está correndo). */
+  const clockNow = (side: Side) => {
+    const c = chessRef.current;
+    const base = clocks.current[side];
+    const running = timed && !over && c.history().length > 0 && c.turn() === side;
+    return Math.max(0, running ? base - (Date.now() - turnStart.current) : base);
+  };
 
   const applyMove = useCallback(
     (m: BoardMove) => {
       const c = chessRef.current;
       const before = c.fen();
+      const mover = c.turn();
+      const plies = c.history().length;
       try {
         c.move(m);
       } catch {
         return false;
+      }
+      if (timed) {
+        const now = Date.now();
+        if (plies > 0) clocks.current[mover] = Math.max(0, clocks.current[mover] - (now - turnStart.current));
+        turnStart.current = now;
       }
       fenHistory.current.push(before);
       tap();
       sync();
       return true;
     },
-    [sync],
+    [sync, timed],
   );
 
   // Vez da IA. Ela "pensa" por um intervalo natural (0,9–1,6 s, variando a cada lance)
@@ -141,11 +174,14 @@ export default function AiGame() {
     let cancelled = false;
     setThinking(true);
     const started = Date.now();
-    const minThink = 900 + Math.random() * 700;
+    // Com relógio, a IA gasta no máximo ~1/40 do tempo que lhe resta em cada lance.
+    const left = clocks.current[aiSide] - (c.history().length > 0 ? Date.now() - turnStart.current : 0);
+    const minThink = Math.min(900 + Math.random() * 700, timed ? left / 60 : Infinity);
+    const maxTimeMs = timed ? Math.max(80, left / 40) : undefined;
     (async () => {
       // Deixa a peça do jogador terminar de deslizar antes de começar a calcular.
       await wait(SLIDE_MS + 60);
-      const r = await findBestMoveAsync(c.fen(), { level: level.id, history: fenHistory.current });
+      const r = await findBestMoveAsync(c.fen(), { level: level.id, history: fenHistory.current, maxTimeMs });
       const rest = minThink - (Date.now() - started);
       if (rest > 0) await wait(rest);
       if (cancelled) return;
@@ -156,7 +192,50 @@ export default function AiGame() {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fen, over, playerSide, level.id, applyMove, finishIfOver]);
+
+  // Relógio: redesenha a cada 100 ms e encerra a partida quando o tempo de alguém acaba.
+  const clockRunning = timed && !over && chessRef.current.history().length > 0;
+  useEffect(() => {
+    if (!clockRunning) return;
+    const t = setInterval(() => {
+      setTick((n) => n + 1);
+      const c = chessRef.current;
+      const side = c.turn();
+      if (clocks.current[side] - (Date.now() - turnStart.current) > 0) return;
+      clocks.current[side] = 0;
+      const winner: Side = side === 'w' ? 'b' : 'w';
+      // Quem ainda tem tempo só vence se tiver material para dar mate (senão é empate).
+      endGame(
+        hasMatingMaterial(c.fen(), winner)
+          ? { result: winner === 'w' ? '1-0' : '0-1', reason: 'tempo' }
+          : { result: '1/2-1/2', reason: 'tempo esgotado sem material' },
+      );
+    }, 100);
+    return () => clearInterval(t);
+  }, [clockRunning, endGame]);
+
+  // Proposta de empate: a IA aceita se não estiver melhor na posição (avaliação ≤ +0,3 peão para ela).
+  const offerDraw = async () => {
+    const c = chessRef.current;
+    if (thinking || over || drawBusy) return;
+    if (c.history().length < 20) {
+      toast('A IA só aceita empate depois do 10º lance.', 'info');
+      return;
+    }
+    setDrawBusy(true);
+    const fenNow = c.fen();
+    const score = await evaluateAsync(fenNow, fenHistory.current);
+    setDrawBusy(false);
+    if (chessRef.current.fen() !== fenNow || over) return;
+    const aiScore = c.turn() === aiSide ? score : -score;
+    if (aiScore <= 30) {
+      endGame({ result: '1/2-1/2', reason: 'acordo' });
+    } else {
+      toast(`${level.name} recusou o empate: acha que está melhor.`, 'info');
+    }
+  };
 
   const onPlayerMove = (m: BoardMove) => {
     if (thinking || over) return;
@@ -165,7 +244,7 @@ export default function AiGame() {
 
   const undo = () => {
     const c = chessRef.current;
-    if (thinking || c.history().length === 0) return;
+    if (thinking || timed || c.history().length === 0) return;
     // Desfaz o lance da IA e o do jogador.
     const plies = c.turn() === playerSide ? 2 : 1;
     for (let i = 0; i < plies && c.history().length > 0; i++) {
@@ -191,6 +270,8 @@ export default function AiGame() {
     chessRef.current = new Chess();
     fenHistory.current = [];
     rewarded.current = false;
+    clocks.current = { w: initialMs, b: initialMs };
+    turnStart.current = 0;
     setReward(null);
     setOver(null);
     setShowModal(false);
@@ -215,7 +296,6 @@ export default function AiGame() {
 
   const material = useMemo(() => materialInfo(fen), [fen]);
   const turn = fen.split(' ')[1] as Side;
-  const aiSide: Side = playerSide === 'w' ? 'b' : 'w';
   const adv = (side: Side) => Math.max(0, side === 'w' ? material.advantage : -material.advantage);
   const text = over ? resultText(over.result, over.reason, playerSide) : null;
 
@@ -229,7 +309,9 @@ export default function AiGame() {
         advantage={adv(aiSide)}
         active={turn === aiSide && !over}
         thinking={thinking}
+        clockMs={timed ? clockNow(aiSide) : undefined}
       />
+      <View style={{ marginHorizontal: -4, alignItems: 'center' }}>
       <ChessBoard
         fen={fen}
         size={boardSize}
@@ -240,7 +322,9 @@ export default function AiGame() {
         onMove={onPlayerMove}
         boardStyle={look.board}
         pieceStyle={look.pieces}
+        premoveColor={over ? null : playerSide}
       />
+      </View>
       <PlayerBar
         name={user?.username ?? 'Você'}
         avatar={user?.equipped.avatar}
@@ -248,6 +332,7 @@ export default function AiGame() {
         capturedColor={aiSide}
         advantage={adv(playerSide)}
         active={turn === playerSide && !over}
+        clockMs={timed ? clockNow(playerSide) : undefined}
       />
       <MoveList moves={chessRef.current.history()} />
       {over && !showModal && text && (
@@ -256,12 +341,15 @@ export default function AiGame() {
         </Text>
       )}
       <View style={styles.actions}>
-        <Button small variant="secondary" title="Desfazer" icon="↶" style={styles.action} onPress={undo} disabled={thinking} />
+        {!timed && <Button small variant="secondary" title="Desfazer" icon="↶" style={styles.action} onPress={undo} disabled={thinking} />}
         <Button small variant="secondary" title="Dica" icon="💡" style={styles.action} onPress={showHint} disabled={thinking || hinting || !!over} loading={hinting} />
         {over ? (
           <Button small title="Nova" icon="↻" style={styles.action} onPress={restart} />
         ) : (
-          <Button small variant="secondary" title="Desistir" icon="⚑" style={styles.action} onPress={resign} />
+          <>
+            <Button small variant="secondary" title="Empate" icon="½" style={styles.action} onPress={offerDraw} disabled={thinking} loading={drawBusy} />
+            <Button small variant="secondary" title="Desistir" icon="⚑" style={styles.action} onPress={resign} />
+          </>
         )}
       </View>
 
