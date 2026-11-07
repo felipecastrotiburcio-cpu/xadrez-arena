@@ -55,7 +55,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
     predictiveBackGestureEnabled: false,
   },
-  web: { favicon: './assets/favicon.png' },
+  web: {
+    favicon: './assets/favicon.png',
+    name: 'Xadrez Arena',
+    shortName: 'Xadrez Arena',
+    themeColor: '#110d2e',
+    backgroundColor: '#110d2e',
+  },
+  // Versão web no GitHub Pages: o site fica em /xadrez-arena (definido só no build da web).
+  ...(process.env.EXPO_BASE_URL ? { experiments: { baseUrl: process.env.EXPO_BASE_URL } } : {}),
   plugins: [
     'expo-router',
     // Sem Face ID / digital: o app só guarda o login de forma segura.

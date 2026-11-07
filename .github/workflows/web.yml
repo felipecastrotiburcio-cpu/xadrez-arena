@@ -1,0 +1,67 @@
+# Publica a versão web do Xadrez Arena no GitHub Pages (é a forma de usar no iPhone sem
+# computador: Safari → Compartilhar → Adicionar à Tela de Início). Roda a cada mudança no app.
+name: Site (versão web / iPhone)
+
+on:
+  push:
+    branches: [main]
+    paths: ['app/**', '.github/workflows/web.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+env:
+  APP_ENV: production
+  EXPO_NO_TELEMETRY: 1
+  CI: 1
+
+jobs:
+  build:
+    name: Gerar o site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Instalar dependências e testar
+        working-directory: app
+        run: |
+          npm ci
+          npx tsc --noEmit
+          npm run test:local
+
+      - name: Exportar o app para a web (PWA)
+        working-directory: app
+        env:
+          EXPO_BASE_URL: /${{ github.event.repository.name }}
+        run: |
+          npx expo export --platform web --output-dir dist
+          node scripts/pwa.mjs dist "$EXPO_BASE_URL"
+          touch dist/.nojekyll
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: app/dist
+
+  deploy:
+    name: Publicar no GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

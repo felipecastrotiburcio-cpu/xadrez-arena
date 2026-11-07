@@ -9,6 +9,23 @@ de iPhone e publica o arquivo **xadrez-arena-ios.ipa** em
 - iOS mínimo: **16.4** (iPhone 8 ou mais novo) · iPad em tela cheia, em pé.
 - Não pede microfone, câmera, localização nem Face ID.
 
+## Jeito mais fácil: versão web (só o iPhone, grátis)
+
+Endereço: **https://felipecastrotiburcio-cpu.github.io/xadrez-arena/**
+
+1. Abra o endereço no **Safari** do iPhone.
+2. Toque em **Compartilhar** (quadrado com seta para cima) → **Adicionar à Tela de Início** → **Adicionar**.
+3. Abra pelo ícone **Xadrez Arena** na tela de início: ele abre em tela cheia, como um app.
+
+- Depois de aberto uma vez, funciona **sem internet** (IA, loja, contas, finalizações 3D).
+- Contas e moedas ficam salvas no próprio iPhone (no app da tela de início). Apagar o ícone
+  apaga esses dados.
+- Atualiza sozinho: a cada mudança no projeto o workflow **Site (versão web / iPhone)** publica
+  a versão nova.
+- **Configuração única** (dono do repositório): GitHub → **Settings → Pages → Build and
+  deployment → Source: GitHub Actions**. Depois, Actions → "Site (versão web / iPhone)" →
+  **Run workflow**.
+
 ## Por que o arquivo .ipa não instala direto?
 
 A Apple só deixa instalar apps **assinados** por uma conta Apple. Diferente do Android,
