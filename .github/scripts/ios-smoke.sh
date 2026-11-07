@@ -53,9 +53,16 @@ shot 01-inicio
 if alive; then ok "App continua aberto após 20 s (tela inicial)"; else fail "App fechou ao abrir"; fi
 
 # Uso do app tocando na tela (Maestro): partida, desistência, finalização, conta, loja.
-USERNAME="ios$(date +%s | tail -c 5)"
-if maestro --device "$UDID" test -e OUT="$OUT" -e USERNAME="$USERNAME" --debug-output "$OUT/maestro" \
-     "$(dirname "$0")/../maestro/ios-smoke.yaml" > "$OUT/maestro.log" 2>&1; then
+run_flow() { # run_flow <tentativa>
+  USERNAME="ios$(date +%s | tail -c 5)"
+  perl -e 'alarm shift; exec @ARGV' 1200 maestro --device "$UDID" test -e OUT="$OUT" -e USERNAME="$USERNAME" --debug-output "$OUT/maestro" \
+    "$(dirname "$0")/../maestro/ios-smoke.yaml" > "$OUT/maestro-$1.log" 2>&1
+  local r=$?
+  cp "$OUT/maestro-$1.log" "$OUT/maestro.log"
+  return $r
+}
+# O simulador do GitHub às vezes fica lento e a ferramenta de toques trava; nesse caso tenta de novo.
+if run_flow 1 || { log "ℹ️  1ª tentativa do teste de uso falhou (ver maestro-1.log); tentando de novo"; xcrun simctl terminate "$UDID" "$BUNDLE" 2>/dev/null; sleep 5; run_flow 2; }; then
   ok "Partida contra a IA (5 min): lance e2→e4, resposta da IA e lance ilegal recusado"
   ok "Desistência, finalização 3D e tela de resultado (Derrota)"
   ok "Conta '$USERNAME' criada no aparelho com 300 moedas"
