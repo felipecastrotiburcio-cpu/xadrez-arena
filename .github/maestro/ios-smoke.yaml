@@ -52,7 +52,10 @@ appId: app.xadrezarena
     end: 50%, 21%
     duration: 4000
 - takeScreenshot: ${OUT}/04-finalizacao-3d
-- tapOn: ".*Pular.*"
+# A finalização fecha sozinha após 9 s; se ainda estiver aberta, pula.
+- tapOn:
+    text: ".*Pular.*"
+    optional: true
 - extendedWaitUntil:
     visible: ".*Derrota.*"
     timeout: 20000
