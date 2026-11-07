@@ -38,6 +38,9 @@ log "Simulador: $NAME ($RUNTIME)"
 
 xcrun simctl boot "$UDID" 2>/dev/null || true
 xcrun simctl bootstatus "$UDID" -b > /dev/null
+# Desliga o tutorial do teclado ("deslize para digitar"), que cobre a tela na 1ª digitação.
+xcrun simctl spawn "$UDID" defaults write com.apple.keyboard.preferences DidShowContinuousPathIntroduction -bool true 2>/dev/null || true
+xcrun simctl spawn "$UDID" defaults write com.apple.Preferences DidShowContinuousPathIntroduction -bool true 2>/dev/null || true
 sleep 5
 shot() { xcrun simctl io "$UDID" screenshot "$OUT/$1.png" > /dev/null 2>&1; }
 alive() { xcrun simctl spawn "$UDID" launchctl list 2>/dev/null | grep -q "UIKitApplication:$BUNDLE"; }

@@ -80,12 +80,16 @@ appId: app.xadrezarena
 - tapOn:
     text: "Continue|Continuar"
     optional: true
+- tapOn:
+    id: "login-username"
 - inputText: ${USERNAME}
 - tapOn:
     id: "login-password"
 - tapOn:
     text: "Continue|Continuar"
     optional: true
+- tapOn:
+    id: "login-password"
 - inputText: "segredo123"
 # "Enter" no campo de senha envia o formulário (o hideKeyboard do Maestro falha no iOS)
 - pressKey: Enter
