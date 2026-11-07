@@ -40,7 +40,7 @@ export default function RootLayout() {
                     contentStyle: { backgroundColor: colors.bg },
                   }}
                 >
-                  <Stack.Screen name="index" options={{ headerShown: false }} />
+                  <Stack.Screen name="index" options={{ headerShown: false, title: 'Início' }} />
                   <Stack.Screen name="login" options={{ title: 'Entrar', presentation: 'modal' }} />
                   <Stack.Screen name="ai/index" options={{ title: 'Jogar contra a IA' }} />
                   <Stack.Screen name="ai/play" options={{ title: 'Partida contra IA' }} />

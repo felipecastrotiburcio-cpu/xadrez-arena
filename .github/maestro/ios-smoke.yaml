@@ -120,15 +120,22 @@ appId: app.xadrezarena
       - extendedWaitUntil:
           visible: ".*Verde Torneio.*"
           timeout: 10000
-- tapOn: ".*🪙 150.*"
-- tapOn: "Comprar"
+# Abre a prévia do "Verde Torneio" (150) e compra por ela
+- tapOn: ".*Verde Torneio.*"
+- extendedWaitUntil:
+    visible: ".*Toque nas peças.*"
+    timeout: 15000
+- tapOn: ".*Comprar · .*"
+- tapOn: "Comprar"   # botão do alerta de confirmação do iOS
 - extendedWaitUntil:
     visible: ".*Equipado.*"
     timeout: 15000
 - takeScreenshot: ${OUT}/07-compra
+- tapOn: ".*Fechar.*"
 - tapOn: ".*Nogueira Entalhada.*"
 - extendedWaitUntil:
     visible: ".*Toque nas peças.*"
     timeout: 15000
+- assertVisible: ".*Comprar · .*300.*"
 - takeScreenshot: ${OUT}/08-previa
 - tapOn: ".*Fechar.*"

@@ -45,9 +45,10 @@ export function ItemPreviewModal({ item, board, pieces, owned, equipped, coins, 
 
   return (
     <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
+      {/* accessible={false}: no iOS os botões de dentro continuam acessíveis um a um (VoiceOver). */}
+      <Pressable style={styles.backdrop} onPress={onClose} accessible={false}>
         <ScrollView contentContainerStyle={styles.center}>
-          <Pressable style={styles.card} onPress={() => {}}>
+          <Pressable style={styles.card} onPress={() => {}} accessible={false}>
             <Text style={styles.title}>{item.name}</Text>
             <Text style={[styles.rarity, { color: rarity.color }]}>
               {rarity.label} · {item.type === 'board' ? 'Tabuleiro' : 'Peças'}
