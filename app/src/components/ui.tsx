@@ -93,7 +93,13 @@ export function Screen({
   return (
     <SafeAreaView style={styles.screen} edges={['bottom', 'left', 'right']}>
       {scroll ? (
-        <ScrollView contentContainerStyle={[styles.content, style]} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          contentContainerStyle={[styles.content, style]}
+          keyboardShouldPersistTaps="handled"
+          // iOS: rola sozinho para o campo em foco não ficar escondido atrás do teclado.
+          automaticallyAdjustKeyboardInsets
+          keyboardDismissMode="interactive"
+        >
           {children}
         </ScrollView>
       ) : (

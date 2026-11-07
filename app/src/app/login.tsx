@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import type React from 'react';
+import { useRef, useState } from 'react';
 import { router } from 'expo-router';
 import { KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput } from 'react-native';
 import { Segmented } from '../components/TimeControlPicker';
@@ -14,6 +15,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const passwordRef = useRef<React.ComponentRef<typeof TextInput>>(null);
 
   const submit = async () => {
     setError('');
@@ -30,7 +32,9 @@ export default function Login() {
   };
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    // iOS: a rolagem da tela se ajusta ao teclado (Screen usa automaticallyAdjustKeyboardInsets);
+    // Android: o sistema redimensiona a janela. O KeyboardAvoidingView fica só como reforço no Android.
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'android' ? 'height' : undefined} enabled={Platform.OS === 'android'}>
       <Screen>
         <Text style={styles.title}>♞ Bem-vindo à Arena</Text>
         <Segmented
@@ -63,6 +67,10 @@ export default function Login() {
             autoCorrect={false}
             placeholder="ex: rei_do_xadrez"
             testID="login-username"
+            returnKeyType="next"
+            submitBehavior="submit"
+            onSubmitEditing={() => passwordRef.current?.focus()}
+            textContentType="username"
             placeholderTextColor={colors.textMuted}
           />
           <Text style={styles.label}>Senha</Text>
@@ -73,6 +81,9 @@ export default function Login() {
             secureTextEntry
             placeholder="mínimo 8 caracteres"
             testID="login-password"
+            ref={passwordRef}
+            returnKeyType="go"
+            textContentType={mode === 'register' ? 'newPassword' : 'password'}
             placeholderTextColor={colors.textMuted}
             onSubmitEditing={submit}
           />

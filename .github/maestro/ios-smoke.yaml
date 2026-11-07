@@ -83,15 +83,10 @@ appId: app.xadrezarena
 - tapOn:
     id: "login-username"
 - inputText: ${USERNAME}
-- tapOn:
-    id: "login-password"
-- tapOn:
-    text: "Continue|Continuar"
-    optional: true
-- tapOn:
-    id: "login-password"
+# "Próximo" no teclado passa para o campo de senha
+- pressKey: Enter
 - inputText: "segredo123"
-# "Enter" no campo de senha envia o formulário (o hideKeyboard do Maestro falha no iOS)
+# "Ir" no teclado envia o formulário
 - pressKey: Enter
 # Conta criada: volta para a tela inicial, com o nome e o saldo de 300 moedas
 - extendedWaitUntil:
