@@ -13,10 +13,17 @@ appId: app.xadrezarena
 - takeScreenshot: ${OUT}/01-inicio
 
 # Partida contra a IA com relógio de 5 minutos
-- tapOn: ".*Contra a IA.*"
-- extendedWaitUntil:
-    visible: ".*Peão Curioso.*"
-    timeout: 20000
+# A tela inicial carrega o boneco 3D; um toque durante o carregamento pode se perder,
+# então tenta de novo se a tela não mudar.
+- retry:
+    maxRetries: 3
+    commands:
+      - waitForAnimationToEnd:
+          timeout: 5000
+      - tapOn: ".*5 níveis, offline.*"
+      - extendedWaitUntil:
+          visible: ".*Peão Curioso.*"
+          timeout: 10000
 - tapOn: ".*Peão Curioso.*"
 - scrollUntilVisible:
     element:
@@ -67,11 +74,16 @@ appId: app.xadrezarena
 - extendedWaitUntil:
     visible: ".*JOGAR!.*"
     timeout: 60000
-- tapOn: ".*Criar conta.*"
-- extendedWaitUntil:
-    visible:
-      id: "login-username"
-    timeout: 20000
+- retry:
+    maxRetries: 3
+    commands:
+      - waitForAnimationToEnd:
+          timeout: 5000
+      - tapOn: "Criar conta"
+      - extendedWaitUntil:
+          visible:
+            id: "login-username"
+          timeout: 10000
 - tapOn:
     id: "seg-register"
 - tapOn:
@@ -99,10 +111,15 @@ appId: app.xadrezarena
 - takeScreenshot: ${OUT}/06-conta-criada
 
 # Loja: comprar "Verde Torneio" (150) e abrir a prévia de outro tabuleiro
-- tapOn: ".*Loja.*"
-- extendedWaitUntil:
-    visible: ".*Verde Torneio.*"
-    timeout: 20000
+- retry:
+    maxRetries: 3
+    commands:
+      - waitForAnimationToEnd:
+          timeout: 5000
+      - tapOn: ".*Loja.*"
+      - extendedWaitUntil:
+          visible: ".*Verde Torneio.*"
+          timeout: 10000
 - tapOn: ".*🪙 150.*"
 - tapOn: "Comprar"
 - extendedWaitUntil:
