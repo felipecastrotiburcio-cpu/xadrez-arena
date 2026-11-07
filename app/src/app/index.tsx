@@ -56,7 +56,7 @@ export default function Home() {
           <Text style={styles.logo}>♞ Xadrez Arena</Text>
           <View style={styles.headerActions}>
             {user && (
-              <Pressable onPress={() => router.push('/shop')} accessibilityLabel="Moedas">
+              <Pressable onPress={() => router.push('/shop')} accessibilityLabel={`${user.coins} moedas, abrir a loja`}>
                 <Coins amount={user.coins} />
               </Pressable>
             )}
