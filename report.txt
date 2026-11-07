@@ -1,0 +1,22 @@
+Dispositivo: sdk_gphone64_x86_64 · Android 14 (API 34)
+✅ APK instalado
+✅ App abriu e continua em execução
+✅ Tela inicial carregada (botão JOGAR! encontrado)
+✅ Menu 'Contra a IA' abriu
+✅ Partida contra a IA iniciada
+✅ Tabuleiro com as 32 peças na posição inicial
+✅ Peça movida pelo toque (peão e2 → e4)
+✅ A IA respondeu com um lance (agora em: d6:preto:p )
+✅ Lance ilegal recusado (peão não anda 2 casas a partir de e4)
+✅ Botão de dica respondeu
+✅ Desistência confirmada
+✅ Finalização 3D exibida sem travar o app
+✅ Tela de resultado (Derrota) exibida
+✅ Login explica que a conta fica salva no aparelho
+✅ Conta 'robo7496' criada e tela inicial mostra o nome
+✅ Conta nova começa com 300 moedas
+✅ Compra na loja feita e item equipado (saldo atualizado)
+✅ Prévia do tabuleiro abriu com botão de compra
+✅ Nenhum travamento (FATAL EXCEPTION) no logcat
+⚠️  Mensagens de erro do JavaScript: ver js-errors.txt
+RESULTADO: SUCESSO
