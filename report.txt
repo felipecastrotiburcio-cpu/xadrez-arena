@@ -1,0 +1,13 @@
+Simulador: iPhone 17 Pro (iOS-26-2)
+✅ App instalado no simulador
+✅ App aberto
+✅ App continua aberto após 20 s (tela inicial)
+ℹ️  1ª tentativa do teste de uso falhou (ver maestro-1.log); tentando de novo
+✅ Partida contra a IA (5 min): lance e2→e4, resposta da IA e lance ilegal recusado
+✅ Desistência, finalização 3D e tela de resultado (Derrota)
+✅ Conta 'ios8576' criada no aparelho com 300 moedas
+✅ Compra na loja (Verde Torneio) e prévia do tabuleiro Nogueira Entalhada
+✅ App continua aberto ao final
+✅ Nenhum relatório de travamento
+⚠️  Mensagens de erro no log: ver js-errors.txt
+RESULTADO: SUCESSO
