@@ -4,6 +4,8 @@ import { Chess } from 'chess.js';
 import { ChessBoard, type BoardMove } from './ChessBoard';
 import { Button } from './ui';
 import { RARITY } from '../lib/cosmetics';
+import { itemName } from '../lib/catalogI18n';
+import { useT, type TranslationKey } from '../lib/i18n';
 import { colors, fonts, radius } from '../lib/theme';
 import type { BoardStyle, PieceStyle, ShopItem } from '../lib/types';
 
@@ -31,6 +33,7 @@ export function ItemPreviewModal({ item, board, pieces, owned, equipped, coins, 
   const [fen, setFen] = useState(SAMPLE_FEN);
   const [lastMove, setLastMove] = useState<{ from: string; to: string } | null>(null);
   const rarity = RARITY[item.rarity];
+  const { t, lang, locale } = useT();
 
   const onMove = (m: BoardMove) => {
     const chess = new Chess(fen);
@@ -49,9 +52,9 @@ export function ItemPreviewModal({ item, board, pieces, owned, equipped, coins, 
       <Pressable style={styles.backdrop} onPress={onClose} accessible={false}>
         <ScrollView contentContainerStyle={styles.center}>
           <Pressable style={styles.card} onPress={() => {}} accessible={false}>
-            <Text style={styles.title}>{item.name}</Text>
+            <Text style={styles.title}>{itemName(item, lang)}</Text>
             <Text style={[styles.rarity, { color: rarity.color }]}>
-              {rarity.label} · {item.type === 'board' ? 'Tabuleiro' : 'Peças'}
+              {t(`rarity.${item.rarity}` as TranslationKey)} · {item.type === 'board' ? t('shop.board') : t('shop.pieces')}
             </Text>
             <ChessBoard
               fen={fen}
@@ -63,12 +66,12 @@ export function ItemPreviewModal({ item, board, pieces, owned, equipped, coins, 
               boardStyle={item.type === 'board' ? item.style : board}
               pieceStyle={item.type === 'pieces' ? item.style : pieces}
             />
-            <Text style={styles.hint}>Toque nas peças para testar os lances 👆</Text>
+            <Text style={styles.hint}>{t('shop.tryMoves')}</Text>
             <View style={styles.actions}>
               <Button
                 small
                 variant="ghost"
-                title="Recomeçar"
+                title={t('shop.reset')}
                 icon="↺"
                 onPress={() => {
                   setFen(SAMPLE_FEN);
@@ -76,14 +79,14 @@ export function ItemPreviewModal({ item, board, pieces, owned, equipped, coins, 
                 }}
               />
               {equipped ? (
-                <Text style={styles.equipped}>✓ Equipado</Text>
+                <Text style={styles.equipped}>{t('common.equipped')}</Text>
               ) : owned ? (
-                <Button small variant="secondary" title="Equipar" loading={busy} onPress={onEquip} />
+                <Button small variant="secondary" title={t('common.equip')} loading={busy} onPress={onEquip} />
               ) : (
                 <Button
                   small
                   variant="gold"
-                  title={`Comprar · 🪙 ${item.price.toLocaleString('pt-BR')}`}
+                  title={t('shop.buyPrice', { price: item.price.toLocaleString(locale) })}
                   disabled={coins < item.price}
                   loading={busy}
                   onPress={onBuy}
@@ -91,9 +94,11 @@ export function ItemPreviewModal({ item, board, pieces, owned, equipped, coins, 
               )}
             </View>
             {!owned && coins < item.price && (
-              <Text style={styles.hint}>Faltam {(item.price - coins).toLocaleString('pt-BR')} moedas.</Text>
+              <Text style={styles.hint}>
+                {t('shop.missingCoins', { count: (item.price - coins).toLocaleString(locale) })}
+              </Text>
             )}
-            <Button title="Fechar" variant="secondary" onPress={onClose} />
+            <Button title={t('common.close')} variant="secondary" onPress={onClose} />
           </Pressable>
         </ScrollView>
       </Pressable>

@@ -4,6 +4,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { Avatar, Button, Card, LevelBadge, Screen, SectionTitle } from '../../components/ui';
 import { api, isLocalMode } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
+import { levelName, reasonText, translateServerText, useT } from '../../lib/i18n';
 import { levelProgress, LEVELS } from '../../lib/levels';
 import { useSocket } from '../../lib/socket';
 import { colors } from '../../lib/theme';
@@ -20,10 +21,10 @@ interface Profile {
 }
 
 const OUTCOME = {
-  win: { label: 'Vitória', color: colors.success },
-  loss: { label: 'Derrota', color: colors.danger },
-  draw: { label: 'Empate', color: colors.textMuted },
-};
+  win: { label: 'profile.win', color: colors.success },
+  loss: { label: 'profile.loss', color: colors.danger },
+  draw: { label: 'profile.draw', color: colors.textMuted },
+} as const;
 
 export default function ProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -31,6 +32,7 @@ export default function ProfileScreen() {
   const { friendsVersion } = useSocket();
   const navigation = useNavigation();
   const toast = useToast();
+  const { t, locale } = useT();
   const [profile, setProfile] = useState<Profile | null>(null);
 
   const load = useCallback(() => {
@@ -40,7 +42,7 @@ export default function ProfileScreen() {
         setProfile(p);
         navigation.setOptions({ title: p.user.username });
       })
-      .catch((e) => toast(e.message, 'error'));
+      .catch((e) => toast(translateServerText(e.message), 'error'));
   }, [id, navigation, toast, token]);
 
   useEffect(load, [load, friendsVersion]);
@@ -65,15 +67,15 @@ export default function ProfileScreen() {
       else await api(`/friends/requests/${friendship.id}`, { method: 'DELETE' });
       load();
     } catch (e) {
-      toast((e as Error).message, 'error');
+      toast(translateServerText((e as Error).message), 'error');
     }
   };
 
   const FRIEND_LABEL = {
-    none: 'Adicionar amigo',
-    incoming: 'Aceitar pedido de amizade',
-    outgoing: 'Cancelar pedido',
-    friends: 'Desfazer amizade',
+    none: t('profile.addFriend'),
+    incoming: t('profile.acceptRequest'),
+    outgoing: t('profile.cancelRequest'),
+    friends: t('profile.unfriend'),
   };
 
   return (
@@ -84,23 +86,26 @@ export default function ProfileScreen() {
         <LevelBadge level={user.level} name={user.levelName} />
         <Text style={styles.rating}>{user.rating}</Text>
         <Text style={styles.muted}>
-          {profile.rank ? `#${profile.rank} no ranking · ` : ''}recorde {user.peakRating}
-          {profile.inGame ? ' · jogando agora' : ''}
+          {profile.rank ? t('profile.rank', { rank: profile.rank }) : ''}
+          {t('profile.peak', { n: user.peakRating })}
+          {profile.inGame ? t('profile.playingNow') : ''}
         </Text>
         <View style={styles.track}>
           <View style={[styles.fill, { width: `${Math.round(lp.progress * 100)}%` }]} />
         </View>
         <Text style={styles.muted}>
-          {lp.next ? `Próximo nível: ${lp.next.name} (${lp.next.minRating})` : 'Nível máximo!'}
+          {lp.next
+            ? t('profile.nextLevel', { name: levelName(lp.next.level, lp.next.name), rating: lp.next.minRating })
+            : t('profile.maxLevel')}
         </Text>
       </Card>
 
       <View style={styles.stats}>
-        <Stat label="Partidas" value={user.gamesPlayed} />
-        <Stat label="Vitórias" value={user.wins} color={colors.success} />
-        <Stat label="Empates" value={user.draws} />
-        <Stat label="Derrotas" value={user.losses} color={colors.danger} />
-        <Stat label="Aproveit." value={`${winRate}%`} />
+        <Stat label={t('profile.games')} value={user.gamesPlayed} />
+        <Stat label={t('profile.wins')} value={user.wins} color={colors.success} />
+        <Stat label={t('profile.draws')} value={user.draws} />
+        <Stat label={t('profile.losses')} value={user.losses} color={colors.danger} />
+        <Stat label={t('profile.winRate')} value={`${winRate}%`} />
       </View>
 
       {!isMe && !isLocalMode() && (
@@ -110,19 +115,19 @@ export default function ProfileScreen() {
           onPress={friendAction}
         />
       )}
-      {isMe && <Button title="Gerenciar amigos" variant="secondary" onPress={() => router.push('/friends')} />}
+      {isMe && <Button title={t('profile.manageFriends')} variant="secondary" onPress={() => router.push('/friends')} />}
 
-      <SectionTitle>Partidas recentes</SectionTitle>
-      {profile.games.length === 0 && <Text style={styles.muted}>Nenhuma partida ainda.</Text>}
+      <SectionTitle>{t('profile.recentGames')}</SectionTitle>
+      {profile.games.length === 0 && <Text style={styles.muted}>{t('profile.noGames')}</Text>}
       {profile.games.map((g) => (
         <Card key={g.id} style={styles.game}>
           <View style={[styles.outcomeBar, { backgroundColor: OUTCOME[g.outcome].color }]} />
           <View style={{ flex: 1 }}>
             <Text style={styles.gameTitle}>
-              {OUTCOME[g.outcome].label} vs {g.opponent?.username ?? g.opponentName ?? '—'}
+              {t(OUTCOME[g.outcome].label)} vs {g.opponent?.username ?? translateServerText(g.opponentName) ?? '—'}
             </Text>
             <Text style={styles.muted}>
-              {g.color === 'white' ? '♔' : '♚'} {g.timeControl} · {g.reason} · {new Date(g.endedAt).toLocaleDateString('pt-BR')}
+              {g.color === 'white' ? '♔' : '♚'} {g.timeControl} · {reasonText(g.reason)} · {new Date(g.endedAt).toLocaleDateString(locale)}
             </Text>
           </View>
           {g.rated && (
@@ -136,11 +141,11 @@ export default function ProfileScreen() {
 
       {isMe && (
         <>
-          <SectionTitle>Níveis</SectionTitle>
+          <SectionTitle>{t('profile.levels')}</SectionTitle>
           <Card style={{ gap: 6 }}>
             {LEVELS.map((l) => (
               <Text key={l.level} style={[styles.levelRow, l.level === user.level && { color: colors.accent, fontWeight: '800' }]}>
-                Nv. {l.level} · {l.name} — {l.minRating}+
+                {t('common.lv')} {l.level} · {levelName(l.level, l.name)} — {l.minRating}+
               </Text>
             ))}
           </Card>

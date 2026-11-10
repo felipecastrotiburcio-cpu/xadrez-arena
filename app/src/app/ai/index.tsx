@@ -5,6 +5,7 @@ import { Segmented } from '../../components/TimeControlPicker';
 import { Button, Screen, SectionTitle } from '../../components/ui';
 import { AI_LEVELS } from '../../ai';
 import { loadAiStats, type AiStats } from '../../lib/aiStats';
+import { useT, type TranslationKey } from '../../lib/i18n';
 import { colors, radius } from '../../lib/theme';
 
 const ICONS = ['♙', '♘', '♗', '♖', '♕'];
@@ -14,6 +15,7 @@ export default function AiSetup() {
   const [color, setColor] = useState<'w' | 'b' | 'random'>('w');
   const [time, setTime] = useState<'0' | '10' | '5' | '3'>('0');
   const [stats, setStats] = useState<AiStats>({});
+  const { t } = useT();
 
   useFocusEffect(
     useCallback(() => {
@@ -23,7 +25,7 @@ export default function AiSetup() {
 
   return (
     <Screen>
-      <SectionTitle>Escolha o adversário</SectionTitle>
+      <SectionTitle>{t('ai.chooseOpponent')}</SectionTitle>
       {AI_LEVELS.map((l, i) => {
         const active = l.id === level;
         const s = stats[l.id];
@@ -32,13 +34,11 @@ export default function AiSetup() {
             <Text style={styles.icon}>{ICONS[i]}</Text>
             <View style={{ flex: 1 }}>
               <Text style={styles.name}>
-                {l.name} <Text style={styles.elo}>~{l.elo}</Text>
+                {t(`ai.${l.id}.name` as TranslationKey)} <Text style={styles.elo}>~{l.elo}</Text>
               </Text>
-              <Text style={styles.desc}>{l.description}</Text>
+              <Text style={styles.desc}>{t(`ai.${l.id}.desc` as TranslationKey)}</Text>
               {s && (
-                <Text style={styles.record}>
-                  Você: {s.wins}V · {s.draws}E · {s.losses}D
-                </Text>
+                <Text style={styles.record}>{t('ai.record', { w: s.wins, d: s.draws, l: s.losses })}</Text>
               )}
             </View>
             <View style={[styles.radio, active && styles.radioActive]} />
@@ -46,23 +46,23 @@ export default function AiSetup() {
         );
       })}
 
-      <SectionTitle>Jogar com</SectionTitle>
+      <SectionTitle>{t('ai.playAs')}</SectionTitle>
       <Segmented
         value={color}
         onChange={setColor}
         options={[
-          { value: 'w', label: '♔ Brancas' },
-          { value: 'random', label: '🎲 Sortear' },
-          { value: 'b', label: '♚ Pretas' },
+          { value: 'w', label: t('common.white') },
+          { value: 'random', label: t('common.random') },
+          { value: 'b', label: t('common.black') },
         ]}
       />
 
-      <SectionTitle>Tempo de partida</SectionTitle>
+      <SectionTitle>{t('ai.time')}</SectionTitle>
       <Segmented
         value={time}
         onChange={setTime}
         options={[
-          { value: '0', label: '∞ Livre' },
+          { value: '0', label: t('ai.untimed') },
           { value: '10', label: '10 min' },
           { value: '5', label: '5 min' },
           { value: '3', label: '3 min' },
@@ -70,14 +70,14 @@ export default function AiSetup() {
       />
 
       <Button
-        title="Começar partida"
+        title={t('ai.start')}
         icon="▶"
         onPress={() => {
           const c = color === 'random' ? (Math.random() < 0.5 ? 'w' : 'b') : color;
           router.push({ pathname: '/ai/play', params: { level: String(level), color: c, time } });
         }}
       />
-      <Text style={styles.footnote}>Partidas contra a IA funcionam offline e não alteram seu rating.</Text>
+      <Text style={styles.footnote}>{t('ai.footnote')}</Text>
     </Screen>
   );
 }

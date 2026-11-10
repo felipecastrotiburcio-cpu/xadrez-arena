@@ -9,20 +9,22 @@ import { Finale } from '../components/Finale';
 import { Avatar, Button, Card, Coins, Screen } from '../components/ui';
 import { api, isLocalMode } from '../lib/api';
 import { useAuth } from '../lib/auth';
+import { itemDescription, itemName } from '../lib/catalogI18n';
 import { confirmAction } from '../lib/confirm';
 import { AI_CHARACTER, RARITY, useCharacterStyle, useCosmetics, useMyLook } from '../lib/cosmetics';
 import { colors, fonts, radius } from '../lib/theme';
 import { Scene3D } from '../three/Scene3D';
 import { createShowcaseScene } from '../three/scenes';
 import { useToast } from '../lib/toast';
+import { translateServerText, useT, type TranslationKey } from '../lib/i18n';
 import type { BoardStyle, CharacterStyle, ItemType, PieceStyle, PrivateUser, ShopItem } from '../lib/types';
 
-const TABS: { type: ItemType; label: string; icon: string }[] = [
-  { type: 'board', label: 'Tabuleiros', icon: '🟫' },
-  { type: 'pieces', label: 'Peças', icon: '♞' },
-  { type: 'avatar', label: 'Ícones', icon: '🙂' },
-  { type: 'character', label: 'Bonecos', icon: '🧍' },
-  { type: 'move', label: 'Movimentos', icon: '🕺' },
+const TABS: { type: ItemType; label: TranslationKey; icon: string }[] = [
+  { type: 'board', label: 'shop.tabBoards', icon: '🟫' },
+  { type: 'pieces', label: 'shop.tabPieces', icon: '♞' },
+  { type: 'avatar', label: 'shop.tabAvatars', icon: '🙂' },
+  { type: 'character', label: 'shop.tabCharacters', icon: '🧍' },
+  { type: 'move', label: 'shop.tabMoves', icon: '🕺' },
 ];
 
 export default function Shop() {
@@ -30,6 +32,7 @@ export default function Shop() {
   const { items } = useCosmetics();
   const look = useMyLook();
   const toast = useToast();
+  const { t, lang, locale } = useT();
   const [tab, setTab] = useState<ItemType>('board');
   const [busy, setBusy] = useState<string | null>(null);
   const [preview, setPreview] = useState<ShopItem | null>(null);
@@ -53,8 +56,8 @@ export default function Shop() {
     return (
       <Screen>
         <Card>
-          <Text style={styles.text}>Entre na sua conta para ganhar moedas e comprar itens.</Text>
-          <Button title="Entrar" onPress={() => router.push('/login')} />
+          <Text style={styles.text}>{t('shop.loginPrompt')}</Text>
+          <Button title={t('common.login')} onPress={() => router.push('/login')} />
         </Card>
       </Screen>
     );
@@ -66,9 +69,10 @@ export default function Shop() {
       const r = await api<{ user: PrivateUser }>(`/shop/${action}`, { body: { itemId } });
       setUser(r.user);
       const item = items.find((i) => i.id === itemId);
-      toast(action === 'buy' ? `${item?.name} comprado e equipado!` : `${item?.name} equipado.`, 'success');
+      const name = item ? itemName(item, lang) : undefined;
+      toast(action === 'buy' ? t('shop.bought', { name: String(name) }) : t('shop.equippedToast', { name: String(name) }), 'success');
     } catch (e) {
-      toast((e as Error).message, 'error');
+      toast(translateServerText((e as Error).message), 'error');
     } finally {
       setBusy(null);
     }
@@ -78,9 +82,9 @@ export default function Shop() {
     try {
       const r = await api<{ user: PrivateUser; amount: number }>('/rewards/daily', { body: {} });
       setUser(r.user);
-      toast(`+${r.amount} moedas!`, 'success');
+      toast(t('shop.coinsGained', { n: r.amount }), 'success');
     } catch (e) {
-      toast((e as Error).message, 'error');
+      toast(translateServerText((e as Error).message), 'error');
     }
   };
 
@@ -88,26 +92,26 @@ export default function Shop() {
     <Screen>
       <Card style={styles.wallet}>
         <View style={{ flex: 1, gap: 4 }}>
-          <Text style={styles.muted}>Seu saldo</Text>
+          <Text style={styles.muted}>{t('shop.balance')}</Text>
           <Coins amount={user.coins} size={22} />
         </View>
         {user.dailyBonusAvailable ? (
-          <Button small title="Bônus diário +50" icon="🎁" onPress={claimDaily} />
+          <Button small title={t('shop.dailyBonus')} icon="🎁" onPress={claimDaily} />
         ) : (
-          <Text style={styles.muted}>Bônus de hoje{'\n'}já resgatado ✓</Text>
+          <Text style={styles.muted}>{t('shop.bonusClaimed')}</Text>
         )}
       </Card>
       <Text style={styles.hint}>
         {isLocalMode()
-          ? 'Ganhe moedas vencendo a IA: de 15 (nível 1) a 35 (nível 5) por vitória, mais bônus por vitórias seguidas.'
-          : 'Ganhe moedas jogando online: vitória 30 · empate 15 · derrota 5 (amistosas valem metade).'}
+          ? t('shop.hintLocal')
+          : t('shop.hintOnline')}
       </Text>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-        {TABS.map((t) => (
-          <Pressable key={t.type} onPress={() => setTab(t.type)} style={[styles.chip, tab === t.type && styles.chipActive]}>
+        {TABS.map((tb) => (
+          <Pressable key={tb.type} onPress={() => setTab(tb.type)} style={[styles.chip, tab === tb.type && styles.chipActive]}>
             <Text style={styles.chipText}>
-              {t.icon} {t.label}
+              {tb.icon} {t(tb.label)}
             </Text>
           </Pressable>
         ))}
@@ -121,8 +125,8 @@ export default function Shop() {
             style={styles.fittingScene}
             fallback={<CharacterThumb look={fitting.style} size={200} />}
           />
-          <Text style={styles.fittingName}>🪞 Provador: {fitting.name}</Text>
-          <Text style={styles.muted}>Toque num boneco para experimentar.</Text>
+          <Text style={styles.fittingName}>{t('shop.fitting', { name: itemName(fitting, lang) })}</Text>
+          <Text style={styles.muted}>{t('shop.tapToTry')}</Text>
         </Card>
       )}
 
@@ -143,26 +147,31 @@ export default function Shop() {
               <ItemPreview item={item} board={look.board} pieces={look.pieces} username={user.username} />
             </View>
             <View style={{ flex: 1, gap: 3 }}>
-              <Text style={styles.name}>{item.name}</Text>
-              <Text style={[styles.rarity, { color: rarity.color }]}>{rarity.label}</Text>
-              {item.description ? <Text style={styles.muted}>{item.description}</Text> : null}
+              <Text style={styles.name}>{itemName(item, lang)}</Text>
+              <Text style={[styles.rarity, { color: rarity.color }]}>{t(`rarity.${item.rarity}` as TranslationKey)}</Text>
+              {item.description ? <Text style={styles.muted}>{itemDescription(item, lang)}</Text> : null}
               <View style={styles.actions}>
                 {(item.type === 'move' || item.type === 'board' || item.type === 'pieces') && (
-                  <Button small variant="secondary" title="Ver" icon={item.type === 'move' ? '▶' : '👁'} onPress={() => setPreview(item)} />
+                  <Button small variant="secondary" title={t('shop.view')} icon={item.type === 'move' ? '▶' : '👁'} onPress={() => setPreview(item)} />
                 )}
                 {equipped ? (
-                  <Text style={styles.equipped}>✓ Equipado</Text>
+                  <Text style={styles.equipped}>{t('common.equipped')}</Text>
                 ) : owned ? (
-                  <Button small variant="secondary" title="Equipar" loading={busy === item.id} onPress={() => run(item.id, 'equip')} />
+                  <Button small variant="secondary" title={t('common.equip')} loading={busy === item.id} onPress={() => run(item.id, 'equip')} />
                 ) : (
                   <Button
                     small
                     variant="gold"
-                    title={`🪙 ${item.price.toLocaleString('pt-BR')}`}
+                    title={`🪙 ${item.price.toLocaleString(locale)}`}
                     disabled={user.coins < item.price}
                     loading={busy === item.id}
                     onPress={() =>
-                      confirmAction(`Comprar ${item.name}?`, `Custa ${item.price} moedas. Você tem ${user.coins}.`, () => run(item.id, 'buy'), 'Comprar')
+                      confirmAction(
+                        t('shop.buyQ', { name: itemName(item, lang) }),
+                        t('shop.buyBody', { price: item.price, coins: user.coins }),
+                        () => run(item.id, 'buy'),
+                        t('common.buy'),
+                      )
                     }
                   />
                 )}
@@ -182,7 +191,12 @@ export default function Shop() {
           coins={user.coins}
           busy={busy === preview.id}
           onBuy={() =>
-            confirmAction(`Comprar ${preview.name}?`, `Custa ${preview.price} moedas. Você tem ${user.coins}.`, () => run(preview.id, 'buy'), 'Comprar')
+            confirmAction(
+              t('shop.buyQ', { name: itemName(preview, lang) }),
+              t('shop.buyBody', { price: preview.price, coins: user.coins }),
+              () => run(preview.id, 'buy'),
+              t('common.buy'),
+            )
           }
           onEquip={() => run(preview.id, 'equip')}
           onClose={() => setPreview(null)}
@@ -193,11 +207,11 @@ export default function Shop() {
         <Finale
           visible
           winner={{ name: user.username, look: myCharacter }}
-          loser={{ name: 'Rival', look: AI_CHARACTER }}
+          loser={{ name: t('shop.rival'), look: AI_CHARACTER }}
           move={preview.style.animation}
-          moveName={preview.name}
-          title="Prévia"
-          subtitle={preview.description}
+          moveName={itemName(preview, lang)}
+          title={t('shop.preview')}
+          subtitle={itemDescription(preview, lang)}
           onDone={() => setPreview(null)}
         />
       )}

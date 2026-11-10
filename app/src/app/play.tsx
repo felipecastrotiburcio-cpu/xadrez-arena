@@ -4,6 +4,7 @@ import { ActivityIndicator, Animated, Easing, StyleSheet, Text, View } from 'rea
 import { TimeControlPicker } from '../components/TimeControlPicker';
 import { Button, Card, LevelBadge, Screen, SectionTitle } from '../components/ui';
 import { useAuth } from '../lib/auth';
+import { translateServerText, useT } from '../lib/i18n';
 import { useSocket } from '../lib/socket';
 import { colors } from '../lib/theme';
 import { useToast } from '../lib/toast';
@@ -12,6 +13,7 @@ export default function Play() {
   const { user } = useAuth();
   const { emit, connected, queueStatus, setQueueStatus, activeGame } = useSocket();
   const toast = useToast();
+  const { t } = useT();
   const [timeControl, setTimeControl] = useState('5+0');
   const [searching, setSearching] = useState(false);
   const spin = useRef(new Animated.Value(0)).current;
@@ -45,7 +47,7 @@ export default function Play() {
 
   const start = async () => {
     const r = await emit('queue:join', { timeControl });
-    if (r.error) toast(r.error, 'error');
+    if (r.error) toast(translateServerText(r.error), 'error');
     else setSearching(true);
   };
 
@@ -68,37 +70,38 @@ export default function Play() {
       </Card>
 
       {activeGame ? (
-        <Button title="Voltar para a partida em andamento" onPress={() => router.push(`/game/${activeGame.id}`)} />
+        <Button title={t('play.backToGame')} onPress={() => router.push(`/game/${activeGame.id}`)} />
       ) : searching ? (
         <Card style={{ alignItems: 'center', paddingVertical: 32, gap: 14 }}>
           <Animated.Text style={[styles.knight, { transform: [{ rotate }] }]}>♞</Animated.Text>
-          <Text style={styles.title}>Procurando adversário…</Text>
-          <Text style={styles.muted}>Ritmo {timeControl} · ranqueada</Text>
+          <Text style={styles.title}>{t('play.searching')}</Text>
+          <Text style={styles.muted}>{t('play.searchMeta', { tc: timeControl })}</Text>
           {queueStatus && (
             <Text style={styles.muted}>
-              {Math.floor(queueStatus.waitedMs / 1000)}s · faixa ±{queueStatus.range} pontos ·{' '}
-              {queueStatus.playersSearching} na fila
+              {t('play.queue', {
+                s: Math.floor(queueStatus.waitedMs / 1000),
+                range: queueStatus.range,
+                players: queueStatus.playersSearching,
+              })}
             </Text>
           )}
-          <Button title="Cancelar" variant="secondary" onPress={cancel} style={{ alignSelf: 'stretch' }} />
+          <Button title={t('common.cancel')} variant="secondary" onPress={cancel} style={{ alignSelf: 'stretch' }} />
         </Card>
       ) : (
         <>
-          <SectionTitle>Ritmo de jogo</SectionTitle>
+          <SectionTitle>{t('play.timeControl')}</SectionTitle>
           <TimeControlPicker value={timeControl} onChange={setTimeControl} />
-          <Text style={styles.muted}>
-            Você será pareado com alguém de rating próximo. A faixa aumenta enquanto você espera.
-          </Text>
+          <Text style={styles.muted}>{t('play.pairingNote')}</Text>
           {connected ? (
-            <Button title="Procurar partida" icon="⚔️" onPress={start} />
+            <Button title={t('play.find')} icon="⚔️" onPress={start} />
           ) : (
             <View style={{ flexDirection: 'row', gap: 8, justifyContent: 'center' }}>
               <ActivityIndicator color={colors.accent} />
-              <Text style={styles.muted}>Conectando ao servidor…</Text>
+              <Text style={styles.muted}>{t('play.connecting')}</Text>
             </View>
           )}
           <Button
-            title="Desafiar um amigo"
+            title={t('play.challengeFriend')}
             icon="👥"
             variant="secondary"
             onPress={() => router.push('/friends')}

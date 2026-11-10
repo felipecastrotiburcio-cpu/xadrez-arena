@@ -1,8 +1,10 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, radius } from '../lib/theme';
+import { timeControlLabel, useT } from '../lib/i18n';
 import { TIME_CONTROLS } from '../lib/timeControls';
 
 export function TimeControlPicker({ value, onChange }: { value: string; onChange: (id: string) => void }) {
+  useT(); // redesenha ao trocar de idioma
   return (
     <View style={styles.grid}>
       {TIME_CONTROLS.map((tc) => {
@@ -15,7 +17,7 @@ export function TimeControlPicker({ value, onChange }: { value: string; onChange
             accessibilityState={{ selected: active }}
           >
             <Text style={[styles.id, active && { color: colors.accent }]}>{tc.id}</Text>
-            <Text style={styles.label}>{tc.label}</Text>
+            <Text style={styles.label}>{timeControlLabel(tc)}</Text>
           </Pressable>
         );
       })}

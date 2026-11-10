@@ -1,5 +1,6 @@
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useMyLook } from '../lib/cosmetics';
+import { useT } from '../lib/i18n';
 import { ChessPiece, type PieceType } from './ChessPiece';
 import { colors } from '../lib/theme';
 import { formatClock } from '../lib/timeControls';
@@ -22,6 +23,7 @@ interface Props {
 
 export function PlayerBar({ name, subtitle, captured, capturedColor, advantage, clockMs, active, thinking, offline, avatar }: Props) {
   const { pieces } = useMyLook();
+  const { t } = useT();
   const low = clockMs !== undefined && clockMs < 20_000;
   return (
     <View style={styles.bar}>
@@ -33,7 +35,7 @@ export function PlayerBar({ name, subtitle, captured, capturedColor, advantage, 
           </Text>
           {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
           {thinking && <ActivityIndicator size="small" color={colors.accent} />}
-          {offline && <Text style={styles.offline}>desconectado</Text>}
+          {offline && <Text style={styles.offline}>{t('player.offline')}</Text>}
         </View>
         <View style={styles.capturedRow}>
           {captured.map((p, i) => (

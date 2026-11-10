@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../lib/auth';
+import { timeControlLabel, translateServerText, useT } from '../lib/i18n';
 import { useSocket } from '../lib/socket';
 import { colors, radius } from '../lib/theme';
 import { useToast } from '../lib/toast';
@@ -27,6 +28,7 @@ export function InviteBanner() {
 function InviteCard({ invite }: { invite: Invite }) {
   const { emit } = useSocket();
   const toast = useToast();
+  const { t } = useT();
   const [busy, setBusy] = useState<'accept' | 'decline' | null>(null);
   const [left, setLeft] = useState(Math.max(0, invite.expiresAt - Date.now()));
 
@@ -39,11 +41,11 @@ function InviteCard({ invite }: { invite: Invite }) {
     setBusy(accept ? 'accept' : 'decline');
     const r = await emit(accept ? 'invite:accept' : 'invite:decline', { inviteId: invite.id });
     setBusy(null);
-    if (r.error) toast(r.error, 'error');
+    if (r.error) toast(translateServerText(r.error), 'error');
   };
 
   const colorText =
-    invite.color === 'random' ? 'cores aleatórias' : invite.color === 'white' ? 'você de pretas' : 'você de brancas';
+    invite.color === 'random' ? t('invite.randomColors') : invite.color === 'white' ? t('invite.youBlack') : t('invite.youWhite');
 
   return (
     <View style={styles.card}>
@@ -51,10 +53,10 @@ function InviteCard({ invite }: { invite: Invite }) {
         <Avatar name={invite.from.username} size={38} icon={invite.from.cosmetics?.avatar} />
         <View style={{ flex: 1 }}>
           <Text style={styles.title}>
-            {invite.from.username} ({invite.from.rating}) te desafiou!
+            {t('invite.challengedYou', { name: invite.from.username, rating: invite.from.rating })}
           </Text>
           <Text style={styles.sub}>
-            {invite.timeControl.label} · {invite.rated ? 'ranqueada' : 'amistosa'} · {colorText} ·{' '}
+            {timeControlLabel(invite.timeControl)} · {invite.rated ? t('common.ratedLower') : t('common.casualLower')} · {colorText} ·{' '}
             {Math.ceil(left / 1000)}s
           </Text>
         </View>
@@ -62,13 +64,13 @@ function InviteCard({ invite }: { invite: Invite }) {
       <View style={{ flexDirection: 'row', gap: 8 }}>
         <Button
           small
-          title="Recusar"
+          title={t('common.decline')}
           variant="secondary"
           style={{ flex: 1 }}
           loading={busy === 'decline'}
           onPress={() => respond(false)}
         />
-        <Button small title="Aceitar" style={{ flex: 1 }} loading={busy === 'accept'} onPress={() => respond(true)} />
+        <Button small title={t('common.accept')} style={{ flex: 1 }} loading={busy === 'accept'} onPress={() => respond(true)} />
       </View>
     </View>
   );

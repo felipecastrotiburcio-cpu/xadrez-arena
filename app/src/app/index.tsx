@@ -8,6 +8,7 @@ import { Button, Coins, LevelBadge, Screen } from '../components/ui';
 import { isLocalMode } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { useCharacterStyle, useMyLook } from '../lib/cosmetics';
+import { useT } from '../lib/i18n';
 import { levelProgress } from '../lib/levels';
 import { useSocket } from '../lib/socket';
 import { colors, fonts, gradients, radius } from '../lib/theme';
@@ -22,6 +23,7 @@ export default function Home() {
   const insets = useSafeAreaInsets();
   const focused = useIsFocused();
   const look = useMyLook();
+  const { t } = useT();
   const character = useCharacterStyle(look.equipped.character);
   const factory = useMemo(
     () => createShowcaseScene({ look: character, board: look.board, bg: HERO_BG }),
@@ -42,11 +44,11 @@ export default function Home() {
   const playTarget = local ? '/ai' : user ? '/play' : '/login';
   const playSub = local
     ? user
-      ? 'Contra a IA · ganhe moedas'
-      : 'Contra a IA · crie conta e ganhe moedas'
+      ? t('home.playSubLocalUser')
+      : t('home.playSubLocalGuest')
     : user
-      ? 'Partida ranqueada online'
-      : 'Entre para jogar online';
+      ? t('home.playSubOnlineUser')
+      : t('home.playSubOnlineGuest');
   const lp = user ? levelProgress(user.rating) : null;
 
   return (
@@ -56,12 +58,12 @@ export default function Home() {
           <Text style={styles.logo}>♞ Xadrez Arena</Text>
           <View style={styles.headerActions}>
             {user && (
-              <Pressable onPress={() => router.push('/shop')} accessibilityLabel={`${user.coins} moedas, abrir a loja`}>
+              <Pressable onPress={() => router.push('/shop')} accessibilityLabel={t('home.coinsA11y', { count: user.coins })}>
                 <Coins amount={user.coins} />
               </Pressable>
             )}
             {user && (
-              <Pressable onPress={() => router.push('/notifications')} hitSlop={10} accessibilityLabel="Notificações">
+              <Pressable onPress={() => router.push('/notifications')} hitSlop={10} accessibilityLabel={t('nav.notifications')}>
                 <Text style={{ fontSize: 24 }}>🔔</Text>
                 {unreadNotifications > 0 && (
                   <View style={styles.badge}>
@@ -70,7 +72,7 @@ export default function Home() {
                 )}
               </Pressable>
             )}
-            <Pressable onPress={() => router.push('/settings')} hitSlop={10} accessibilityLabel="Configurações">
+            <Pressable onPress={() => router.push('/settings')} hitSlop={10} accessibilityLabel={t('nav.settings')}>
               <Text style={{ fontSize: 24 }}>⚙️</Text>
             </Pressable>
           </View>
@@ -96,7 +98,7 @@ export default function Home() {
                 </Text>
                 <LevelBadge level={user.level} name={user.levelName} />
                 <Text style={styles.rating}>{user.rating}</Text>
-                <Text style={styles.muted}>{rank ? `#${rank} no ranking` : 'jogue para entrar no ranking'}</Text>
+                <Text style={styles.muted}>{rank ? t('home.rank', { rank }) : t('home.noRank')}</Text>
                 <View style={styles.xpTrack}>
                   <LinearGradient
                     colors={gradients.primary}
@@ -106,33 +108,29 @@ export default function Home() {
                   />
                 </View>
                 <Text style={styles.muted}>
-                  {lp.next ? `${lp.next.minRating - user.rating} pts para o Nv. ${lp.next.level}` : 'Nível máximo! 👑'}
+                  {lp.next ? t('home.ptsToNext', { pts: lp.next.minRating - user.rating, level: lp.next.level }) : t('home.maxLevel')}
                 </Text>
                 {user.winStreak > 0 && (
                   <View style={styles.streak}>
-                    <Text style={styles.streakText}>
-                      🔥 {user.winStreak} {user.winStreak === 1 ? 'vitória' : 'vitórias'} seguidas
-                    </Text>
+                    <Text style={styles.streakText}>{t('home.streak', { count: user.winStreak })}</Text>
                   </View>
                 )}
                 <Pressable onPress={() => router.push('/shop')} style={styles.customize}>
-                  <Text style={styles.customizeText}>🎨 Personalizar</Text>
+                  <Text style={styles.customizeText}>{t('home.customize')}</Text>
                 </Pressable>
               </>
             ) : (
               <>
-                <Text style={styles.username}>Monte seu boneco!</Text>
-                <Text style={styles.mutedLight}>
-                  Crie uma conta para jogar online, subir de nível, ganhar moedas e desbloquear visuais.
-                </Text>
-                <Button small variant="gold" title="Criar conta" onPress={() => router.push('/login')} />
+                <Text style={styles.username}>{t('home.buildCharacter')}</Text>
+                <Text style={styles.mutedLight}>{t('home.guestPitch')}</Text>
+                <Button small variant="gold" title={t('common.createAccount')} onPress={() => router.push('/login')} />
               </>
             )}
           </View>
         </LinearGradient>
 
         {activeGame && (
-          <Button title="Voltar para a partida" icon="⏱" variant="gold" onPress={() => router.push(`/game/${activeGame.id}`)} />
+          <Button title={t('home.backToGame')} icon="⏱" variant="gold" onPress={() => router.push(`/game/${activeGame.id}`)} />
         )}
 
         <Pressable
@@ -143,18 +141,18 @@ export default function Home() {
           <LinearGradient colors={gradients.play} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.playButton}>
             <Text style={styles.playIcon}>⚔️</Text>
             <View>
-              <Text style={styles.playTitle}>JOGAR!</Text>
+              <Text style={styles.playTitle}>{t('home.play')}</Text>
               <Text style={styles.playSub}>{playSub}</Text>
             </View>
           </LinearGradient>
         </Pressable>
 
         <View style={styles.grid}>
-          <Tile icon="🤖" title="Contra a IA" subtitle="5 níveis, offline" colors={gradients.ai} onPress={() => router.push('/ai')} />
+          <Tile icon="🤖" title={t('home.aiTitle')} subtitle={t('home.aiSub')} colors={gradients.ai} onPress={() => router.push('/ai')} />
           <Tile
             icon="👥"
-            title="Amigos"
-            subtitle={local ? '🌐 Requer servidor online' : pendingInvites ? `${pendingInvites} desafio(s)!` : 'Convide e desafie'}
+            title={t('home.friendsTitle')}
+            subtitle={local ? t('home.needsServer') : pendingInvites ? t('home.challenges', { count: pendingInvites }) : t('home.friendsSub')}
             colors={gradients.friends}
             locked={!user}
             dimmed={local}
@@ -163,16 +161,16 @@ export default function Home() {
           />
           <Tile
             icon="🏆"
-            title="Ranking"
-            subtitle={local ? 'Contas deste aparelho' : 'Os melhores'}
+            title={t('home.rankingTitle')}
+            subtitle={local ? t('home.rankingLocal') : t('home.rankingSub')}
             colors={gradients.ranking}
             locked={!user}
             onPress={() => router.push('/leaderboard')}
           />
           <Tile
             icon="🛍️"
-            title="Loja"
-            subtitle={user?.dailyBonusAvailable ? '🎁 Bônus grátis!' : 'Bonecos e estilos'}
+            title={t('home.shopTitle')}
+            subtitle={user?.dailyBonusAvailable ? t('home.shopBonus') : t('home.shopSub')}
             colors={gradients.shop}
             locked={!user}
             badge={user?.dailyBonusAvailable ? 1 : 0}
@@ -203,6 +201,7 @@ function Tile({
   badge?: number;
   dimmed?: boolean;
 }) {
+  const { t } = useT();
   return (
     <Pressable
       onPress={locked ? () => router.push('/login') : onPress}
@@ -217,7 +216,7 @@ function Tile({
       >
         <Text style={styles.tileIcon}>{icon}</Text>
         <Text style={styles.tileTitle}>{title}</Text>
-        <Text style={styles.tileSub}>{locked ? '🔒 Requer conta' : subtitle}</Text>
+        <Text style={styles.tileSub}>{locked ? t('home.needsAccount') : subtitle}</Text>
       </LinearGradient>
       {!!badge && !locked && (
         <View style={[styles.badge, { top: -4, right: -4 }]}>

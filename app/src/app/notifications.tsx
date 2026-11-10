@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Button, EmptyState, Screen } from '../components/ui';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
+import { translateServerText, tStatic, useT } from '../lib/i18n';
 import { useSocket } from '../lib/socket';
 import { colors, radius } from '../lib/theme';
 import type { AppNotification } from '../lib/types';
@@ -20,16 +21,17 @@ const ICON: Record<AppNotification['type'], string> = {
 
 function timeAgo(ts: number) {
   const s = Math.floor((Date.now() - ts) / 1000);
-  if (s < 60) return 'agora';
-  if (s < 3600) return `há ${Math.floor(s / 60)} min`;
-  if (s < 86400) return `há ${Math.floor(s / 3600)} h`;
-  return `há ${Math.floor(s / 86400)} d`;
+  if (s < 60) return tStatic('notif.now');
+  if (s < 3600) return tStatic('notif.minAgo', { n: Math.floor(s / 60) });
+  if (s < 86400) return tStatic('notif.hAgo', { n: Math.floor(s / 3600) });
+  return tStatic('notif.dAgo', { n: Math.floor(s / 86400) });
 }
 
 export default function Notifications() {
   const { token } = useAuth();
   const { unreadNotifications, setUnreadNotifications } = useSocket();
   const [list, setList] = useState<AppNotification[] | null>(null);
+  const { t } = useT();
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -61,15 +63,15 @@ export default function Notifications() {
   return (
     <Screen>
       {!!list?.some((n) => !n.read) && (
-        <Button small variant="secondary" title="Marcar todas como lidas" onPress={() => markRead()} />
+        <Button small variant="secondary" title={t('notif.markAll')} onPress={() => markRead()} />
       )}
-      {list?.length === 0 && <EmptyState icon="🔔" text="Nenhuma notificação por enquanto." />}
+      {list?.length === 0 && <EmptyState icon="🔔" text={t('notif.empty')} />}
       {list?.map((n) => (
         <Pressable key={n.id} onPress={() => open(n)} style={[styles.row, !n.read && styles.unread]}>
           <Text style={styles.icon}>{ICON[n.type] ?? '🔔'}</Text>
           <View style={{ flex: 1, gap: 2 }}>
-            <Text style={styles.title}>{n.title}</Text>
-            <Text style={styles.body}>{n.body}</Text>
+            <Text style={styles.title}>{translateServerText(n.title)}</Text>
+            <Text style={styles.body}>{translateServerText(n.body)}</Text>
             <Text style={styles.time}>{timeAgo(n.createdAt)}</Text>
           </View>
           {!n.read && <View style={styles.dot} />}

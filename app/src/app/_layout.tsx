@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { InviteBanner } from '../components/InviteBanner';
 import { AuthProvider } from '../lib/auth';
 import { CosmeticsProvider } from '../lib/cosmetics';
+import { I18nProvider, useT } from '../lib/i18n';
 import { SocketProvider } from '../lib/socket';
 import { colors, fonts } from '../lib/theme';
 import { ToastProvider } from '../lib/toast';
@@ -18,10 +19,22 @@ const theme = {
   colors: { ...DarkTheme.colors, background: colors.bg, card: colors.bg, primary: colors.accent, text: colors.text },
 };
 
+const blank = <View style={{ flex: 1, backgroundColor: colors.bg }} />;
+
 export default function RootLayout() {
+  // O idioma envolve tudo (inclusive os toasts).
+  return (
+    <I18nProvider fallback={blank}>
+      <AppShell />
+    </I18nProvider>
+  );
+}
+
+function AppShell() {
+  const { t } = useT();
   const [fontsLoaded, fontError] = useFonts({ Fredoka_500Medium, Fredoka_600SemiBold, Fredoka_700Bold });
   // Sem a fonte o app continua funcionando com a fonte do sistema.
-  if (!fontsLoaded && !fontError) return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
+  if (!fontsLoaded && !fontError) return blank;
   return (
     <SafeAreaProvider>
       <ThemeProvider value={theme}>
@@ -40,18 +53,18 @@ export default function RootLayout() {
                     contentStyle: { backgroundColor: colors.bg },
                   }}
                 >
-                  <Stack.Screen name="index" options={{ headerShown: false, title: 'Início' }} />
-                  <Stack.Screen name="login" options={{ title: 'Entrar', presentation: 'modal' }} />
-                  <Stack.Screen name="ai/index" options={{ title: 'Jogar contra a IA' }} />
-                  <Stack.Screen name="ai/play" options={{ title: 'Partida contra IA' }} />
-                  <Stack.Screen name="play" options={{ title: 'Partida online' }} />
-                  <Stack.Screen name="game/[id]" options={{ title: 'Partida', gestureEnabled: false }} />
-                  <Stack.Screen name="friends" options={{ title: 'Amigos' }} />
-                  <Stack.Screen name="leaderboard" options={{ title: 'Ranking' }} />
-                  <Stack.Screen name="profile/[id]" options={{ title: 'Perfil' }} />
-                  <Stack.Screen name="settings" options={{ title: 'Configurações' }} />
-                  <Stack.Screen name="shop" options={{ title: 'Loja' }} />
-                  <Stack.Screen name="notifications" options={{ title: 'Notificações' }} />
+                  <Stack.Screen name="index" options={{ headerShown: false, title: t('nav.home') }} />
+                  <Stack.Screen name="login" options={{ title: t('nav.login'), presentation: 'modal' }} />
+                  <Stack.Screen name="ai/index" options={{ title: t('nav.ai') }} />
+                  <Stack.Screen name="ai/play" options={{ title: t('nav.aiPlay') }} />
+                  <Stack.Screen name="play" options={{ title: t('nav.play') }} />
+                  <Stack.Screen name="game/[id]" options={{ title: t('nav.game'), gestureEnabled: false }} />
+                  <Stack.Screen name="friends" options={{ title: t('nav.friends') }} />
+                  <Stack.Screen name="leaderboard" options={{ title: t('nav.leaderboard') }} />
+                  <Stack.Screen name="profile/[id]" options={{ title: t('nav.profile') }} />
+                  <Stack.Screen name="settings" options={{ title: t('nav.settings') }} />
+                  <Stack.Screen name="shop" options={{ title: t('nav.shop') }} />
+                  <Stack.Screen name="notifications" options={{ title: t('nav.notifications') }} />
                 </Stack>
                 <InviteBanner />
               </View>

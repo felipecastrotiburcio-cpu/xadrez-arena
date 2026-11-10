@@ -4,6 +4,7 @@ import { io, type Socket } from 'socket.io-client';
 import { api, getServerUrl, isLocalMode } from './api';
 import { localEvents } from './localDevice';
 import { useAuth } from './auth';
+import { translateServerText, tStatic } from './i18n';
 import { useToast } from './toast';
 import type { Ack, AppNotification, GameOver, GameState, Invite } from './types';
 
@@ -66,7 +67,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
         .catch(() => {});
       return localEvents.onNotification(({ notification, unread }) => {
         setUnreadNotifications(unread);
-        if (notification.type !== 'game_result' && notification.type !== 'reward') toast(`🔔 ${notification.title}`, 'success');
+        if (notification.type !== 'game_result' && notification.type !== 'reward') toast(`🔔 ${translateServerText(notification.title)}`, 'success');
       });
     }
     const s = io(getServerUrl(), { auth: { token }, transports: ['websocket'] });
@@ -104,15 +105,15 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     });
     s.on('invite:declined', (inv: Invite) => {
       removeInvite(inv);
-      toast(`${inv.to.username} recusou o convite.`);
+      toast(tStatic('socket.inviteDeclined', { name: inv.to.username }));
     });
     s.on('invite:cancelled', (inv: Invite) => {
       removeInvite(inv);
-      if (inv.to.id === userRef.current?.id) toast(`${inv.from.username} cancelou o convite.`);
+      if (inv.to.id === userRef.current?.id) toast(tStatic('socket.inviteCancelled', { name: inv.from.username }));
     });
     s.on('invite:expired', (inv: Invite) => {
       removeInvite(inv);
-      if (inv.from.id === userRef.current?.id) toast(`Convite para ${inv.to.username} expirou.`);
+      if (inv.from.id === userRef.current?.id) toast(tStatic('socket.inviteExpired', { name: inv.to.username }));
     });
 
     s.on('friends:changed', () => setFriendsVersion((v) => v + 1));
@@ -121,7 +122,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       setUnreadNotifications(unread);
       // Resultado de partida já aparece na tela do jogo.
       // Resultado de partida e bônus já têm aviso na própria tela.
-      if (notification.type !== 'game_result' && notification.type !== 'reward') toast(`🔔 ${notification.title}`, 'success');
+      if (notification.type !== 'game_result' && notification.type !== 'reward') toast(`🔔 ${translateServerText(notification.title)}`, 'success');
     });
     // Moedas/inventário mudaram (fim de partida, bônus): recarrega o perfil.
     s.on('wallet:changed', () => refresh());

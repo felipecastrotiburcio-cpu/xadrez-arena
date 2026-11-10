@@ -3,6 +3,7 @@ import { Animated, Easing, Platform, Pressable, StyleSheet, Text, View } from 'r
 import { Chess, type Square } from 'chess.js';
 import { ChessPiece, tint, type PieceType } from './ChessPiece';
 import { FrameArt } from './FrameArt';
+import { useT } from '../lib/i18n';
 import { colors } from '../lib/theme';
 import { playSound, preloadSounds, type BoardSound } from '../lib/sound';
 import type { BoardStyle, PieceStyle, Side } from '../lib/types';
@@ -351,11 +352,12 @@ interface SquareProps {
 /** Uma casa do tabuleiro. Memorizada: só redesenha quando algo dela muda. */
 const BoardSquare = memo(function BoardSquare(p: SquareProps) {
   const { sq, boardStyle, light } = p;
+  const { t } = useT();
   const coordColor = light ? boardStyle.coord.light : boardStyle.coord.dark;
   return (
     <Pressable
       onPress={() => p.onPressSquare(p.square)}
-      accessibilityLabel={`${p.square}${p.pieceType ? ` ${p.pieceColor === 'w' ? 'branco' : 'preto'} ${p.pieceType}` : ''}`}
+      accessibilityLabel={`${p.square}${p.pieceType ? ` ${t(p.pieceColor === 'w' ? 'common.pieceWhite' : 'common.pieceBlack')} ${p.pieceType}` : ''}`}
       style={{ width: sq, height: sq, overflow: 'hidden' }}
     >
       <SquareSurface style={boardStyle} index={FILES.indexOf(p.square[0]) * 8 + Number(p.square[1])} size={sq} light={light} />
