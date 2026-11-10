@@ -11,6 +11,7 @@ import { useSocket } from '../lib/socket';
 import { colors, radius } from '../lib/theme';
 import { useToast } from '../lib/toast';
 import type { FriendEntry, FriendshipStatus, PublicUser } from '../lib/types';
+import { Flag } from '../components/Flag';
 
 type Tab = 'friends' | 'requests' | 'add';
 
@@ -165,7 +166,7 @@ function UserRow({
       <Avatar name={user.username} online={online} icon={user.cosmetics?.avatar} />
       <View style={{ flex: 1, gap: 2 }}>
         <Text style={styles.name} numberOfLines={1}>
-          {user.username} <Text style={styles.muted}>{user.rating}</Text>
+          {user.username} <Flag code={user.country} size={14} /> <Text style={styles.muted}>{user.rating}</Text>
         </Text>
         <LevelBadge level={user.level} name={user.levelName} compact />
         <Text style={[styles.muted, online && status === t('friends.online') && { color: colors.success }]}>{status}</Text>

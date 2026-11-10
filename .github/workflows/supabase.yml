@@ -9,11 +9,11 @@ name: Servidor online (Supabase)
 on:
   push:
     branches: [main]
-    paths: ['supabase/**', 'server/src/catalog.ts', 'server/src/levels.ts', 'server/src/timeControls.ts', '.github/workflows/supabase.yml']
+    paths: ['supabase/**', 'app/**', 'server/src/catalog.ts', 'server/src/levels.ts', 'server/src/timeControls.ts', '.github/workflows/supabase.yml']
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: supabase
@@ -78,6 +78,26 @@ jobs:
       - name: Jogar online com dois jogadores
         working-directory: supabase/tests
         run: npm run test:online
+
+      - name: Testar o app (versão web) com dois jogadores — português e inglês
+        run: |
+          cd app && npm ci
+          EXPO_PUBLIC_SUPABASE_URL="$API_URL" EXPO_PUBLIC_SUPABASE_ANON_KEY="$ANON_KEY" APP_ENV=production \
+            npx expo export --platform web --output-dir "$RUNNER_TEMP/web"
+          cd ../supabase/tests
+          npx playwright install --with-deps chromium
+          node app.e2e.mjs "$RUNNER_TEMP/web" "$GITHUB_WORKSPACE/online-results"
+
+      - name: Publicar capturas do teste
+        if: always()
+        run: |
+          mkdir -p online-results && cd online-results
+          cp ../functions.log . 2>/dev/null || true
+          if [ "${{ job.status }}" = "success" ]; then R=SUCESSO; else R=FALHOU; fi
+          echo "online: $R" > status.txt
+          git init -q -b ci-results-online && git add -A
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -qm "Teste online: $R"
+          git push -fq "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" ci-results-online
 
       - name: Registros da função (em caso de falha)
         if: failure()

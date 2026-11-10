@@ -10,6 +10,7 @@ import { useSocket } from '../../lib/socket';
 import { colors } from '../../lib/theme';
 import { useToast } from '../../lib/toast';
 import type { FriendshipStatus, GameSummary, PublicUser } from '../../lib/types';
+import { Flag } from '../../components/Flag';
 
 interface Profile {
   user: PublicUser;
@@ -82,7 +83,9 @@ export default function ProfileScreen() {
     <Screen>
       <Card style={{ alignItems: 'center' }}>
         <Avatar name={user.username} size={80} online={profile.online} icon={user.cosmetics?.avatar} />
-        <Text style={styles.name}>{user.username}</Text>
+        <Text style={styles.name}>
+          {user.username} <Flag code={user.country} size={22} />
+        </Text>
         <LevelBadge level={user.level} name={user.levelName} />
         <Text style={styles.rating}>{user.rating}</Text>
         <Text style={styles.muted}>

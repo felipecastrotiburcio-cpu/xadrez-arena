@@ -8,6 +8,7 @@ import { colors, radius } from '../lib/theme';
 import { useToast } from '../lib/toast';
 import type { Invite } from '../lib/types';
 import { Avatar, Button } from './ui';
+import { Flag } from './Flag';
 
 /** Banner global com os convites de partida recebidos. */
 export function InviteBanner() {
@@ -53,6 +54,7 @@ function InviteCard({ invite }: { invite: Invite }) {
         <Avatar name={invite.from.username} size={38} icon={invite.from.cosmetics?.avatar} />
         <View style={{ flex: 1 }}>
           <Text style={styles.title}>
+            <Flag code={invite.from.country} size={14} />{invite.from.country ? ' ' : ''}
             {t('invite.challengedYou', { name: invite.from.username, rating: invite.from.rating })}
           </Text>
           <Text style={styles.sub}>

@@ -246,6 +246,11 @@ export const en: Dictionary & Record<string, string> = {
   'settings.logoutAllQ': 'Log out of all devices?',
   'settings.logoutAllBody': 'All open sessions will be closed, including this one.',
   'settings.logout': 'Log out',
+  'settings.country': 'Flag / Country',
+  'settings.countryDesc': 'Shown next to your name in online games and on the leaderboard. Use the 2-letter code (e.g. US, GB, BR).',
+  'settings.countryDevice': 'Use device country',
+  'settings.countrySaved': 'Country updated.',
+  'settings.countryInvalid': 'Use a 2-letter code, like US.',
 
   // Loja
   'shop.tabBoards': 'Boards',

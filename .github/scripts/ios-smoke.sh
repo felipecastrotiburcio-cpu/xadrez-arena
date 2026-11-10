@@ -38,6 +38,12 @@ log "Simulador: $NAME ($RUNTIME)"
 
 xcrun simctl boot "$UDID" 2>/dev/null || true
 xcrun simctl bootstatus "$UDID" -b > /dev/null
+# Simulador em português do Brasil (o app segue o idioma do aparelho e o teste procura textos em português).
+xcrun simctl spawn "$UDID" defaults write "Apple Global Domain" AppleLanguages -array pt-BR
+xcrun simctl spawn "$UDID" defaults write "Apple Global Domain" AppleLocale -string pt_BR
+xcrun simctl shutdown "$UDID"
+xcrun simctl boot "$UDID"
+xcrun simctl bootstatus "$UDID" -b > /dev/null
 # Desliga o tutorial do teclado ("deslize para digitar"), que cobre a tela na 1ª digitação.
 xcrun simctl spawn "$UDID" defaults write com.apple.keyboard.preferences DidShowContinuousPathIntroduction -bool true 2>/dev/null || true
 xcrun simctl spawn "$UDID" defaults write com.apple.Preferences DidShowContinuousPathIntroduction -bool true 2>/dev/null || true

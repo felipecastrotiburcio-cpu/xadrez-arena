@@ -7,6 +7,7 @@ import { useAuth } from '../lib/auth';
 import { translateServerText, useT } from '../lib/i18n';
 import { colors, radius } from '../lib/theme';
 import type { PublicUser } from '../lib/types';
+import { Flag } from '../components/Flag';
 
 type Row = PublicUser & { rank: number; online: boolean };
 const MEDALS = ['🥇', '🥈', '🥉'];
@@ -39,7 +40,9 @@ export default function Leaderboard() {
           <Text style={styles.rank}>{MEDALS[p.rank - 1] ?? p.rank}</Text>
           <Avatar name={p.username} size={38} online={p.online} icon={p.cosmetics?.avatar} />
           <View style={{ flex: 1, gap: 3 }}>
-            <Text style={styles.name}>{p.username}</Text>
+            <Text style={styles.name}>
+              {p.username} <Flag code={p.country} size={14} />
+            </Text>
             <LevelBadge level={p.level} name={p.levelName} />
           </View>
           <View style={{ alignItems: 'flex-end' }}>

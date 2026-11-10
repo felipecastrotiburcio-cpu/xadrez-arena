@@ -60,6 +60,16 @@ alive() { adb shell pidof "$PKG" > /dev/null; }
 
 log "Dispositivo: $(adb shell getprop ro.product.model | tr -d '\r') · Android $(adb shell getprop ro.build.version.release | tr -d '\r') (API $(adb shell getprop ro.build.version.sdk | tr -d '\r'))"
 
+# Emulador em português do Brasil (o app segue o idioma do aparelho e o teste procura textos em português).
+adb shell "setprop persist.sys.locale pt-BR; setprop ctl.restart zygote" || true
+sleep 10
+for _ in $(seq 1 60); do
+  [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1" ] && adb shell pm path android > /dev/null 2>&1 && break
+  sleep 3
+done
+sleep 15
+log "Idioma do emulador: $(adb shell getprop persist.sys.locale | tr -d '\r')"
+
 # 1. Instalação
 if adb install -r "$APK" > "$OUT/install.txt" 2>&1; then ok "APK instalado"; else fail "Falha ao instalar: $(cat "$OUT/install.txt")"; exit 1; fi
 

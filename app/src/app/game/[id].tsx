@@ -191,6 +191,7 @@ export default function OnlineGame() {
       </Text>
       <PlayerBar
         name={players[oppSide].username}
+        country={players[oppSide].country}
         avatar={players[oppSide].cosmetics?.avatar}
         subtitle={String(players[oppSide].rating)}
         captured={material.captured[orientation]}
@@ -215,6 +216,7 @@ export default function OnlineGame() {
       </View>
       <PlayerBar
         name={players[orientation].username}
+        country={players[orientation].country}
         avatar={players[orientation].cosmetics?.avatar}
         subtitle={String(players[orientation].rating)}
         captured={material.captured[oppSide]}

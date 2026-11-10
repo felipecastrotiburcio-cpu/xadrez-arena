@@ -3,12 +3,15 @@ import { router } from 'expo-router';
 import { StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { Segmented } from '../components/TimeControlPicker';
 import { Button, Card, Screen, SectionTitle } from '../components/ui';
-import { api, getServerUrl, setServerUrl } from '../lib/api';
+import { api, getServerUrl, setServerUrl, usingSupabase } from '../lib/api';
 import { confirmAction } from '../lib/confirm';
 import { translateServerText, useT, type LangPref } from '../lib/i18n';
 import { useAuth } from '../lib/auth';
 import { colors, radius } from '../lib/theme';
 import { useToast } from '../lib/toast';
+import { Flag, countryName } from '../components/Flag';
+import { deviceCountry } from '../lib/supabase';
+import type { PrivateUser } from '../lib/types';
 import { isSoundEnabled, playSound, setSoundEnabled } from '../lib/sound';
 
 export default function Settings() {
@@ -74,6 +77,7 @@ export default function Settings() {
 
       {user && (
         <>
+          {usingSupabase() && <CountryCard />}
           <SectionTitle>{t('settings.account')}</SectionTitle>
           <Card>
             <Text style={styles.text}>{t('settings.loggedInAs', { name: user.username })}</Text>
@@ -121,3 +125,55 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
 });
+
+/** País da bandeira (só no modo online com Supabase). */
+function CountryCard() {
+  const { user, setUser } = useAuth();
+  const { t, locale } = useT();
+  const toast = useToast();
+  const [code, setCode] = useState(user?.country ?? '');
+  const save = async (value: string) => {
+    const c = value.trim().toUpperCase();
+    if (!/^[A-Z]{2}$/.test(c)) {
+      toast(t('settings.countryInvalid'), 'error');
+      return;
+    }
+    try {
+      const r = await api<{ user: PrivateUser }>('/me/country', { body: { country: c } });
+      setUser(r.user);
+      setCode(c);
+      toast(t('settings.countrySaved'), 'success');
+    } catch (e) {
+      toast(translateServerText((e as Error).message), 'error');
+    }
+  };
+  return (
+    <>
+      <SectionTitle>{t('settings.country')}</SectionTitle>
+      <Card>
+        <Text style={styles.text}>
+          <Flag code={user?.country} size={20} /> {user?.country ? countryName(user.country, locale) : '—'}
+        </Text>
+        <Text style={styles.muted}>{t('settings.countryDesc')}</Text>
+        <TextInput
+          style={styles.input}
+          value={code}
+          onChangeText={(v) => setCode(v.replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase())}
+          autoCapitalize="characters"
+          autoCorrect={false}
+          maxLength={2}
+          placeholder="BR"
+          placeholderTextColor={colors.textMuted}
+        />
+        <Button title={t('settings.save')} onPress={() => save(code)} />
+        {deviceCountry() && deviceCountry() !== user?.country ? (
+          <Button
+            variant="secondary"
+            title={`${t('settings.countryDevice')} (${deviceCountry()})`}
+            onPress={() => save(deviceCountry()!)}
+          />
+        ) : null}
+      </Card>
+    </>
+  );
+}

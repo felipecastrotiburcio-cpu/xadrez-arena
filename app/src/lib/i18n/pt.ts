@@ -246,6 +246,11 @@ export const pt = {
   'settings.logoutAllQ': 'Sair de todos os aparelhos?',
   'settings.logoutAllBody': 'Todas as sessões abertas serão encerradas, inclusive esta.',
   'settings.logout': 'Sair da conta',
+  'settings.country': 'Bandeira / País',
+  'settings.countryDesc': 'Aparece ao lado do seu nome nas partidas online e no ranking. Use o código de 2 letras (ex.: BR, PT, US).',
+  'settings.countryDevice': 'Usar o do aparelho',
+  'settings.countrySaved': 'País atualizado.',
+  'settings.countryInvalid': 'Use um código de 2 letras, como BR.',
 
   // Loja
   'shop.tabBoards': 'Tabuleiros',

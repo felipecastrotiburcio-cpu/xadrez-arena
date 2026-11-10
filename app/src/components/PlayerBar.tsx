@@ -5,6 +5,7 @@ import { ChessPiece, type PieceType } from './ChessPiece';
 import { colors } from '../lib/theme';
 import { formatClock } from '../lib/timeControls';
 import { Avatar } from './ui';
+import { Flag } from './Flag';
 
 interface Props {
   name: string;
@@ -19,9 +20,11 @@ interface Props {
   thinking?: boolean;
   offline?: boolean;
   avatar?: string;
+  /** País do jogador (bandeira ao lado do nome). */
+  country?: string | null;
 }
 
-export function PlayerBar({ name, subtitle, captured, capturedColor, advantage, clockMs, active, thinking, offline, avatar }: Props) {
+export function PlayerBar({ name, subtitle, captured, capturedColor, advantage, clockMs, active, thinking, offline, avatar, country }: Props) {
   const { pieces } = useMyLook();
   const { t } = useT();
   const low = clockMs !== undefined && clockMs < 20_000;
@@ -30,6 +33,7 @@ export function PlayerBar({ name, subtitle, captured, capturedColor, advantage, 
       <Avatar name={name} size={36} icon={avatar} />
       <View style={{ flex: 1 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Flag code={country} size={15} />
           <Text style={styles.name} numberOfLines={1}>
             {name}
           </Text>

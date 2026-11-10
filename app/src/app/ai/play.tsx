@@ -331,6 +331,7 @@ export default function AiGame() {
       </View>
       <PlayerBar
         name={user?.username ?? t('common.you')}
+        country={user?.country}
         avatar={user?.equipped.avatar}
         captured={material.captured[aiSide]}
         capturedColor={aiSide}

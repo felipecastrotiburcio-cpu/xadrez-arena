@@ -14,6 +14,7 @@ import { useSocket } from '../lib/socket';
 import { colors, fonts, gradients, radius } from '../lib/theme';
 import { Scene3D } from '../three/Scene3D';
 import { createShowcaseScene } from '../three/scenes';
+import { Flag } from '../components/Flag';
 
 const HERO_BG = gradients.hero[0];
 
@@ -94,6 +95,8 @@ export default function Home() {
             {user && lp ? (
               <>
                 <Text style={styles.username} numberOfLines={1}>
+                  {user.country ? <Flag code={user.country} size={18} /> : null}
+                  {user.country ? ' ' : ''}
                   {user.username}
                 </Text>
                 <LevelBadge level={user.level} name={user.levelName} />

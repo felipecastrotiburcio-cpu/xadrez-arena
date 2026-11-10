@@ -1,6 +1,7 @@
 import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { getLocales } from 'expo-localization';
 import { Platform } from 'react-native';
 import { ApiError } from './apiError';
 import { levelFor } from './levels';
@@ -104,10 +105,9 @@ export function publicUser(p: ProfileRow): PublicUser {
 /** País do aparelho (código ISO de 2 letras), para a bandeira no perfil. */
 export function deviceCountry(): string | null {
   try {
-    const locale =
-      Platform.OS === 'web' && typeof navigator !== 'undefined'
-        ? navigator.language
-        : Intl.DateTimeFormat().resolvedOptions().locale;
+    const region = getLocales()[0]?.regionCode;
+    if (region && /^[A-Za-z]{2}$/.test(region)) return region.toUpperCase();
+    const locale = Platform.OS === 'web' && typeof navigator !== 'undefined' ? navigator.language : '';
     const m = /[-_]([A-Za-z]{2})\b/.exec(locale ?? '');
     return m ? m[1].toUpperCase() : null;
   } catch {

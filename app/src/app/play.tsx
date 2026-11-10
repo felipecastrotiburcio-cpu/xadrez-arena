@@ -93,7 +93,7 @@ export default function Play() {
           <TimeControlPicker value={timeControl} onChange={setTimeControl} />
           <Text style={styles.muted}>{t('play.pairingNote')}</Text>
           {connected ? (
-            <Button title={t('play.find')} icon="⚔️" onPress={start} />
+            <Button title={t('play.find')} icon="⚔️" onPress={start} testID="queue-join" />
           ) : (
             <View style={{ flexDirection: 'row', gap: 8, justifyContent: 'center' }}>
               <ActivityIndicator color={colors.accent} />
