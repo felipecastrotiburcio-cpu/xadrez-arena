@@ -117,6 +117,8 @@ try {
     }
     check(seen, `lance ${i + 1} ${from}-${to} apareceu para o adversário em ${Date.now() - t0} ms`);
     if (i === 3) {
+      const offline = /desconectado|disconnected/i;
+      check(!offline.test(await body(W)) && !offline.test(await body(Bk)), 'ninguém aparece como desconectado durante a partida');
       await W.page.screenshot({ path: `${out}/04-${W.name}-partida.png` });
       await Bk.page.screenshot({ path: `${out}/05-${Bk.name}-partida.png` });
     }

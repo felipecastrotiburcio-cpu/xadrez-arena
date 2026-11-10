@@ -307,8 +307,14 @@ export class SupabaseLink {
       const before = new Set(Object.keys(state));
       const map: Record<string, { online: boolean; inGame: boolean }> = {};
       for (const [id, metas] of Object.entries(state)) map[id] = { online: true, inGame: metas.some((m) => m.inGame) };
-      // Quem saiu: avisa como offline.
-      for (const id of Object.keys(lastPresence)) if (!before.has(id)) this.fire('friends:presence', { userId: id, online: false, inGame: false });
+      // Quem saiu: avisa como offline (amigos e adversário da partida).
+      for (const id of Object.keys(lastPresence)) {
+        if (!before.has(id)) {
+          this.fire('friends:presence', { userId: id, online: false, inGame: false });
+          this.fire('game:opponentConnection', { userId: id, connected: false });
+        }
+      }
+      for (const id of before) if (!lastPresence[id]) this.fire('game:opponentConnection', { userId: id, connected: true });
       for (const [id, s] of Object.entries(map)) {
         const prev = lastPresence[id];
         if (!prev || prev.inGame !== s.inGame) this.fire('friends:presence', { userId: id, ...s });
@@ -318,9 +324,9 @@ export class SupabaseLink {
       setPresenceMap(map);
     };
     let lastPresence: Record<string, { online: boolean; inGame: boolean }> = {};
+    // Usa só o estado completo ("sync"): atualizar o próprio status gera "saiu"+"entrou" seguidos,
+    // que fora de ordem marcariam o adversário como desconectado sem estar.
     ch.on('presence', { event: 'sync' }, sync)
-      .on('presence', { event: 'leave' }, ({ key }) => this.fire('game:opponentConnection', { userId: key, connected: false }))
-      .on('presence', { event: 'join' }, ({ key }) => this.fire('game:opponentConnection', { userId: key, connected: true }))
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') this.updatePresence();
       });
