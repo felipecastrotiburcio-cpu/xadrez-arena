@@ -1,7 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { router } from 'expo-router';
 import { io, type Socket } from 'socket.io-client';
-import { api, getServerUrl, isLocalMode } from './api';
+import { api, getServerUrl, isLocalMode, usingSupabase } from './api';
+import { SupabaseLink } from './supabaseLink';
 import { localEvents } from './localDevice';
 import { useAuth } from './auth';
 import { useToast } from './toast';
@@ -69,7 +70,10 @@ export function SocketProvider({ children }: { children: ReactNode }) {
         if (notification.type !== 'game_result' && notification.type !== 'reward') toast(`🔔 ${notification.title}`, 'success');
       });
     }
-    const s = io(getServerUrl(), { auth: { token }, transports: ['websocket'] });
+    // Supabase: eventos ao vivo pelo Realtime, no mesmo formato do socket.io.
+    const s = usingSupabase()
+      ? (new SupabaseLink() as unknown as Socket)
+      : io(getServerUrl(), { auth: { token }, transports: ['websocket'] });
     setSocket(s);
 
     s.on('connect', () => setConnected(true));

@@ -1,6 +1,8 @@
 export interface PublicUser {
   id: string;
   username: string;
+  /** País (ISO 3166, 2 letras) para a bandeira. Ausente no modo local / servidor antigo. */
+  country?: string | null;
   rating: number;
   peakRating: number;
   level: number;

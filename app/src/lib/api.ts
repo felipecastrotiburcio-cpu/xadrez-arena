@@ -2,6 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import { ApiError } from './apiError';
 import { localApi } from './localDevice';
+import { isSupabaseConfigured } from './supabase';
+import { supabaseApi } from './supabaseApi';
 
 const SERVER_KEY = 'xadrez.serverUrl';
 
@@ -13,6 +15,8 @@ const SERVER_KEY = 'xadrez.serverUrl';
 function defaultServerUrl() {
   // "none" força o modo local (contas no aparelho), útil para testes.
   if (process.env.EXPO_PUBLIC_SERVER_URL === 'none') return '';
+  // Servidor online no Supabase (definido na compilação): ele é o padrão.
+  if (isSupabaseConfigured()) return '';
   if (process.env.EXPO_PUBLIC_SERVER_URL) return process.env.EXPO_PUBLIC_SERVER_URL;
   const host = Constants.expoConfig?.hostUri?.split(':')[0];
   if (host) return `http://${host}:3001`;
@@ -50,8 +54,10 @@ export async function setServerUrl(url: string) {
 }
 
 export const getServerUrl = () => serverUrl;
+/** O app fala com o Supabase (a menos que um servidor próprio tenha sido configurado). */
+export const usingSupabase = () => serverUrl === '' && isSupabaseConfigured();
 /** Há um servidor online configurado? (sem ele, só o modo contra a IA funciona) */
-export const isServerConfigured = () => serverUrl !== '';
+export const isServerConfigured = () => serverUrl !== '' || usingSupabase();
 /** Sem servidor online, contas, loja e notificações ficam salvas no próprio aparelho. */
 export const isLocalMode = () => !isServerConfigured();
 export const SERVER_NOT_CONFIGURED =
@@ -64,6 +70,7 @@ export { ApiError };
 
 export async function api<T = any>(path: string, opts: { method?: string; body?: unknown } = {}): Promise<T> {
   if (!serverUrl) {
+    if (usingSupabase()) return supabaseApi<T>(path, opts.method ?? (opts.body !== undefined ? 'POST' : 'GET'), opts.body);
     return localApi<T>(path, opts.method ?? (opts.body !== undefined ? 'POST' : 'GET'), opts.body, authToken);
   }
   const insecure = validateServerUrl(serverUrl);

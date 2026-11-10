@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { api, ApiError, loadServerUrl, setAuthToken } from './api';
+import { api, ApiError, loadServerUrl, setAuthToken, usingSupabase } from './api';
+import { supabase } from './supabase';
 import { secureStorage } from './secureStorage';
 import type { PrivateUser } from './types';
 
@@ -48,7 +49,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     (async () => {
       try {
         await loadServerUrl();
-        const saved = await secureStorage.get(TOKEN_KEY);
+        // Supabase guarda e renova a sessão sozinho; os outros servidores usam o token salvo.
+        const saved = usingSupabase()
+          ? ((await supabase().auth.getSession()).data.session?.access_token ?? null)
+          : await secureStorage.get(TOKEN_KEY);
         if (saved) {
           setAuthToken(saved);
           setToken(saved);
@@ -86,7 +90,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [applySession],
   );
 
-  const logout = useCallback(() => applySession(null, null), [applySession]);
+  const logout = useCallback(async () => {
+    if (usingSupabase()) await supabase().auth.signOut().catch(() => {});
+    await applySession(null, null);
+  }, [applySession]);
 
   const value = useMemo(
     () => ({ ready, token, user, rank, setUser, login, register, logout, refresh }),
