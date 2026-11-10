@@ -15,6 +15,8 @@ import { api, isLocalMode } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import { AI_CHARACTER, useCharacterStyle, useCosmetics, useMyLook } from '../../lib/cosmetics';
 import { hasMatingMaterial, materialInfo, resultText } from '../../lib/chessUtils';
+import { itemName } from '../../lib/catalogI18n';
+import { translateServerText, useT, type TranslationKey } from '../../lib/i18n';
 import { useToast } from '../../lib/toast';
 import { colors } from '../../lib/theme';
 import type { PrivateUser, Side } from '../../lib/types';
@@ -53,6 +55,8 @@ export default function AiGame() {
   const turnStart = useRef(0);
   const [, setTick] = useState(0);
   const toast = useToast();
+  const { t, lang } = useT();
+  const aiName = t(`ai.${level.id}.name` as TranslationKey);
   const [drawBusy, setDrawBusy] = useState(false);
   const { user, setUser } = useAuth();
   const [reward, setReward] = useState<Reward | null>(null);
@@ -82,8 +86,8 @@ export default function AiGame() {
   }, []);
 
   useEffect(() => {
-    navigation.setOptions({ title: `vs ${level.name}` });
-  }, [navigation, level.name]);
+    navigation.setOptions({ title: t('aiPlay.title', { name: aiName }) });
+  }, [navigation, aiName, t]);
 
   const sync = useCallback(() => {
     const c = chessRef.current;
@@ -221,7 +225,7 @@ export default function AiGame() {
     const c = chessRef.current;
     if (thinking || over || drawBusy) return;
     if (c.history().length < 20) {
-      toast('A IA só aceita empate depois do 10º lance.', 'info');
+      toast(t('aiPlay.drawTooEarly'), 'info');
       return;
     }
     setDrawBusy(true);
@@ -233,7 +237,7 @@ export default function AiGame() {
     if (aiScore <= 30) {
       endGame({ result: '1/2-1/2', reason: 'acordo' });
     } else {
-      toast(`${level.name} recusou o empate: acha que está melhor.`, 'info');
+      toast(t('aiPlay.drawDeclined', { name: aiName }), 'info');
     }
   };
 
@@ -288,9 +292,9 @@ export default function AiGame() {
       report('loss', 'desistência');
     };
     if (Platform.OS === 'web') confirm();
-    else Alert.alert('Desistir?', 'A partida contará como derrota.', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Desistir', style: 'destructive', onPress: confirm },
+    else Alert.alert(t('aiPlay.resignTitle'), t('aiPlay.resignBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('common.resign'), style: 'destructive', onPress: confirm },
     ]);
   };
 
@@ -302,7 +306,7 @@ export default function AiGame() {
   return (
     <Screen scroll style={{ gap: 8, paddingHorizontal: 4 }}>
       <PlayerBar
-        name={level.name}
+        name={aiName}
         subtitle={`~${level.elo}`}
         captured={material.captured[playerSide]}
         capturedColor={playerSide}
@@ -326,7 +330,7 @@ export default function AiGame() {
       />
       </View>
       <PlayerBar
-        name={user?.username ?? 'Você'}
+        name={user?.username ?? t('common.you')}
         avatar={user?.equipped.avatar}
         captured={material.captured[aiSide]}
         capturedColor={aiSide}
@@ -341,14 +345,14 @@ export default function AiGame() {
         </Text>
       )}
       <View style={styles.actions}>
-        {!timed && <Button small variant="secondary" title="Desfazer" icon="↶" style={styles.action} onPress={undo} disabled={thinking} />}
-        <Button small variant="secondary" title="Dica" icon="💡" style={styles.action} onPress={showHint} disabled={thinking || hinting || !!over} loading={hinting} />
+        {!timed && <Button small variant="secondary" title={t('aiPlay.undo')} icon="↶" style={styles.action} onPress={undo} disabled={thinking} />}
+        <Button small variant="secondary" title={t('aiPlay.hint')} icon="💡" style={styles.action} onPress={showHint} disabled={thinking || hinting || !!over} loading={hinting} />
         {over ? (
-          <Button small title="Nova" icon="↻" style={styles.action} onPress={restart} />
+          <Button small title={t('aiPlay.new')} icon="↻" style={styles.action} onPress={restart} />
         ) : (
           <>
-            <Button small variant="secondary" title="Empate" icon="½" style={styles.action} onPress={offerDraw} disabled={thinking} loading={drawBusy} />
-            <Button small variant="secondary" title="Desistir" icon="⚑" style={styles.action} onPress={resign} />
+            <Button small variant="secondary" title={t('common.draw')} icon="½" style={styles.action} onPress={offerDraw} disabled={thinking} loading={drawBusy} />
+            <Button small variant="secondary" title={t('common.resign')} icon="⚑" style={styles.action} onPress={resign} />
           </>
         )}
       </View>
@@ -358,16 +362,23 @@ export default function AiGame() {
           visible={finale}
           winner={
             text.outcome === 'win'
-              ? { name: user?.username ?? 'Você', look: myCharacter }
-              : { name: level.name, look: AI_CHARACTER }
+              ? { name: user?.username ?? t('common.you'), look: myCharacter }
+              : { name: aiName, look: AI_CHARACTER }
           }
           loser={
             text.outcome === 'win'
-              ? { name: level.name, look: AI_CHARACTER }
-              : { name: user?.username ?? 'Você', look: myCharacter }
+              ? { name: aiName, look: AI_CHARACTER }
+              : { name: user?.username ?? t('common.you'), look: myCharacter }
           }
           move={text.outcome === 'win' ? (get(look.equipped.move)?.style as { animation: string } | undefined)?.animation ?? 'jamal' : '67'}
-          moveName={text.outcome === 'win' ? get(look.equipped.move)?.name : 'Movimento do 67'}
+          moveName={
+            text.outcome === 'win'
+              ? (() => {
+                  const m = get(look.equipped.move);
+                  return m ? itemName(m, lang) : undefined;
+                })()
+              : itemName({ id: 'move_67', name: 'Movimento do 67' }, lang)
+          }
           title={text.title}
           subtitle={text.subtitle}
           onDone={() => {
@@ -385,14 +396,14 @@ export default function AiGame() {
           ratingChange={reward?.ratingChange}
           newRating={reward?.newRating}
           coins={reward?.coins}
-          levelUp={reward?.levelUp}
+          levelUp={translateServerText(reward?.levelUp)}
         >
           {!user && (
-            <Button title="Criar conta e ganhar moedas" variant="gold" onPress={() => router.push('/login')} />
+            <Button title={t('aiPlay.signUpCoins')} variant="gold" onPress={() => router.push('/login')} />
           )}
-          <Button title="Jogar novamente" onPress={restart} />
-          <Button title="Analisar tabuleiro" variant="secondary" onPress={() => setShowModal(false)} />
-          <Button title="Trocar adversário" variant="ghost" onPress={() => router.back()} />
+          <Button title={t('aiPlay.playAgain')} onPress={restart} />
+          <Button title={t('aiPlay.analyze')} variant="secondary" onPress={() => setShowModal(false)} />
+          <Button title={t('aiPlay.changeOpponent')} variant="ghost" onPress={() => router.back()} />
         </GameOverModal>
       )}
     </Screen>

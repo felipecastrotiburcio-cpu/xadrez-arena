@@ -6,10 +6,12 @@ import { Segmented } from '../components/TimeControlPicker';
 import { Button, Card, Screen } from '../components/ui';
 import { isLocalMode } from '../lib/api';
 import { useAuth } from '../lib/auth';
+import { translateServerText, useT } from '../lib/i18n';
 import { colors, radius } from '../lib/theme';
 
 export default function Login() {
   const { login, register } = useAuth();
+  const { t } = useT();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -25,7 +27,7 @@ export default function Login() {
       else await register(username.trim(), password);
       router.back();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erro inesperado.');
+      setError(e instanceof Error ? translateServerText(e.message) : t('common.unexpectedError'));
     } finally {
       setLoading(false);
     }
@@ -36,7 +38,7 @@ export default function Login() {
     // Android: o sistema redimensiona a janela. O KeyboardAvoidingView fica só como reforço no Android.
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'android' ? 'height' : undefined} enabled={Platform.OS === 'android'}>
       <Screen>
-        <Text style={styles.title}>♞ Bem-vindo à Arena</Text>
+        <Text style={styles.title}>{t('login.welcome')}</Text>
         <Segmented
           value={mode}
           onChange={(m) => {
@@ -44,28 +46,29 @@ export default function Login() {
             setError('');
           }}
           options={[
-            { value: 'login', label: 'Entrar' },
-            { value: 'register', label: 'Criar conta' },
+            { value: 'login', label: t('common.login') },
+            { value: 'register', label: t('common.createAccount') },
           ]}
         />
         {isLocalMode() && (
           <Card style={{ borderColor: colors.primary }}>
             <Text style={styles.notice}>
-              📱 Sua conta fica salva <Text style={{ fontWeight: '800' }}>neste aparelho</Text>. Com ela você ganha moedas
-              vencendo a IA, compra itens na loja, sobe de nível e recebe notificações.
+              {t('login.noticeA')}
+              <Text style={{ fontWeight: '800' }}>{t('login.noticeBold')}</Text>
+              {t('login.noticeB')}
             </Text>
-            <Text style={styles.noticeMuted}>Partidas online e amigos ficam disponíveis quando o servidor online for ativado.</Text>
+            <Text style={styles.noticeMuted}>{t('login.noticeMuted')}</Text>
           </Card>
         )}
         <Card>
-          <Text style={styles.label}>Nome de usuário</Text>
+          <Text style={styles.label}>{t('login.username')}</Text>
           <TextInput
             style={styles.input}
             value={username}
             onChangeText={setUsername}
             autoCapitalize="none"
             autoCorrect={false}
-            placeholder="ex: rei_do_xadrez"
+            placeholder={t('login.usernamePh')}
             testID="login-username"
             returnKeyType="next"
             submitBehavior="submit"
@@ -73,13 +76,13 @@ export default function Login() {
             textContentType="username"
             placeholderTextColor={colors.textMuted}
           />
-          <Text style={styles.label}>Senha</Text>
+          <Text style={styles.label}>{t('login.password')}</Text>
           <TextInput
             style={styles.input}
             value={password}
             onChangeText={setPassword}
             secureTextEntry
-            placeholder="mínimo 8 caracteres"
+            placeholder={t('login.passwordPh')}
             testID="login-password"
             ref={passwordRef}
             returnKeyType="go"
@@ -89,7 +92,7 @@ export default function Login() {
           />
           {error ? <Text style={styles.error}>{error}</Text> : null}
           <Button
-            title={mode === 'login' ? 'Entrar' : 'Criar conta'}
+            title={mode === 'login' ? t('common.login') : t('common.createAccount')}
             onPress={submit}
             loading={loading}
             disabled={!username || !password}
@@ -97,11 +100,9 @@ export default function Login() {
           />
         </Card>
         {mode === 'register' && (
-          <Text style={styles.hint}>
-            Você começa com 1000 pontos (Nível 3 · Amador) e 300 moedas. Vença partidas para subir até Grande Mestre!
-          </Text>
+          <Text style={styles.hint}>{t('login.registerHint')}</Text>
         )}
-        <Button title="Configurar servidor" variant="ghost" small onPress={() => router.push('/settings')} />
+        <Button title={t('login.configureServer')} variant="ghost" small onPress={() => router.push('/settings')} />
       </Screen>
     </KeyboardAvoidingView>
   );

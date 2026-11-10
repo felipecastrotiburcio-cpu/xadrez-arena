@@ -1,9 +1,11 @@
 import { useEffect, useRef } from 'react';
 import { ScrollView, StyleSheet, Text, View, type ScrollViewInstance } from 'react-native';
+import { useT } from '../lib/i18n';
 import { colors } from '../lib/theme';
 
 export function MoveList({ moves }: { moves: string[] }) {
   const ref = useRef<ScrollViewInstance>(null);
+  const { t } = useT();
   useEffect(() => {
     ref.current?.scrollToEnd({ animated: true });
   }, [moves.length]);
@@ -13,7 +15,7 @@ export function MoveList({ moves }: { moves: string[] }) {
 
   return (
     <ScrollView ref={ref} horizontal showsHorizontalScrollIndicator={false} style={styles.list}>
-      {pairs.length === 0 && <Text style={styles.empty}>Nenhum lance ainda</Text>}
+      {pairs.length === 0 && <Text style={styles.empty}>{t('moves.empty')}</Text>}
       {pairs.map(([w, b], i) => (
         <View key={i} style={styles.pair}>
           <Text style={styles.num}>{i + 1}.</Text>

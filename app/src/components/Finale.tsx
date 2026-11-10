@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useMyLook } from '../lib/cosmetics';
+import { useT } from '../lib/i18n';
 import { playMusic, stopMusic } from '../lib/sound';
 import { colors, fonts } from '../lib/theme';
 import type { CharacterStyle } from '../lib/types';
@@ -33,6 +34,7 @@ interface Props {
 export function Finale({ visible, winner, loser, move, moveName, title, subtitle, onDone, durationMs = 9000 }: Props) {
   const { width, height } = useWindowDimensions();
   const { board } = useMyLook();
+  const { t } = useT();
   const onDoneRef = useRef(onDone);
   onDoneRef.current = onDone;
 
@@ -71,12 +73,13 @@ export function Finale({ visible, winner, loser, move, moveName, title, subtitle
           />
         )}
         <View style={styles.top} pointerEvents="none">
-          <Text style={styles.title}>{title ?? 'Vitória!'}</Text>
+          <Text style={styles.title}>{title ?? t('result.victory')}</Text>
           {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
         </View>
         <View style={styles.bottom}>
           <Text style={styles.names}>
-            <Text style={{ color: colors.accent }}>{winner.name}</Text> derrotou {loser.name}
+            <Text style={{ color: colors.accent }}>{winner.name}</Text>
+            {t('finale.defeated', { name: loser.name })}
           </Text>
           {moveName ? (
             <View style={styles.moveChip}>
@@ -84,7 +87,7 @@ export function Finale({ visible, winner, loser, move, moveName, title, subtitle
             </View>
           ) : null}
           <Pressable onPress={onDone} style={styles.skip} hitSlop={12} accessibilityRole="button">
-            <Text style={styles.skipText}>Pular ›</Text>
+            <Text style={styles.skipText}>{t('finale.skip')}</Text>
           </Pressable>
         </View>
       </View>

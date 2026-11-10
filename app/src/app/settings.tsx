@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { router } from 'expo-router';
 import { StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Segmented } from '../components/TimeControlPicker';
 import { Button, Card, Screen, SectionTitle } from '../components/ui';
 import { api, getServerUrl, setServerUrl } from '../lib/api';
 import { confirmAction } from '../lib/confirm';
+import { translateServerText, useT, type LangPref } from '../lib/i18n';
 import { useAuth } from '../lib/auth';
 import { colors, radius } from '../lib/theme';
 import { useToast } from '../lib/toast';
@@ -12,15 +14,16 @@ import { isSoundEnabled, playSound, setSoundEnabled } from '../lib/sound';
 export default function Settings() {
   const { user, logout } = useAuth();
   const toast = useToast();
+  const { t, pref, setLang } = useT();
   const [url, setUrl] = useState(getServerUrl());
   const [sound, setSound] = useState(isSoundEnabled());
 
   return (
     <Screen>
-      <SectionTitle>Sons</SectionTitle>
+      <SectionTitle>{t('settings.sounds')}</SectionTitle>
       <Card>
         <View style={styles.row}>
-          <Text style={[styles.text, { flex: 1 }]}>Sons das jogadas (lance, captura, xeque e xeque-mate)</Text>
+          <Text style={[styles.text, { flex: 1 }]}>{t('settings.soundsDesc')}</Text>
           <Switch
             value={sound}
             onValueChange={async (on) => {
@@ -33,12 +36,20 @@ export default function Settings() {
         </View>
       </Card>
 
-      <SectionTitle>Servidor</SectionTitle>
+      <SectionTitle>{t('settings.language')}</SectionTitle>
+      <Segmented<LangPref>
+        value={pref}
+        onChange={setLang}
+        options={[
+          { value: 'auto', label: t('settings.langAuto') },
+          { value: 'pt', label: 'Português' },
+          { value: 'en', label: 'English' },
+        ]}
+      />
+
+      <SectionTitle>{t('settings.server')}</SectionTitle>
       <Card>
-        <Text style={styles.muted}>
-          Endereço do servidor de partidas online. No celular, use o IP do computador que roda o servidor (ex:
-          http://192.168.0.10:3001). Versões publicadas exigem https://.
-        </Text>
+        <Text style={styles.muted}>{t('settings.serverDesc')}</Text>
         <TextInput
           style={styles.input}
           value={url}
@@ -48,14 +59,14 @@ export default function Settings() {
           keyboardType="url"
         />
         <Button
-          title="Salvar"
+          title={t('settings.save')}
           onPress={async () => {
             try {
               await setServerUrl(url);
               setUrl(getServerUrl());
-              toast('Servidor atualizado. Entre novamente se necessário.', 'success');
+              toast(t('settings.serverUpdated'), 'success');
             } catch (e) {
-              toast((e as Error).message, 'error');
+              toast(translateServerText((e as Error).message), 'error');
             }
           }}
         />
@@ -63,14 +74,14 @@ export default function Settings() {
 
       {user && (
         <>
-          <SectionTitle>Conta</SectionTitle>
+          <SectionTitle>{t('settings.account')}</SectionTitle>
           <Card>
-            <Text style={styles.text}>Conectado como {user.username}</Text>
+            <Text style={styles.text}>{t('settings.loggedInAs', { name: user.username })}</Text>
             <Button
-              title="Sair de todos os aparelhos"
+              title={t('settings.logoutAll')}
               variant="secondary"
               onPress={() =>
-                confirmAction('Sair de todos os aparelhos?', 'Todas as sessões abertas serão encerradas, inclusive esta.', async () => {
+                confirmAction(t('settings.logoutAllQ'), t('settings.logoutAllBody'), async () => {
                   try {
                     await api('/auth/logout-all', { body: {} });
                   } finally {
@@ -81,7 +92,7 @@ export default function Settings() {
               }
             />
             <Button
-              title="Sair da conta"
+              title={t('settings.logout')}
               variant="danger"
               onPress={async () => {
                 await logout();

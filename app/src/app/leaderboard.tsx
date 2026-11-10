@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Avatar, EmptyState, LevelBadge, Screen } from '../components/ui';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
+import { translateServerText, useT } from '../lib/i18n';
 import { colors, radius } from '../lib/theme';
 import type { PublicUser } from '../lib/types';
 
@@ -14,20 +15,21 @@ export default function Leaderboard() {
   const { user, token } = useAuth();
   const [players, setPlayers] = useState<Row[] | null>(null);
   const [error, setError] = useState('');
+  const { t } = useT();
 
   useFocusEffect(
     useCallback(() => {
       if (!token) return;
       api<{ players: Row[] }>('/leaderboard')
         .then((r) => setPlayers(r.players))
-        .catch((e) => setError(e.message));
+        .catch((e) => setError(translateServerText(e.message)));
     }, [token]),
   );
 
   return (
     <Screen>
       {error ? <Text style={styles.muted}>{error}</Text> : null}
-      {players?.length === 0 && <EmptyState icon="🏆" text="Ninguém jogou partidas ranqueadas ainda. Seja o primeiro!" />}
+      {players?.length === 0 && <EmptyState icon="🏆" text={t('lb.empty')} />}
       {players?.map((p) => (
         <Pressable
           key={p.id}
@@ -42,9 +44,7 @@ export default function Leaderboard() {
           </View>
           <View style={{ alignItems: 'flex-end' }}>
             <Text style={styles.rating}>{p.rating}</Text>
-            <Text style={styles.muted}>
-              {p.wins}V {p.draws}E {p.losses}D
-            </Text>
+            <Text style={styles.muted}>{t('lb.record', { w: p.wins, d: p.draws, l: p.losses })}</Text>
           </View>
         </Pressable>
       ))}

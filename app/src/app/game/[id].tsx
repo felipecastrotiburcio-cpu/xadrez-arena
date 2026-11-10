@@ -13,6 +13,8 @@ import { useAuth } from '../../lib/auth';
 import { confirmAction } from '../../lib/confirm';
 import { useCharacterStyle, useCosmetics, useMyLook } from '../../lib/cosmetics';
 import { materialInfo, resultText } from '../../lib/chessUtils';
+import { itemName } from '../../lib/catalogI18n';
+import { timeControlLabel, translateServerText, useT } from '../../lib/i18n';
 import { useSocket } from '../../lib/socket';
 import { colors } from '../../lib/theme';
 import { useToast } from '../../lib/toast';
@@ -25,6 +27,7 @@ export default function OnlineGame() {
   const { user } = useAuth();
   const { socket, emit, gameCache, connected } = useSocket();
   const toast = useToast();
+  const { t, lang } = useT();
   const { width } = useWindowDimensions();
   // Tabuleiro de ponta a ponta na tela do celular.
   const boardSize = Math.min(width, 640);
@@ -52,8 +55,8 @@ export default function OnlineGame() {
   const resync = useCallback(async () => {
     const r = await emit('game:sync', { gameId: id });
     if (r.state) apply(r.state as GameState);
-    else if (!isOver(gameCache.get(id) ?? null)) toast(r.error ?? 'Partida não encontrada.', 'error');
-  }, [emit, id, apply, gameCache, toast]);
+    else if (!isOver(gameCache.get(id) ?? null)) toast(r.error ? translateServerText(r.error) : t('game.notFound'), 'error');
+  }, [emit, id, apply, gameCache, toast, t]);
 
   useEffect(() => {
     if (!socket) return;
@@ -130,7 +133,7 @@ export default function OnlineGame() {
     setState({ ...state, fen: c.fen(), turn: c.turn(), lastMove: { from: m.from, to: m.to }, moves: [...state.moves, c.history()[0]] });
     const r = await emit('game:move', { gameId: id, ...m });
     if (r.error) {
-      toast(r.error, 'error');
+      toast(translateServerText(r.error), 'error');
       setState(prev);
       resync();
     }
@@ -138,23 +141,23 @@ export default function OnlineGame() {
 
   const resign = () =>
     confirmAction(
-      state.moves.length < 2 ? 'Cancelar partida?' : 'Desistir?',
-      state.moves.length < 2 ? 'Sem lances, a partida não vale pontos.' : 'Você perderá pontos de rating.',
+      state.moves.length < 2 ? t('game.cancelTitle') : t('game.resignTitle'),
+      state.moves.length < 2 ? t('game.cancelBody') : t('game.resignBody'),
       async () => {
         const r = await emit('game:resign', { gameId: id });
-        if (r.error) toast(r.error, 'error');
+        if (r.error) toast(translateServerText(r.error), 'error');
       },
     );
 
   const offerDraw = async () => {
     const r = await emit('game:offerDraw', { gameId: id });
-    if (r.error) toast(r.error, 'error');
-    else toast('Proposta de empate enviada.');
+    if (r.error) toast(translateServerText(r.error), 'error');
+    else toast(t('game.drawOfferSent'));
   };
 
   const respondDraw = async (accept: boolean) => {
     const r = await emit('game:respondDraw', { gameId: id, accept });
-    if (r.error) toast(r.error, 'error');
+    if (r.error) toast(translateServerText(r.error), 'error');
   };
 
   const rematch = async () => {
@@ -167,10 +170,10 @@ export default function OnlineGame() {
       color: mySide === 'w' ? 'black' : 'white',
       rematchOf: id,
     });
-    if (r.error) toast(r.error, 'error');
+    if (r.error) toast(translateServerText(r.error), 'error');
     else {
       setRematchSent(true);
-      toast(`Revanche proposta a ${opponent.username}.`, 'success');
+      toast(t('game.rematchOffered', { name: opponent.username }), 'success');
     }
   };
 
@@ -183,8 +186,8 @@ export default function OnlineGame() {
   return (
     <Screen style={{ gap: 8, paddingHorizontal: 4 }}>
       <Text style={styles.meta}>
-        {state.timeControl.label} · {state.rated ? 'Ranqueada' : 'Amistosa'}
-        {!state.clocksRunning && !over ? ' · relógio começa após o 1º lance de cada lado' : ''}
+        {timeControlLabel(state.timeControl)} · {state.rated ? t('common.rated') : t('common.casual')}
+        {!state.clocksRunning && !over ? t('game.clockNote') : ''}
       </Text>
       <PlayerBar
         name={players[oppSide].username}
@@ -223,10 +226,10 @@ export default function OnlineGame() {
 
       {drawOfferedToMe && (
         <Card style={{ gap: 8 }}>
-          <Text style={styles.drawText}>{players[oppSide].username} propôs empate.</Text>
+          <Text style={styles.drawText}>{t('game.opponentOfferedDraw', { name: players[oppSide].username })}</Text>
           <View style={styles.actions}>
-            <Button small variant="secondary" title="Recusar" style={styles.action} onPress={() => respondDraw(false)} />
-            <Button small title="Aceitar empate" style={styles.action} onPress={() => respondDraw(true)} />
+            <Button small variant="secondary" title={t('common.decline')} style={styles.action} onPress={() => respondDraw(false)} />
+            <Button small title={t('game.acceptDraw')} style={styles.action} onPress={() => respondDraw(true)} />
           </View>
         </Card>
       )}
@@ -235,8 +238,8 @@ export default function OnlineGame() {
 
       {over ? (
         <View style={styles.actions}>
-          <Button small variant="secondary" title="Resultado" style={styles.action} onPress={() => setShowModal(true)} />
-          <Button small title="Início" style={styles.action} onPress={() => router.dismissTo('/')} />
+          <Button small variant="secondary" title={t('game.result')} style={styles.action} onPress={() => setShowModal(true)} />
+          <Button small title={t('game.home')} style={styles.action} onPress={() => router.dismissTo('/')} />
         </View>
       ) : (
         mySide && (
@@ -244,13 +247,13 @@ export default function OnlineGame() {
             <Button
               small
               variant="secondary"
-              title={state.drawOffer === mySide ? 'Empate proposto' : 'Empate'}
+              title={state.drawOffer === mySide ? t('game.drawOffered') : t('common.draw')}
               icon="½"
               style={styles.action}
               disabled={state.drawOffer === mySide || state.moves.length < 2}
               onPress={offerDraw}
             />
-            <Button small variant="secondary" title={state.moves.length < 2 ? 'Cancelar' : 'Desistir'} icon="⚑" style={styles.action} onPress={resign} />
+            <Button small variant="secondary" title={state.moves.length < 2 ? t('common.cancel') : t('common.resign')} icon="⚑" style={styles.action} onPress={resign} />
           </View>
         )
       )}
@@ -266,7 +269,7 @@ export default function OnlineGame() {
             winner={{ name: winner.username, look: winSide === 'w' ? whiteLook : blackLook }}
             loser={{ name: loser.username, look: winSide === 'w' ? blackLook : whiteLook }}
             move={moveItem?.type === 'move' ? moveItem.style.animation : 'jamal'}
-            moveName={moveItem?.name ?? 'Passinho do Jamal'}
+            moveName={itemName(moveItem ?? { id: 'move_jamal', name: 'Passinho do Jamal' }, lang)}
             title={text?.title}
             subtitle={text?.subtitle}
             onDone={() => {
@@ -286,13 +289,13 @@ export default function OnlineGame() {
           subtitle={text.subtitle}
           ratingChange={over.rated && over.result ? myChange : undefined}
           newRating={me?.rating}
-          levelUp={mySide && over.levelUp[mySide === 'w' ? 'white' : 'black'] ? me?.levelName : null}
+          levelUp={mySide && over.levelUp[mySide === 'w' ? 'white' : 'black'] ? translateServerText(me?.levelName) : null}
         >
           {over.result && (
-            <Button title={rematchSent ? 'Revanche proposta' : 'Revanche'} icon="↻" onPress={rematch} disabled={rematchSent} />
+            <Button title={rematchSent ? t('game.rematchSent') : t('game.rematch')} icon="↻" onPress={rematch} disabled={rematchSent} />
           )}
-          <Button title="Nova partida" variant="secondary" onPress={() => router.replace('/play')} />
-          <Button title="Ver tabuleiro" variant="ghost" onPress={() => setShowModal(false)} />
+          <Button title={t('game.newGame')} variant="secondary" onPress={() => router.replace('/play')} />
+          <Button title={t('game.viewBoard')} variant="ghost" onPress={() => setShowModal(false)} />
         </GameOverModal>
       )}
     </Screen>

@@ -12,6 +12,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAvatarStyle } from '../lib/cosmetics';
+import { levelName, useT } from '../lib/i18n';
 import { LEVEL_ICONS } from '../lib/levels';
 import { colors, fonts, gradients, radius } from '../lib/theme';
 
@@ -118,11 +119,12 @@ export function SectionTitle({ children }: { children: ReactNode }) {
 }
 
 export function LevelBadge({ level, name, compact }: { level: number; name: string; compact?: boolean }) {
+  const { t } = useT();
   return (
     <View style={styles.badge}>
       <Text style={styles.badgeText}>
-        {LEVEL_ICONS[level - 1] ?? '♙'} Nv. {level}
-        {compact ? '' : ` · ${name}`}
+        {LEVEL_ICONS[level - 1] ?? '♙'} {t('common.lv')} {level}
+        {compact ? '' : ` · ${levelName(level, name)}`}
       </Text>
     </View>
   );
@@ -178,10 +180,11 @@ export function Avatar({
 }
 
 export function Coins({ amount, size = 15 }: { amount: number; size?: number }) {
+  const { locale } = useT();
   return (
     <View style={styles.coins}>
       <Text style={{ fontSize: size }}>🪙</Text>
-      <Text style={[styles.coinsText, { fontSize: size }]}>{amount.toLocaleString('pt-BR')}</Text>
+      <Text style={[styles.coinsText, { fontSize: size }]}>{amount.toLocaleString(locale)}</Text>
     </View>
   );
 }

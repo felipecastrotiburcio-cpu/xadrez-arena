@@ -6,6 +6,7 @@ import { Avatar, Button, Card, EmptyState, LevelBadge, Screen, SectionTitle } fr
 import { api, isLocalMode } from '../lib/api';
 import { ONLINE_ONLY } from '../lib/localDevice';
 import { useAuth } from '../lib/auth';
+import { translateServerText, useT } from '../lib/i18n';
 import { useSocket } from '../lib/socket';
 import { colors, radius } from '../lib/theme';
 import { useToast } from '../lib/toast';
@@ -17,6 +18,7 @@ export default function Friends() {
   const { user, token } = useAuth();
   const { friendsVersion, presence, invites, emit } = useSocket();
   const toast = useToast();
+  const { t } = useT();
   const [tab, setTab] = useState<Tab>('friends');
   const [data, setData] = useState<{ friends: FriendEntry[]; incoming: FriendEntry[]; outgoing: FriendEntry[] } | null>(null);
   const [challenge, setChallenge] = useState<PublicUser | null>(null);
@@ -26,7 +28,7 @@ export default function Friends() {
     try {
       setData(await api('/friends'));
     } catch (e) {
-      toast((e as Error).message, 'error');
+      toast(translateServerText((e as Error).message), 'error');
     }
   }, [toast, token]);
 
@@ -40,7 +42,7 @@ export default function Friends() {
       if (success) toast(success, 'success');
       load();
     } catch (e) {
-      toast((e as Error).message, 'error');
+      toast(translateServerText((e as Error).message), 'error');
     }
   };
 
@@ -48,7 +50,7 @@ export default function Friends() {
   if (isLocalMode()) {
     return (
       <Screen>
-        <EmptyState icon="🌐" text={ONLINE_ONLY} />
+        <EmptyState icon="🌐" text={translateServerText(ONLINE_ONLY)} />
       </Screen>
     );
   }
@@ -61,24 +63,22 @@ export default function Friends() {
         value={tab}
         onChange={setTab}
         options={[
-          { value: 'friends', label: `Amigos${data ? ` (${data.friends.length})` : ''}` },
-          { value: 'requests', label: `Pedidos${requestCount ? ` (${requestCount})` : ''}` },
-          { value: 'add', label: 'Adicionar' },
+          { value: 'friends', label: `${t('friends.tabFriends')}${data ? ` (${data.friends.length})` : ''}` },
+          { value: 'requests', label: `${t('friends.tabRequests')}${requestCount ? ` (${requestCount})` : ''}` },
+          { value: 'add', label: t('friends.tabAdd') },
         ]}
       />
 
       {outgoingInvites.map((inv) => (
         <Card key={inv.id} style={styles.inviteCard}>
-          <Text style={styles.text}>
-            Aguardando {inv.to.username} aceitar ({inv.timeControl.id})…
-          </Text>
-          <Button small variant="secondary" title="Cancelar" onPress={() => emit('invite:decline', { inviteId: inv.id })} />
+          <Text style={styles.text}>{t('friends.waiting', { name: inv.to.username, tc: inv.timeControl.id })}</Text>
+          <Button small variant="secondary" title={t('common.cancel')} onPress={() => emit('invite:decline', { inviteId: inv.id })} />
         </Card>
       ))}
 
       {tab === 'friends' &&
         (data?.friends.length === 0 ? (
-          <EmptyState icon="👥" text="Você ainda não tem amigos. Toque em “Adicionar” para buscar jogadores." />
+          <EmptyState icon="👥" text={t('friends.none')} />
         ) : (
           data?.friends.map((f) => {
             const status = presence[f.user.id] ?? { online: f.online, inGame: f.inGame };
@@ -87,11 +87,11 @@ export default function Friends() {
                 key={f.user.id}
                 user={f.user}
                 online={status.online}
-                status={status.inGame ? 'Em partida' : status.online ? 'Online' : 'Offline'}
+                status={status.inGame ? t('friends.inGame') : status.online ? t('friends.online') : t('friends.offline')}
               >
                 <Button
                   small
-                  title="Desafiar"
+                  title={t('friends.challenge')}
                   disabled={!status.online || status.inGame}
                   onPress={() => setChallenge(f.user)}
                 />
@@ -102,10 +102,10 @@ export default function Friends() {
 
       {tab === 'requests' && data && (
         <>
-          <SectionTitle>Recebidos</SectionTitle>
-          {data.incoming.length === 0 && <Text style={styles.muted}>Nenhum pedido pendente.</Text>}
+          <SectionTitle>{t('friends.received')}</SectionTitle>
+          {data.incoming.length === 0 && <Text style={styles.muted}>{t('friends.noPending')}</Text>}
           {data.incoming.map((f) => (
-            <UserRow key={f.requestId} user={f.user} status="quer ser seu amigo">
+            <UserRow key={f.requestId} user={f.user} status={t('friends.wantsToBeFriend')}>
               <View style={{ flexDirection: 'row', gap: 6 }}>
                 <Button
                   small
@@ -115,25 +115,25 @@ export default function Friends() {
                 />
                 <Button
                   small
-                  title="Aceitar"
+                  title={t('common.accept')}
                   onPress={() =>
                     act(
                       () => api(`/friends/requests/${f.requestId}/accept`, { method: 'POST' }),
-                      `Agora você e ${f.user.username} são amigos!`,
+                      t('friends.nowFriends', { name: f.user.username }),
                     )
                   }
                 />
               </View>
             </UserRow>
           ))}
-          <SectionTitle>Enviados</SectionTitle>
-          {data.outgoing.length === 0 && <Text style={styles.muted}>Nenhum pedido enviado.</Text>}
+          <SectionTitle>{t('friends.sent')}</SectionTitle>
+          {data.outgoing.length === 0 && <Text style={styles.muted}>{t('friends.noSent')}</Text>}
           {data.outgoing.map((f) => (
-            <UserRow key={f.requestId} user={f.user} status="aguardando resposta">
+            <UserRow key={f.requestId} user={f.user} status={t('friends.awaitingReply')}>
               <Button
                 small
                 variant="secondary"
-                title="Cancelar"
+                title={t('common.cancel')}
                 onPress={() => act(() => api(`/friends/requests/${f.requestId}`, { method: 'DELETE' }))}
               />
             </UserRow>
@@ -159,6 +159,7 @@ function UserRow({
   online?: boolean;
   children?: React.ReactNode;
 }) {
+  const { t } = useT();
   return (
     <Pressable onPress={() => router.push(`/profile/${user.id}`)} style={styles.row}>
       <Avatar name={user.username} online={online} icon={user.cosmetics?.avatar} />
@@ -167,7 +168,7 @@ function UserRow({
           {user.username} <Text style={styles.muted}>{user.rating}</Text>
         </Text>
         <LevelBadge level={user.level} name={user.levelName} compact />
-        <Text style={[styles.muted, online && status === 'Online' && { color: colors.success }]}>{status}</Text>
+        <Text style={[styles.muted, online && status === t('friends.online') && { color: colors.success }]}>{status}</Text>
       </View>
       {children}
     </Pressable>
@@ -176,6 +177,7 @@ function UserRow({
 
 function AddFriend({ onChanged }: { onChanged: () => void }) {
   const toast = useToast();
+  const { t } = useT();
   const [q, setQ] = useState('');
   const [results, setResults] = useState<(PublicUser & { friendship: FriendshipStatus })[]>([]);
   const [loading, setLoading] = useState(false);
@@ -191,7 +193,7 @@ function AddFriend({ onChanged }: { onChanged: () => void }) {
         const r = await api(`/users/search?q=${encodeURIComponent(q.trim())}`);
         setResults(r.users);
       } catch (e) {
-        toast((e as Error).message, 'error');
+        toast(translateServerText((e as Error).message), 'error');
       } finally {
         setLoading(false);
       }
@@ -205,14 +207,19 @@ function AddFriend({ onChanged }: { onChanged: () => void }) {
       setResults((list) =>
         list.map((x) => (x.id === u.id ? { ...x, friendship: { status: r.status, id: r.id } } : x)),
       );
-      toast(r.status === 'friends' ? `Agora você e ${u.username} são amigos!` : 'Pedido enviado!', 'success');
+      toast(r.status === 'friends' ? t('friends.nowFriends', { name: u.username }) : t('friends.requestSent'), 'success');
       onChanged();
     } catch (e) {
-      toast((e as Error).message, 'error');
+      toast(translateServerText((e as Error).message), 'error');
     }
   };
 
-  const LABEL = { friends: 'Amigos ✓', outgoing: 'Enviado', incoming: 'Aceitar', none: 'Adicionar' };
+  const LABEL = {
+    friends: t('friends.labelFriends'),
+    outgoing: t('friends.labelOutgoing'),
+    incoming: t('common.accept'),
+    none: t('friends.tabAdd'),
+  };
 
   return (
     <>
@@ -220,17 +227,17 @@ function AddFriend({ onChanged }: { onChanged: () => void }) {
         style={styles.input}
         value={q}
         onChangeText={setQ}
-        placeholder="Buscar pelo nome de usuário"
+        placeholder={t('friends.searchPh')}
         placeholderTextColor={colors.textMuted}
         autoCapitalize="none"
         autoCorrect={false}
       />
-      {loading && <Text style={styles.muted}>Buscando…</Text>}
+      {loading && <Text style={styles.muted}>{t('friends.searching')}</Text>}
       {!loading && q.trim().length >= 2 && results.length === 0 && (
-        <Text style={styles.muted}>Nenhum jogador encontrado.</Text>
+        <Text style={styles.muted}>{t('friends.noPlayers')}</Text>
       )}
       {results.map((u) => (
-        <UserRow key={u.id} user={u} status={`${u.gamesPlayed} partidas`}>
+        <UserRow key={u.id} user={u} status={t('friends.games', { count: u.gamesPlayed })}>
           <Button
             small
             title={LABEL[u.friendship.status]}
@@ -247,6 +254,7 @@ function AddFriend({ onChanged }: { onChanged: () => void }) {
 function ChallengeModal({ user, onClose }: { user: PublicUser | null; onClose: () => void }) {
   const { emit } = useSocket();
   const toast = useToast();
+  const { t } = useT();
   const [timeControl, setTimeControl] = useState('5+0');
   const [color, setColor] = useState<'white' | 'random' | 'black'>('random');
   const [rated, setRated] = useState<'rated' | 'casual'>('casual');
@@ -257,9 +265,9 @@ function ChallengeModal({ user, onClose }: { user: PublicUser | null; onClose: (
     setSending(true);
     const r = await emit('invite:send', { toUserId: user.id, timeControl, color, rated: rated === 'rated' });
     setSending(false);
-    if (r.error) toast(r.error, 'error');
+    if (r.error) toast(translateServerText(r.error), 'error');
     else {
-      toast(`Convite enviado para ${user.username}!`, 'success');
+      toast(t('friends.inviteSent', { name: user.username }), 'success');
       onClose();
     }
   };
@@ -268,30 +276,30 @@ function ChallengeModal({ user, onClose }: { user: PublicUser | null; onClose: (
     <Modal visible={!!user} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable style={styles.sheet} onPress={() => {}}>
-          <Text style={styles.sheetTitle}>Desafiar {user?.username}</Text>
-          <SectionTitle>Ritmo</SectionTitle>
+          <Text style={styles.sheetTitle}>{t('friends.challengeTitle', { name: user?.username ?? '' })}</Text>
+          <SectionTitle>{t('friends.pace')}</SectionTitle>
           <TimeControlPicker value={timeControl} onChange={setTimeControl} />
-          <SectionTitle>Suas peças</SectionTitle>
+          <SectionTitle>{t('friends.yourPieces')}</SectionTitle>
           <Segmented
             value={color}
             onChange={setColor}
             options={[
-              { value: 'white', label: '♔ Brancas' },
-              { value: 'random', label: '🎲 Sortear' },
-              { value: 'black', label: '♚ Pretas' },
+              { value: 'white', label: t('common.white') },
+              { value: 'random', label: t('common.random') },
+              { value: 'black', label: t('common.black') },
             ]}
           />
-          <SectionTitle>Tipo</SectionTitle>
+          <SectionTitle>{t('friends.type')}</SectionTitle>
           <Segmented
             value={rated}
             onChange={setRated}
             options={[
-              { value: 'casual', label: 'Amistosa' },
-              { value: 'rated', label: 'Ranqueada' },
+              { value: 'casual', label: t('common.casual') },
+              { value: 'rated', label: t('common.rated') },
             ]}
           />
-          <Button title="Enviar convite" icon="⚔️" onPress={send} loading={sending} style={{ marginTop: 8 }} />
-          <Button title="Cancelar" variant="ghost" onPress={onClose} />
+          <Button title={t('friends.sendInvite')} icon="⚔️" onPress={send} loading={sending} style={{ marginTop: 8 }} />
+          <Button title={t('common.cancel')} variant="ghost" onPress={onClose} />
         </Pressable>
       </Pressable>
     </Modal>

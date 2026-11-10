@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Modal, StyleSheet, Text, View } from 'react-native';
+import { useT } from '../lib/i18n';
 import { colors, radius } from '../lib/theme';
 
 interface Props {
@@ -17,6 +18,7 @@ interface Props {
 const ICON = { win: '🏆', loss: '♚', draw: '🤝' };
 
 export function GameOverModal({ visible, outcome, title, subtitle, ratingChange, newRating, levelUp, coins, children }: Props) {
+  const { t } = useT();
   return (
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent>
       <View style={styles.backdrop}>
@@ -37,10 +39,10 @@ export function GameOverModal({ visible, outcome, title, subtitle, ratingChange,
               </Text>
             </View>
           )}
-          {!!coins && <Text style={styles.coins}>+{coins} 🪙 moedas</Text>}
+          {!!coins && <Text style={styles.coins}>{t('gameOver.coins', { n: coins })}</Text>}
           {levelUp && (
             <View style={styles.levelUp}>
-              <Text style={styles.levelUpText}>⬆ Subiu de nível: {levelUp}!</Text>
+              <Text style={styles.levelUpText}>{t('gameOver.levelUp', { name: levelUp })}</Text>
             </View>
           )}
           <View style={{ gap: 10, alignSelf: 'stretch', marginTop: 8 }}>{children}</View>

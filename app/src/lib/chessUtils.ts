@@ -1,3 +1,4 @@
+import { reasonText, tStatic } from './i18n';
 import type { Side } from './types';
 
 const START_COUNT: Record<string, number> = { p: 8, n: 2, b: 2, r: 2, q: 1 };
@@ -39,15 +40,17 @@ export const PIECE_GLYPH: Record<string, string> = {
 };
 
 export function resultText(result: string | null, reason: string, mySide: Side | null) {
-  if (!result) return { title: 'Partida cancelada', subtitle: 'Não valeu pontos para ninguém.', outcome: 'draw' as const };
-  if (result === '1/2-1/2') return { title: 'Empate', subtitle: `Por ${reason}.`, outcome: 'draw' as const };
+  // Textos no idioma atual; o motivo chega em português (do servidor) e é traduzido aqui.
+  const why = reasonText(reason);
+  if (!result) return { title: tStatic('result.cancelled'), subtitle: tStatic('result.cancelledSub'), outcome: 'draw' as const };
+  if (result === '1/2-1/2') return { title: tStatic('result.draw'), subtitle: tStatic('result.by', { reason: why }), outcome: 'draw' as const };
   const whiteWon = result === '1-0';
   const won = mySide ? (mySide === 'w') === whiteWon : null;
-  const winner = whiteWon ? 'Brancas' : 'Pretas';
-  if (won === null) return { title: `${winner} venceram`, subtitle: `Por ${reason}.`, outcome: 'draw' as const };
+  const winner = tStatic(whiteWon ? 'result.white' : 'result.black');
+  if (won === null) return { title: tStatic('result.won', { winner }), subtitle: tStatic('result.by', { reason: why }), outcome: 'draw' as const };
   return {
-    title: won ? 'Vitória!' : 'Derrota',
-    subtitle: `${winner} venceram por ${reason}.`,
+    title: tStatic(won ? 'result.victory' : 'result.defeat'),
+    subtitle: tStatic('result.wonBy', { winner, reason: why }),
     outcome: won ? ('win' as const) : ('loss' as const),
   };
 }
