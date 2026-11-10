@@ -87,6 +87,23 @@ Moedas por partida contra a IA: vitória de 15 (nível 1) a 35 (nível 5), empat
 
 Testes: `cd app && npm run test:local`.
 
+## Online pelo mundo (Supabase), inglês, bandeiras e compras reais
+
+- **Servidor online no Supabase** (`supabase/`): banco com permissões (RLS), função de borda
+  `arena` que valida cada lance com chess.js, fila por rating, convites, amizades, presença
+  (quem está online), empate, desistência, relógio conferido no servidor, loja, bônus diário e
+  moedas da IA. Eventos ao vivo pelo Realtime, com rede de segurança se um aviso se perder.
+  Como ligar no seu projeto: **ONLINE.md**.
+- **Inglês**: o app segue o idioma do aparelho (português → português; outros → inglês) e pode ser
+  trocado em Configurações (`app/src/lib/i18n.tsx`, dicionários em `app/src/lib/i18n/`).
+- **Bandeiras**: país detectado no cadastro (pode trocar em Configurações), bandeira ao lado do
+  nome na partida, ranking, amigos, perfil e convites.
+- **Compras reais**: os 12 itens lendários são vendidos pela Google Play / App Store
+  (`app/src/lib/iap.ts`, conferência no servidor em `supabase/functions/arena/purchases.ts`).
+- **Testes** (workflow *Servidor online (Supabase)*): banco (PGlite), conferência de compras (Deno),
+  servidor completo num Supabase local com dois jogadores e o app web com um jogador em português
+  e outro em inglês jogando ao vivo até o xeque-mate.
+
 ## Tabuleiro, regras e sons
 
 - Casa a1 escura (padrão oficial: cada dama começa na casa da sua cor). Tabuleiro de ponta a ponta na tela.
