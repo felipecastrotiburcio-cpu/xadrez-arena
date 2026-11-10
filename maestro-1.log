@@ -1,0 +1,56 @@
+Anonymous analytics enabled. To opt out, set MAESTRO_CLI_NO_ANALYTICS environment variable to any value before running Maestro.
+
+Running on iPhone 17 Pro - iOS 26.2 - 98A0BFA3-CEC3-4FD6-9916-5A2149774DBF
+ > Flow ios-smoke
+Launch app "app.xadrezarena" with clear state... COMPLETED
+Assert that ".*JOGAR!.*" is visible... COMPLETED
+Wait for animation to end within 8000 ms... COMPLETED
+Take screenshot ${OUT}/01-inicio... COMPLETED
+Retry 3 times...
+  Wait for animation to end within 5000 ms... COMPLETED
+  Tap on ".*5 níveis, offline.*"... COMPLETED
+  Assert that ".*Peão Curioso.*" is visible... COMPLETED
+Retry 3 times... COMPLETED
+Tap on ".*Peão Curioso.*"... COMPLETED
+Scrolling DOWN until id: seg-5 is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+Tap on id: seg-5... COMPLETED
+Tap on ".*Começar partida.*"... COMPLETED
+Assert that "e2 branco p" is visible... COMPLETED
+Take screenshot ${OUT}/02-tabuleiro... COMPLETED
+Tap on "e2 branco p"... COMPLETED
+Tap on "e4"... COMPLETED
+Assert that "e4 branco p" is visible... COMPLETED
+Wait for animation to end within 6000 ms...WARNING: GL pipe is running in software mode (Renderer ID=0x1020400)
+ COMPLETED
+Take screenshot ${OUT}/03-ia-respondeu... COMPLETED
+Tap on "e4 branco p"... COMPLETED
+Tap on "e6"... COMPLETED
+Assert that "e4 branco p" is visible... COMPLETED
+Tap on ".*Desistir.*"... COMPLETED
+Tap on "Desistir"... COMPLETED
+Assert that ".*Pular.*" is visible... COMPLETED
+Swipe from (50%, 20%) to (50%, 21%) in 4000 ms... COMPLETED
+Take screenshot ${OUT}/04-finalizacao-3d... COMPLETED
+Tap on (Optional) ".*Pular.*"... WARNED
+Assert that ".*Derrota.*" is visible... COMPLETED
+Take screenshot ${OUT}/05-resultado... COMPLETED
+Launch app "app.xadrezarena"... COMPLETED
+Assert that ".*JOGAR!.*" is visible... COMPLETED
+Retry 3 times...
+  Wait for animation to end within 5000 ms... COMPLETED
+  Tap on "Criar conta"... COMPLETED
+  Assert that id: login-username is visible... COMPLETED
+Retry 3 times... COMPLETED
+Tap on id: seg-register... COMPLETED
+Tap on id: login-username... COMPLETED
+Tap on (Optional) "Continue|Continuar"... WARNED
+Tap on id: login-username... COMPLETED
+Input text ${USERNAME}... COMPLETED
+Press Enter key... COMPLETED
+Input text segredo123... COMPLETED
+Press Enter key... COMPLETED
+Assert that ".*JOGAR!.*" is visible... COMPLETED
+Assert that ".*${USERNAME}.*" is visible...
+==== Debug output (logs & screenshots) ====
+
+/Users/runner/work/xadrez-arena/xadrez-arena/ios-results/maestro/.maestro/tests/2026-11-10_024953
