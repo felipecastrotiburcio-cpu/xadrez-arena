@@ -103,7 +103,7 @@ jobs:
         if: always()
         run: |
           tail -200 functions.log || true
-          docker ps --format '{{.Names}}' | grep -i realtime | head -1 | xargs -r docker logs --tail 80 2>&1 || true
+          docker ps --format '{{.Names}}' | grep -i realtime | head -1 | xargs -r docker logs --tail 600 2>&1 | grep -viE "Billing metrics|api/ping|DatabaseIpVersionIsIpv4" | tail -150 || true
 
   deploy:
     name: Publicar no Supabase do projeto

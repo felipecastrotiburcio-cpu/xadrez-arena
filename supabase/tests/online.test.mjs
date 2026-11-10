@@ -41,9 +41,7 @@ function listen(sb, table, filter) {
   const ch = sb
     .channel(`t-${table}-${filter}-${Math.random()}`)
     .on('postgres_changes', { event: '*', schema: 'public', table, filter }, (p) => events.push(p))
-    .on('system', {}, (m) => {
-      if (m?.status !== 'ok') console.log(`[realtime ${table}] sistema:`, JSON.stringify(m));
-    })
+    .on('system', {}, (m) => console.log(`[realtime ${table}] sistema:`, JSON.stringify(m)))
     .subscribe((status, err) => {
       if (status !== 'SUBSCRIBED') console.log(`[realtime ${table}] ${status}`, err?.message ?? '');
     });
@@ -69,7 +67,7 @@ function listen(sb, table, filter) {
         if (hit) return hit;
         await sleep(50);
       }
-      throw new Error(`evento não chegou em ${table} (${filter})`);
+      throw new Error(`evento não chegou em ${table} (${filter}); estado do canal: ${ch.state}; eventos recebidos: ${events.length}`);
     },
     close: () => sb.removeChannel(ch),
   };

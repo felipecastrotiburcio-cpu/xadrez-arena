@@ -8,7 +8,7 @@ import { Chess } from 'chess.js';
 import { CATALOG, DAILY_BONUS, LEVEL_UP_BONUS, aiCoinReward, coinReward, getItem, streakBonus } from '../_shared/catalog.ts';
 import { levelFor, ratingDelta } from '../_shared/levels.ts';
 import { getTimeControl, type TimeControl } from '../_shared/timeControls.ts';
-import { verifyPurchase } from './purchases.ts';
+import { PurchaseError, verifyPurchase } from './purchases.ts';
 
 type Side = 'w' | 'b';
 type Json = Record<string, unknown>;
@@ -694,7 +694,7 @@ Deno.serve(async (req) => {
         return json({ error: 'Ação desconhecida.' }, 400);
     }
   } catch (e) {
-    if (e instanceof UserError) return json({ error: e.message }, e.status);
+    if (e instanceof UserError || e instanceof PurchaseError) return json({ error: e.message }, e.status);
     console.error(e);
     return json({ error: 'Erro no servidor. Tente de novo.' }, 500);
   }

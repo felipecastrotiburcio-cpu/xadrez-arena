@@ -27,7 +27,7 @@ export interface VerifiedPurchase {
   transactionId: string;
 }
 
-class PurchaseError extends Error {
+export class PurchaseError extends Error {
   status = 400;
 }
 
@@ -56,9 +56,19 @@ export async function verifyApple(
 ): Promise<VerifiedPurchase> {
   const parts = jws.split('.');
   if (parts.length !== 3) throw new PurchaseError('Compra inválida.');
-  const header = b64urlJson(parts[0]) as { alg?: string; x5c?: string[] };
+  let header: { alg?: string; x5c?: string[] };
+  try {
+    header = b64urlJson(parts[0]);
+  } catch {
+    throw new PurchaseError('Compra inválida.');
+  }
   if (header.alg !== 'ES256' || !Array.isArray(header.x5c) || header.x5c.length !== 3) throw new PurchaseError('Compra inválida.');
-  const [leaf, intermediate, root] = header.x5c.map((c) => new X509Certificate(c));
+  let leaf: X509Certificate, intermediate: X509Certificate, root: X509Certificate;
+  try {
+    [leaf, intermediate, root] = header.x5c.map((c) => new X509Certificate(c));
+  } catch {
+    throw new PurchaseError('Compra inválida.');
+  }
 
   const rootHash = hex(await crypto.subtle.digest('SHA-256', root.rawData));
   if (rootHash !== rootSha256) throw new PurchaseError('Compra não assinada pela Apple.');
@@ -76,7 +86,11 @@ export async function verifyApple(
   if (!chainOk) throw new PurchaseError('Compra não assinada pela Apple.');
 
   const leafKey = await leaf.publicKey.export({ name: 'ECDSA', namedCurve: 'P-256' }, ['verify']);
-  const { payload } = await compactVerify(jws, leafKey);
+  const payload = await compactVerify(jws, leafKey)
+    .then((r) => r.payload)
+    .catch(() => {
+      throw new PurchaseError('Assinatura da compra inválida.');
+    });
   const tx = JSON.parse(new TextDecoder().decode(payload)) as {
     bundleId?: string;
     productId?: string;
