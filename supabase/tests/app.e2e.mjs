@@ -50,7 +50,7 @@ async function newPlayer(name, locale) {
   await page.screenshot({ path: `${out}/00-${name}-apos-cadastro.png` });
   await page.goto(BASE);
   try {
-    await page.getByText(username, { exact: true }).first().waitFor({ timeout: 30000 });
+    await page.getByText(new RegExp(`${username}$`)).first().waitFor({ timeout: 30000 });
   } catch (e) {
     await page.screenshot({ path: `${out}/99-${name}-falha-cadastro.png` });
     console.log(`texto da tela (${name}):`, (await page.locator('body').innerText()).slice(0, 600));
@@ -142,7 +142,7 @@ try {
 
   // Ranking com os dois jogadores
   await A.page.goto(`${BASE}/leaderboard`);
-  await A.page.getByText(B.username).first().waitFor({ timeout: 15000 });
+  await A.page.getByText(new RegExp(B.username)).first().waitFor({ timeout: 15000 });
   await A.page.screenshot({ path: `${out}/10-ranking.png` });
   check(true, 'ranking mostra os dois jogadores');
 } catch (e) {
