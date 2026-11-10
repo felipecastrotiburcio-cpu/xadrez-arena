@@ -30,6 +30,10 @@ export class SupabaseLink {
   private started = new Set<string>();
   private finished = new Set<string>();
   private lastPly = new Map<string, number>();
+  /** Último estado de partida recebido (para a rede de segurança abaixo). */
+  private lastGameUpdate = 0;
+  private watchdog: ReturnType<typeof setInterval> | null = null;
+  private watchTick = 0;
 
   private me = '';
 
@@ -59,6 +63,7 @@ export class SupabaseLink {
     this.closed = true;
     this.connected = false;
     this.stopQueue();
+    if (this.watchdog) clearInterval(this.watchdog);
     for (const t of [...this.claimTimers.values(), ...this.inviteTimers.values()]) clearTimeout(t);
     const sb = supabase();
     for (const ch of this.channels) sb.removeChannel(ch);
@@ -97,7 +102,45 @@ export class SupabaseLink {
       if (ply < prev) return;
       this.lastPly.set(id, ply);
     }
+    this.lastGameUpdate = Date.now();
     this.fire(`game:${kind}`, state);
+  }
+
+  /**
+   * Rede de segurança caso um aviso ao vivo se perca (rede ruim, aparelho em segundo plano):
+   * durante a partida, sem novidade há 4 s, pergunta o estado ao servidor; a cada 12 s confere
+   * convites recebidos.
+   */
+  private startWatchdog() {
+    if (this.watchdog) return;
+    this.watchdog = setInterval(async () => {
+      if (this.closed) return;
+      this.watchTick++;
+      const id = this.activeGameId;
+      if (id && Date.now() - this.lastGameUpdate > 4000) {
+        this.lastGameUpdate = Date.now();
+        try {
+          const r = await arena<{ state: GameState | GameOver }>('sync', { gameId: id });
+          if ('reason' in r.state && r.state.reason) {
+            this.untrackGame(id);
+            this.fireGame('over', r.state);
+          } else {
+            this.fireGame('state', r.state as GameState);
+          }
+        } catch {
+          // sem conexão agora: tenta no próximo ciclo
+        }
+      }
+      if (this.watchTick % 3 === 0) {
+        const { data } = await supabase()
+          .from('invites')
+          .select('*')
+          .eq('to_id', this.me)
+          .eq('status', 'pending')
+          .gt('expires_at', new Date().toISOString());
+        for (const row of (data ?? []) as any[]) if (!this.inviteTimers.has(row.id)) await this.onInvite(row);
+      }
+    }, 4000);
   }
 
   // ---------------------------------------------------------------- conexão e eventos ao vivo
@@ -127,6 +170,7 @@ export class SupabaseLink {
         if (status === 'SUBSCRIBED') {
           this.connected = true;
           this.fire('connect');
+          this.startWatchdog();
           await this.sendSession();
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
           if (this.connected) {

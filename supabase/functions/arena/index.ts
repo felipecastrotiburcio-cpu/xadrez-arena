@@ -255,7 +255,9 @@ class Arena {
   async queue(timeControl: string): Promise<Json> {
     const tc = getTimeControl(timeControl);
     if (!tc) throw new UserError('Ritmo de jogo inválido.');
-    if (await this.activeGameOf(this.userId)) throw new UserError('Termine sua partida atual primeiro.', 409);
+    // Já em partida (ex.: o adversário acabou de formar o par): devolve a partida em vez de entrar na fila.
+    const current = await this.activeGameOf(this.userId);
+    if (current) return { matched: true, gameId: current.id, state: await this.sync(current.id) };
     const { data: oppId, error } = await this.db.rpc('mm_try_pair', { p_user: this.userId, p_time_control: tc.id });
     if (error) throw new Error(error.message);
     if (oppId) {
