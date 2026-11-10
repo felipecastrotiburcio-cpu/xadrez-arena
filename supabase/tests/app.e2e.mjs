@@ -35,6 +35,9 @@ async function newPlayer(name, locale) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, locale, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
   page.on('pageerror', (e) => errors.push(`${name}: ${e}`));
+  page.on('console', (m) => {
+    if (m.type() === 'error' || m.type() === 'warning') console.log(`[${name} console] ${m.text().slice(0, 300)}`);
+  });
   page.on('dialog', (d) => d.accept());
   const username = `${name}${run}`;
   await page.goto(`${BASE}/login`);
@@ -42,7 +45,17 @@ async function newPlayer(name, locale) {
   await page.locator('[data-testid="login-username"]').fill(username);
   await page.locator('[data-testid="login-password"]').fill('segredo123');
   await page.locator('[data-testid="login-submit"]').click();
-  await page.getByText(username, { exact: true }).first().waitFor({ timeout: 30000 });
+  // A tela de login volta para a anterior; como ela foi aberta direto, vamos ao início.
+  await page.waitForTimeout(4000);
+  await page.screenshot({ path: `${out}/00-${name}-apos-cadastro.png` });
+  await page.goto(BASE);
+  try {
+    await page.getByText(username, { exact: true }).first().waitFor({ timeout: 30000 });
+  } catch (e) {
+    await page.screenshot({ path: `${out}/99-${name}-falha-cadastro.png` });
+    console.log(`texto da tela (${name}):`, (await page.locator('body').innerText()).slice(0, 600));
+    throw e;
+  }
   return { page, username, name };
 }
 
