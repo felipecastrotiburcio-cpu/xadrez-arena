@@ -1,0 +1,52 @@
+# Configuração do Supabase do Xadrez Arena (usada pelo teste local no GitHub Actions e pelo
+# "supabase config push" ao publicar no projeto real).
+project_id = "xadrez-arena"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 17
+
+[realtime]
+enabled = true
+
+[studio]
+enabled = false
+
+[inbucket]
+enabled = false
+
+[storage]
+enabled = false
+
+[analytics]
+enabled = false
+
+[auth]
+enabled = true
+site_url = "https://felipecastrotiburcio-cpu.github.io/xadrez-arena/"
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+enable_signup = true
+enable_anonymous_sign_ins = false
+minimum_password_length = 8
+
+[auth.email]
+enable_signup = true
+# Contas por nome de usuário + senha: não há e-mail para confirmar.
+enable_confirmations = false
+double_confirm_changes = false
+secure_password_change = false
+
+[edge_runtime]
+enabled = true
+policy = "per_worker"
+
+[functions.arena]
+verify_jwt = true

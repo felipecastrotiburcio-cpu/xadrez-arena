@@ -1,0 +1,124 @@
+# Servidor online (Supabase): testa tudo num Supabase local dentro do GitHub Actions e,
+# se o projeto real estiver configurado (segredos abaixo), publica banco e função.
+#   SUPABASE_ACCESS_TOKEN  — token pessoal (supabase.com → Account → Access Tokens)
+#   SUPABASE_PROJECT_REF   — ID do projeto (Project Settings → General → Reference ID)
+#   SUPABASE_DB_PASSWORD   — senha do banco escolhida ao criar o projeto
+#   GOOGLE_SERVICE_ACCOUNT_JSON (opcional) — para conferir compras do Google Play
+name: Servidor online (Supabase)
+
+on:
+  push:
+    branches: [main]
+    paths: ['supabase/**', 'server/src/catalog.ts', 'server/src/levels.ts', 'server/src/timeControls.ts', '.github/workflows/supabase.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Testar com Supabase local
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: supabase/tests/package-lock.json
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.5.x
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Arquivos compartilhados iguais aos do servidor
+        run: |
+          for f in catalog levels timeControls; do
+            diff -u server/src/$f.ts supabase/functions/_shared/$f.ts
+          done
+
+      - name: Testar o banco (PGlite) e a conferência de compras (Deno)
+        run: |
+          cd supabase/tests && npm ci && npm run test:sql
+          cd ../functions && deno check --config arena/deno.json arena/index.ts
+          deno test --config arena/deno.json --allow-env arena/purchases.test.ts
+
+      - name: Conferir a raiz da Apple fixada no código
+        run: |
+          curl -fsSL -o /tmp/g3.cer https://www.apple.com/certificateauthority/AppleRootCA-G3.cer
+          got=$(sha256sum /tmp/g3.cer | cut -d' ' -f1)
+          want=$(grep -oE "APPLE_ROOT_G3_SHA256 = '[0-9a-f]+'" supabase/functions/arena/purchases.ts | grep -oE "[0-9a-f]{64}")
+          echo "Apple: $got"; echo "código: $want"
+          [ "$got" = "$want" ]
+
+      - name: Subir o Supabase local
+        run: |
+          supabase start -x studio,imgproxy,storage-api,postgres-meta
+          supabase status -o env | grep -E "^(API_URL|ANON_KEY|SERVICE_ROLE_KEY)=" | sed 's/"//g' >> "$GITHUB_ENV"
+
+      - name: Servir a função "arena"
+        run: |
+          nohup supabase functions serve > functions.log 2>&1 &
+          for i in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" -X OPTIONS "$(supabase status -o env | grep ^API_URL= | cut -d'"' -f2)/functions/v1/arena" || true)
+            [ "$code" = "200" ] && break; sleep 2
+          done
+          echo "função respondeu: $code"
+
+      - name: Jogar online com dois jogadores
+        working-directory: supabase/tests
+        run: npm run test:online
+
+      - name: Registros da função (em caso de falha)
+        if: failure()
+        run: tail -150 functions.log || true
+
+  deploy:
+    name: Publicar no Supabase do projeto
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+    steps:
+      - name: Conferir configuração
+        id: cfg
+        run: |
+          if [ -n "$SUPABASE_ACCESS_TOKEN" ] && [ -n "$SUPABASE_PROJECT_REF" ] && [ -n "$SUPABASE_DB_PASSWORD" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Supabase real ainda não configurado (faltam os segredos SUPABASE_ACCESS_TOKEN, SUPABASE_PROJECT_REF e SUPABASE_DB_PASSWORD). Veja ONLINE.md."
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.cfg.outputs.ok == 'true'
+
+      - uses: supabase/setup-cli@v1
+        if: steps.cfg.outputs.ok == 'true'
+        with:
+          version: latest
+
+      - name: Publicar banco, configuração e função
+        if: steps.cfg.outputs.ok == 'true'
+        run: |
+          supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+          supabase db push --password "$SUPABASE_DB_PASSWORD"
+          supabase config push --project-ref "$SUPABASE_PROJECT_REF" <<< "y" || echo "::warning::config push falhou; confira em Authentication → Providers → Email: 'Confirm email' desligado."
+          supabase functions deploy arena --project-ref "$SUPABASE_PROJECT_REF"
+          if [ -n "$GOOGLE_SERVICE_ACCOUNT_JSON" ]; then
+            supabase secrets set --project-ref "$SUPABASE_PROJECT_REF" GOOGLE_SERVICE_ACCOUNT_JSON="$GOOGLE_SERVICE_ACCOUNT_JSON"
+          fi

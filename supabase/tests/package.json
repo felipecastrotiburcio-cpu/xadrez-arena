@@ -1,0 +1,13 @@
+{
+  "name": "xadrez-arena-supabase-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:sql": "node sql.test.mjs ../migrations/20261110000000_xadrez_arena.sql",
+    "test:online": "node online.test.mjs"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.3.16",
+    "@supabase/supabase-js": "2.118.0"
+  }
+}

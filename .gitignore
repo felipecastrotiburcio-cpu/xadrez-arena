@@ -12,3 +12,5 @@ ios/
 server/data/
 deploy/.env
 .DS_Store
+supabase/.temp/
+supabase/.branches/

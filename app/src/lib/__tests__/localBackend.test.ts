@@ -40,7 +40,9 @@ test('login: senha correta entra, errada é recusada', async () => {
 
 test('loja: saldo, compra, equipar e bônus diário', async () => {
   const { token } = await call('/auth/register', { username: 'bia', password: 'segredo123' });
-  await assert.rejects(call('/shop/buy', { itemId: 'board_galaxy' }, token), /Faltam 2700 moedas/);
+  await assert.rejects(call('/shop/buy', { itemId: 'board_lava' }, token), /Faltam 1300 moedas/);
+  // Lendários são compra real (Google Play / App Store), não saem por moedas.
+  await assert.rejects(call('/shop/buy', { itemId: 'board_galaxy' }, token), /compra no app/);
   const buy = await call('/shop/buy', { itemId: 'board_tournament' }, token);
   assert.equal(buy.user.coins, 150);
   assert.equal(buy.user.equipped.board, 'board_tournament');

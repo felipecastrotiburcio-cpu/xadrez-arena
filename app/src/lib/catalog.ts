@@ -66,6 +66,11 @@ export interface ShopItemBase {
   description: string;
   price: number;
   rarity: Rarity;
+  /**
+   * Itens lendários são vendidos com dinheiro real (Google Play / App Store).
+   * É o ID do produto cadastrado nas lojas (igual ao ID do item). Sem isso, o item é comprado com moedas.
+   */
+  iap?: string;
 }
 
 export type ShopItem =
@@ -91,7 +96,7 @@ const move = (
   id: string, name: string, description: string, price: number, rarity: Rarity, emoji: string,
 ): ShopItem => ({ id, type: 'move', name, description, price, rarity, style: { animation: id.replace('move_', ''), emoji } });
 
-export const CATALOG: ShopItem[] = [
+const ITEMS: ShopItem[] = [
   // ----------------------------------------------------------- tabuleiros
   board('board_classic', 'Madeira Clássica', 'O tabuleiro tradicional de madeira.', 0, 'comum', {
     light: '#efd9b4', dark: '#b5835a', border: '#7a5232', frame: 8,
@@ -266,6 +271,9 @@ export const CATALOG: ShopItem[] = [
   move('move_crown', 'Coroação', 'Uma coroa desce do céu entre confetes.', 1200, 'epico', '👑'),
   move('move_lightning', 'Fúria do Trovão', 'Raios atingem o adversário derrotado.', 2200, 'lendario', '⚡'),
 ];
+
+/** Lendários = compra real no app; os demais = moedas. */
+export const CATALOG: ShopItem[] = ITEMS.map((i) => (i.rarity === 'lendario' ? { ...i, iap: i.id } : i));
 
 export const DEFAULT_ITEMS = CATALOG.filter((i) => i.price === 0).map((i) => i.id);
 

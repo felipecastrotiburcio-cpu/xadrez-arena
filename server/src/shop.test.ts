@@ -48,9 +48,11 @@ test('catálogo ordenado por preço e compra sem saldo recusada', async () => {
   const boards = catalog.filter((i: any) => i.type === 'board');
   assert.ok(boards.at(-1).price > boards[1].price);
 
-  const caro = await api('/shop/buy', { token, body: { itemId: 'board_galaxy' } });
+  const caro = await api('/shop/buy', { token, body: { itemId: 'board_lava' } });
   assert.equal(caro.status, 402);
-  assert.match(caro.data.error, /Faltam 2700 moedas/);
+  // Lendários são compra real (Google Play / App Store), não saem por moedas.
+  assert.equal((await api('/shop/buy', { token, body: { itemId: 'board_galaxy' } })).status, 400);
+  assert.match(caro.data.error, /Faltam 1300 moedas/);
   assert.equal((await api('/shop/buy', { token, body: { itemId: 'nao_existe' } })).status, 404);
 });
 

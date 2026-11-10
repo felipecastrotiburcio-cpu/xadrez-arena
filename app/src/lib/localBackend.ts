@@ -290,6 +290,9 @@ async function handle(data: Data, method: string, route: string, body: Record<st
     if (!item) throw new ApiError('Item não encontrado.', 404);
     if (route === '/shop/buy') {
       if (user.inventory.includes(item.id)) throw new ApiError('Você já possui este item.', 409);
+      if (item.iap) {
+        throw new ApiError('Este item é vendido como compra no app (Google Play / App Store).', 400);
+      }
       if (user.coins < item.price) {
         throw new ApiError(`Faltam ${item.price - user.coins} moedas para comprar ${item.name}.`, 402);
       }

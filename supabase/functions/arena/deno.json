@@ -1,0 +1,9 @@
+{
+  "imports": {
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@2.118.0",
+    "chess.js": "npm:chess.js@1.4.0",
+    "jose": "npm:jose@6.2.13",
+    "@peculiar/x509": "npm:@peculiar/x509@2.2.0",
+    "reflect-metadata": "npm:reflect-metadata@0.2.2"
+  }
+}

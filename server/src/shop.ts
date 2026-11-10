@@ -19,6 +19,9 @@ export function createShopRoutes(db: Database, auth: Auth, notifier: Notifier) {
     const item = getItem(String(req.body?.itemId ?? ''));
     if (!item) return res.status(404).json({ error: 'Item não encontrado.' });
     if (user.inventory.includes(item.id)) return res.status(409).json({ error: 'Você já possui este item.' });
+    if (item.iap) {
+      return res.status(400).json({ error: 'Este item é vendido como compra no app (Google Play / App Store).' });
+    }
     if (user.coins < item.price) {
       return res.status(402).json({ error: `Faltam ${item.price - user.coins} moedas para comprar ${item.name}.` });
     }
