@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { CharacterThumb } from '../components/Character';
@@ -16,6 +16,7 @@ import { colors, fonts, radius } from '../lib/theme';
 import { Scene3D } from '../three/Scene3D';
 import { createShowcaseScene } from '../three/scenes';
 import { useToast } from '../lib/toast';
+import { buyWithStore, iapSupported, loadPrices, restoreStorePurchases } from '../lib/iap';
 import { translateServerText, useT, type TranslationKey } from '../lib/i18n';
 import type { BoardStyle, CharacterStyle, ItemType, PieceStyle, PrivateUser, ShopItem } from '../lib/types';
 
@@ -38,6 +39,13 @@ export default function Shop() {
   const [preview, setPreview] = useState<ShopItem | null>(null);
   /** Boneco exibido no provador 3D (aba Bonecos). */
   const [trying, setTrying] = useState<string | null>(null);
+  /** Preços das lojas (Play Store / App Store) para os itens lendários. */
+  const [prices, setPrices] = useState<Record<string, string>>({});
+  const storeOk = iapSupported();
+  useEffect(() => {
+    if (!storeOk) return;
+    loadPrices(items.filter((i) => i.iap).map((i) => i.iap!)).then(setPrices);
+  }, [storeOk, items]);
   const myCharacter = useCharacterStyle(user?.equipped.character);
 
   const fittingId = trying ?? user?.equipped.character;
@@ -78,6 +86,37 @@ export default function Shop() {
     }
   };
 
+  /** Itens lendários: compra com dinheiro real pela loja do aparelho. */
+  const buyReal = async (item: ShopItem) => {
+    if (!storeOk || !item.iap) {
+      toast(t('shop.inAppOnly'), 'info');
+      return;
+    }
+    setBusy(item.id);
+    try {
+      const u = await buyWithStore(item.iap);
+      setUser(u);
+      toast(t('shop.boughtReal', { name: itemName(item, lang) }), 'success');
+    } catch (e) {
+      if ((e as { status?: number }).status !== 499) toast(translateServerText((e as Error).message), 'error');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const restore = async () => {
+    setBusy('restore');
+    try {
+      const r = await restoreStorePurchases();
+      if (r.user) setUser(r.user);
+      toast(r.restored ? t('shop.restored', { count: r.restored }) : t('shop.nothingToRestore'), r.restored ? 'success' : 'info');
+    } catch (e) {
+      toast(translateServerText((e as Error).message), 'error');
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const claimDaily = async () => {
     try {
       const r = await api<{ user: PrivateUser; amount: number }>('/rewards/daily', { body: {} });
@@ -106,6 +145,10 @@ export default function Shop() {
           ? t('shop.hintLocal')
           : t('shop.hintOnline')}
       </Text>
+
+      {storeOk && (
+        <Button small variant="ghost" title={t('shop.restore')} icon="↺" loading={busy === 'restore'} onPress={restore} />
+      )}
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
         {TABS.map((tb) => (
@@ -150,6 +193,7 @@ export default function Shop() {
               <Text style={styles.name}>{itemName(item, lang)}</Text>
               <Text style={[styles.rarity, { color: rarity.color }]}>{t(`rarity.${item.rarity}` as TranslationKey)}</Text>
               {item.description ? <Text style={styles.muted}>{itemDescription(item, lang)}</Text> : null}
+              {item.iap && !owned ? <Text style={styles.realBadge}>{t('shop.legendaryReal')}</Text> : null}
               <View style={styles.actions}>
                 {(item.type === 'move' || item.type === 'board' || item.type === 'pieces') && (
                   <Button small variant="secondary" title={t('shop.view')} icon={item.type === 'move' ? '▶' : '👁'} onPress={() => setPreview(item)} />
@@ -158,6 +202,14 @@ export default function Shop() {
                   <Text style={styles.equipped}>{t('common.equipped')}</Text>
                 ) : owned ? (
                   <Button small variant="secondary" title={t('common.equip')} loading={busy === item.id} onPress={() => run(item.id, 'equip')} />
+                ) : item.iap ? (
+                  <Button
+                    small
+                    variant="gold"
+                    title={`💳 ${prices[item.iap] ?? t('shop.realPurchase')}`}
+                    loading={busy === item.id}
+                    onPress={() => buyReal(item)}
+                  />
                 ) : (
                   <Button
                     small
@@ -189,9 +241,12 @@ export default function Shop() {
           owned={user.inventory.includes(preview.id)}
           equipped={user.equipped[preview.type] === preview.id}
           coins={user.coins}
+          storePrice={preview.iap ? prices[preview.iap] : undefined}
           busy={busy === preview.id}
           onBuy={() =>
-            confirmAction(
+            preview.iap
+              ? buyReal(preview)
+              : confirmAction(
               t('shop.buyQ', { name: itemName(preview, lang) }),
               t('shop.buyBody', { price: preview.price, coins: user.coins }),
               () => run(preview.id, 'buy'),
@@ -305,6 +360,7 @@ const styles = StyleSheet.create({
   rarity: { fontSize: 12, fontFamily: fonts.black, textTransform: 'uppercase', letterSpacing: 0.5 },
   actions: { flexDirection: 'row', gap: 8, alignItems: 'center', marginTop: 6, flexWrap: 'wrap' },
   equipped: { color: colors.accent, fontFamily: fonts.black },
+  realBadge: { color: '#ffc83d', fontSize: 12, fontFamily: fonts.bold },
   fitting: { padding: 0, overflow: 'hidden', alignItems: 'center', paddingBottom: 12 },
   fittingScene: { width: '100%', height: 240 },
   fittingName: { color: colors.text, fontFamily: fonts.bold, fontSize: 17 },

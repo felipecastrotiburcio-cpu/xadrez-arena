@@ -99,9 +99,11 @@ jobs:
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -qm "Teste online: $R"
           git push -fq "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" ci-results-online
 
-      - name: Registros da função (em caso de falha)
-        if: failure()
-        run: tail -150 functions.log || true
+      - name: Registros da função e do Realtime
+        if: always()
+        run: |
+          tail -200 functions.log || true
+          docker ps --format '{{.Names}}' | grep -i realtime | head -1 | xargs -r docker logs --tail 80 2>&1 || true
 
   deploy:
     name: Publicar no Supabase do projeto

@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "test:sql": "node sql.test.mjs ../migrations/20261110000000_xadrez_arena.sql",
-    "test:online": "node online.test.mjs",
+    "test:online": "node --test --test-force-exit --test-timeout=120000 --test-concurrency=1 online.test.mjs",
     "test:app": "node app.e2e.mjs"
   },
   "devDependencies": {

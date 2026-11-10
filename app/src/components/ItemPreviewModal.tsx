@@ -20,6 +20,8 @@ interface Props {
   owned: boolean;
   equipped: boolean;
   coins: number;
+  /** Item lendário: preço da loja do aparelho (compra com dinheiro real). */
+  storePrice?: string;
   busy: boolean;
   onBuy: () => void;
   onEquip: () => void;
@@ -27,7 +29,7 @@ interface Props {
 }
 
 /** Prévia de tabuleiro/peças antes de comprar: um tabuleiro grande onde dá para mexer as peças. */
-export function ItemPreviewModal({ item, board, pieces, owned, equipped, coins, busy, onBuy, onEquip, onClose }: Props) {
+export function ItemPreviewModal({ item, board, pieces, owned, equipped, coins, storePrice, busy, onBuy, onEquip, onClose }: Props) {
   const { width, height } = useWindowDimensions();
   const size = Math.min(width - 48, height * 0.5, 440);
   const [fen, setFen] = useState(SAMPLE_FEN);
@@ -86,14 +88,14 @@ export function ItemPreviewModal({ item, board, pieces, owned, equipped, coins, 
                 <Button
                   small
                   variant="gold"
-                  title={t('shop.buyPrice', { price: item.price.toLocaleString(locale) })}
-                  disabled={coins < item.price}
+                  title={item.iap ? t('shop.buyStore', { price: storePrice ?? t('shop.realPurchase') }) : t('shop.buyPrice', { price: item.price.toLocaleString(locale) })}
+                  disabled={!item.iap && coins < item.price}
                   loading={busy}
                   onPress={onBuy}
                 />
               )}
             </View>
-            {!owned && coins < item.price && (
+            {!owned && !item.iap && coins < item.price && (
               <Text style={styles.hint}>
                 {t('shop.missingCoins', { count: (item.price - coins).toLocaleString(locale) })}
               </Text>

@@ -17,6 +17,7 @@
     "expo-font": "~58.0.11",
     "expo-gl": "~58.0.3",
     "expo-haptics": "~58.0.7",
+    "expo-iap": "^6.3.0",
     "expo-linear-gradient": "~58.0.3",
     "expo-linking": "~58.0.15",
     "expo-localization": "~58.0.5",

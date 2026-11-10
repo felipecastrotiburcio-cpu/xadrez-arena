@@ -41,14 +41,24 @@ function listen(sb, table, filter) {
   const ch = sb
     .channel(`t-${table}-${filter}-${Math.random()}`)
     .on('postgres_changes', { event: '*', schema: 'public', table, filter }, (p) => events.push(p))
-    .subscribe();
+    .on('system', {}, (m) => {
+      if (m?.status !== 'ok') console.log(`[realtime ${table}] sistema:`, JSON.stringify(m));
+    })
+    .subscribe((status, err) => {
+      if (status !== 'SUBSCRIBED') console.log(`[realtime ${table}] ${status}`, err?.message ?? '');
+    });
   return {
     events,
-    ready: new Promise((res) => {
+    ready: new Promise((res, rej) => {
+      const end = Date.now() + 15000;
       const t = setInterval(() => {
         if (ch.state === 'joined') {
           clearInterval(t);
-          res();
+          // o servidor ainda liga a escuta do banco logo após entrar no canal
+          setTimeout(res, 1500);
+        } else if (Date.now() > end) {
+          clearInterval(t);
+          rej(new Error(`canal ao vivo não conectou (${table}, estado ${ch.state})`));
         }
       }, 50);
     }),

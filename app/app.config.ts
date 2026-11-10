@@ -77,6 +77,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'expo-splash-screen',
       { image: './assets/splash-icon.png', imageWidth: 220, resizeMode: 'contain', backgroundColor: '#110d2e' },
     ],
+    // Compras com dinheiro real (Google Play Billing / StoreKit 2) dos itens lendários.
+    'expo-iap',
     './plugins/withReleaseSigning',
     [
       'expo-build-properties',

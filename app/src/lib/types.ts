@@ -72,6 +72,8 @@ interface ShopItemBase {
   description: string;
   price: number;
   rarity: Rarity;
+  /** ID do produto nas lojas (itens comprados com dinheiro real). */
+  iap?: string;
 }
 
 export type ShopItem =

@@ -280,6 +280,15 @@ export const pt = {
   'shop.tryMoves': 'Toque nas peças para testar os lances 👆',
   'shop.reset': 'Recomeçar',
   'shop.buyPrice': 'Comprar · 🪙 {price}',
+  'shop.buyStore': 'Comprar · {price}',
+  'shop.realPurchase': 'Compra no app',
+  'shop.legendaryReal': '💳 Lendário: compra com dinheiro real',
+  'shop.inAppOnly': 'Itens lendários são comprados com dinheiro real no app instalado pela Play Store ou App Store (com o servidor online).',
+  'shop.restore': 'Restaurar compras',
+  'shop.restored': '{count} compras restauradas.',
+  'shop.restored_one': '1 compra restaurada.',
+  'shop.nothingToRestore': 'Nenhuma compra para restaurar.',
+  'shop.boughtReal': '{name} é seu! Obrigado pela compra 💜',
   'shop.missingCoins': 'Faltam {count} moedas.',
 
   // Raridade
