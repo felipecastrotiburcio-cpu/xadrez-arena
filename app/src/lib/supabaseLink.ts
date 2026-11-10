@@ -311,10 +311,27 @@ export class SupabaseLink {
       for (const id of Object.keys(lastPresence)) {
         if (!before.has(id)) {
           this.fire('friends:presence', { userId: id, online: false, inGame: false });
-          this.fire('game:opponentConnection', { userId: id, connected: false });
+          // Só avisa "desconectado" se a pessoa continuar fora por 5 s (atualizar o status ou uma
+          // queda rápida de rede fazem ela sair e voltar em seguida).
+          if (!offlineTimers.has(id)) {
+            offlineTimers.set(
+              id,
+              setTimeout(() => {
+                offlineTimers.delete(id);
+                if (!lastPresence[id]) this.fire('game:opponentConnection', { userId: id, connected: false });
+              }, 5000),
+            );
+          }
         }
       }
-      for (const id of before) if (!lastPresence[id]) this.fire('game:opponentConnection', { userId: id, connected: true });
+      for (const id of before) {
+        const t = offlineTimers.get(id);
+        if (t) {
+          clearTimeout(t);
+          offlineTimers.delete(id);
+        }
+        if (!lastPresence[id]) this.fire('game:opponentConnection', { userId: id, connected: true });
+      }
       for (const [id, s] of Object.entries(map)) {
         const prev = lastPresence[id];
         if (!prev || prev.inGame !== s.inGame) this.fire('friends:presence', { userId: id, ...s });
@@ -324,6 +341,7 @@ export class SupabaseLink {
       setPresenceMap(map);
     };
     let lastPresence: Record<string, { online: boolean; inGame: boolean }> = {};
+    const offlineTimers = new Map<string, ReturnType<typeof setTimeout>>();
     // Usa só o estado completo ("sync"): atualizar o próprio status gera "saiu"+"entrou" seguidos,
     // que fora de ordem marcariam o adversário como desconectado sem estar.
     ch.on('presence', { event: 'sync' }, sync)
