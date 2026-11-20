@@ -7,13 +7,13 @@ import { RARITY } from '../lib/cosmetics';
 import { itemName } from '../lib/catalogI18n';
 import { useT, type TranslationKey } from '../lib/i18n';
 import { colors, fonts, radius } from '../lib/theme';
-import type { BoardStyle, PieceStyle, ShopItem } from '../lib/types';
+import type { BoardStyle, EntranceStyle, PieceStyle, ShopItem } from '../lib/types';
 
 /** Posição de exemplo com todos os tipos de peça (Abertura Italiana). */
 const SAMPLE_FEN = 'r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/2N2N2/PPPP1PPP/R1BQK2R w KQkq - 4 5';
 
 interface Props {
-  item: ShopItem & { type: 'board' | 'pieces' };
+  item: ShopItem & { type: 'board' | 'pieces' | 'entrance' };
   /** Visual equipado, para combinar com o item na prévia. */
   board: BoardStyle;
   pieces: PieceStyle;
@@ -32,7 +32,11 @@ interface Props {
 export function ItemPreviewModal({ item, board, pieces, owned, equipped, coins, storePrice, busy, onBuy, onEquip, onClose }: Props) {
   const { width, height } = useWindowDimensions();
   const size = Math.min(width - 48, height * 0.5, 440);
-  const [fen, setFen] = useState(SAMPLE_FEN);
+  const isEntrance = item.type === 'entrance';
+  // Surgimento: começa na posição inicial e toca o efeito (de novo a cada "Repetir").
+  const startFen = isEntrance ? new Chess().fen() : SAMPLE_FEN;
+  const [fen, setFen] = useState(startFen);
+  const [playKey, setPlayKey] = useState(1);
   const [lastMove, setLastMove] = useState<{ from: string; to: string } | null>(null);
   const rarity = RARITY[item.rarity];
   const { t, lang, locale } = useT();
@@ -56,7 +60,8 @@ export function ItemPreviewModal({ item, board, pieces, owned, equipped, coins, 
           <Pressable style={styles.card} onPress={() => {}} accessible={false}>
             <Text style={styles.title}>{itemName(item, lang)}</Text>
             <Text style={[styles.rarity, { color: rarity.color }]}>
-              {t(`rarity.${item.rarity}` as TranslationKey)} · {item.type === 'board' ? t('shop.board') : t('shop.pieces')}
+              {t(`rarity.${item.rarity}` as TranslationKey)} ·{' '}
+              {item.type === 'board' ? t('shop.board') : item.type === 'pieces' ? t('shop.pieces') : t('shop.entrance')}
             </Text>
             <ChessBoard
               fen={fen}
@@ -67,17 +72,20 @@ export function ItemPreviewModal({ item, board, pieces, owned, equipped, coins, 
               onMove={onMove}
               boardStyle={item.type === 'board' ? item.style : board}
               pieceStyle={item.type === 'pieces' ? item.style : pieces}
+              entrance={isEntrance ? (item.style as EntranceStyle) : null}
+              entranceKey={isEntrance ? playKey : undefined}
             />
-            <Text style={styles.hint}>{t('shop.tryMoves')}</Text>
+            <Text style={styles.hint}>{isEntrance ? t('shop.entranceHint') : t('shop.tryMoves')}</Text>
             <View style={styles.actions}>
               <Button
                 small
                 variant="ghost"
-                title={t('shop.reset')}
-                icon="↺"
+                title={isEntrance ? t('shop.replay') : t('shop.reset')}
+                icon={isEntrance ? '▶' : '↺'}
                 onPress={() => {
-                  setFen(SAMPLE_FEN);
+                  setFen(startFen);
                   setLastMove(null);
+                  if (isEntrance) setPlayKey((k) => k + 1);
                 }}
               />
               {equipped ? (

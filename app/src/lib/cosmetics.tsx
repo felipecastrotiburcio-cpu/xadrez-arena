@@ -2,10 +2,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { api } from './api';
 import { useAuth } from './auth';
-import type { AvatarStyle, BoardStyle, CharacterStyle, ItemType, PieceStyle, ShopItem } from './types';
+import type { AvatarStyle, BoardStyle, CharacterStyle, EntranceStyle, ItemType, PieceStyle, ShopItem } from './types';
 
 // v2: bonecos em blocos (acessórios 3D em vez de emoji).
-const CACHE_KEY = 'xadrez.catalog.v3';
+const CACHE_KEY = 'xadrez.catalog.v4';
 
 /**
  * Itens gratuitos embutidos no app: garantem que tudo seja desenhado mesmo
@@ -30,6 +30,7 @@ const FALLBACK: ShopItem[] = [
   },
   { id: 'move_jamal', type: 'move', name: 'Passinho do Jamal', description: '', price: 0, rarity: 'comum', style: { animation: 'jamal', emoji: '🕺' } },
   { id: 'move_67', type: 'move', name: 'Movimento do 67', description: '', price: 0, rarity: 'comum', style: { animation: '67', emoji: '🤲' } },
+  { id: 'entrance_pop', type: 'entrance', name: 'Pop', description: '', price: 0, rarity: 'comum', style: { effect: 'pop', emoji: '🫧', color: '#ffffff' } },
 ];
 
 export const DEFAULT_LOOK: Record<ItemType, string> = {
@@ -38,6 +39,7 @@ export const DEFAULT_LOOK: Record<ItemType, string> = {
   avatar: 'avatar_letter',
   character: 'char_rookie',
   move: 'move_jamal',
+  entrance: 'entrance_pop',
 };
 
 /** Boneco usado pela IA nas finalizações. */
@@ -111,6 +113,9 @@ export function useAvatarStyle(id?: string): AvatarStyle {
 export function useCharacterStyle(id?: string): CharacterStyle {
   return styleOf(useCosmetics(), 'character', id);
 }
+export function useEntranceStyle(id?: string): EntranceStyle {
+  return styleOf(useCosmetics(), 'entrance', id);
+}
 
 /** Aparência equipada do usuário logado (ou padrão para visitantes). */
 export function useMyLook() {
@@ -120,5 +125,7 @@ export function useMyLook() {
     equipped: eq,
     board: useBoardStyle(eq.board),
     pieces: usePieceStyle(eq.pieces),
+    // Contas antigas não têm surgimento equipado: usa o padrão.
+    entrance: useEntranceStyle(eq.entrance ?? DEFAULT_LOOK.entrance),
   };
 }

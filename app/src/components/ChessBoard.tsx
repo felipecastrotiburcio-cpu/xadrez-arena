@@ -3,10 +3,11 @@ import { Animated, Easing, Platform, Pressable, StyleSheet, Text, View } from 'r
 import { Chess, type Square } from 'chess.js';
 import { ChessPiece, tint, type PieceType } from './ChessPiece';
 import { FrameArt } from './FrameArt';
+import { EntranceLayer } from './PieceEntrance';
 import { useT } from '../lib/i18n';
 import { colors } from '../lib/theme';
 import { playSound, preloadSounds, type BoardSound } from '../lib/sound';
-import type { BoardStyle, PieceStyle, Side } from '../lib/types';
+import type { BoardStyle, EntranceStyle, PieceStyle, Side } from '../lib/types';
 
 export interface BoardMove {
   from: string;
@@ -29,15 +30,30 @@ interface Props {
   sounds?: boolean;
   /** Cor que pode fazer pré-lance enquanto o adversário pensa (null = sem pré-lance). */
   premoveColor?: Side | null;
+  /** Surgimento das peças (item da loja) e a "chave" que faz ele tocar (muda a cada partida nova). */
+  entrance?: EntranceStyle | null;
+  entranceKey?: number;
 }
 
 const FILES = 'abcdefgh';
 
 function ChessBoardBase({
   fen, size: outerSize, orientation, movableColor, lastMove, hint, onMove, boardStyle, pieceStyle, sounds = true, premoveColor = null,
+  entrance = null, entranceKey,
 }: Props) {
   const size = outerSize - boardStyle.frame * 2;
   const chess = useMemo(() => new Chess(fen), [fen]);
+
+  // Surgimento das peças: toca quando a chave muda; um lance no meio interrompe.
+  const [intro, setIntro] = useState<number | null>(null);
+  useEffect(() => {
+    setIntro(null);
+  }, [fen]);
+  useEffect(() => {
+    if (entrance && entranceKey) setIntro(entranceKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entranceKey]);
+  const endIntro = useCallback(() => setIntro(null), []);
   const [selected, setSelected] = useState<Square | null>(null);
   const [promotion, setPromotion] = useState<{ from: string; to: string } | null>(null);
 
@@ -186,7 +202,7 @@ function ChessBoardBase({
                 light={isLight(square)}
                 pieceType={piece ? piece.type : null}
                 pieceColor={piece ? piece.color : null}
-                hidePiece={!!moving && lastMove?.to === square}
+                hidePiece={intro !== null || (!!moving && lastMove?.to === square)}
                 last={!!lastMove && (lastMove.from === square || lastMove.to === square)}
                 hinted={!!hint && (hint.from === square || hint.to === square)}
                 premoved={!!premove && (premove.from === square || premove.to === square)}
@@ -219,6 +235,10 @@ function ChessBoardBase({
           sq={sq}
           pieceStyle={pieceStyle}
         />
+      )}
+
+      {intro !== null && entrance && (
+        <EntranceLayer fen={fen} orientation={orientation} sq={sq} pieceStyle={pieceStyle} entrance={entrance} playKey={intro} onDone={endIntro} />
       )}
 
       {epFlash > 0 && (

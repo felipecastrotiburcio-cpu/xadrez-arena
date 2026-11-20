@@ -8,7 +8,7 @@
  * Regra de preço: quanto mais elaborado o visual, maior a raridade e o preço.
  */
 
-export type ItemType = 'board' | 'pieces' | 'avatar' | 'character' | 'move';
+export type ItemType = 'board' | 'pieces' | 'avatar' | 'character' | 'move' | 'entrance';
 export type Rarity = 'comum' | 'raro' | 'epico' | 'lendario';
 
 export interface BoardStyle {
@@ -78,7 +78,16 @@ export type ShopItem =
   | (ShopItemBase & { type: 'pieces'; style: PieceStyle })
   | (ShopItemBase & { type: 'avatar'; style: AvatarStyle })
   | (ShopItemBase & { type: 'character'; style: CharacterStyle })
-  | (ShopItemBase & { type: 'move'; style: { animation: string; emoji: string } });
+  | (ShopItemBase & { type: 'move'; style: { animation: string; emoji: string } })
+  | (ShopItemBase & { type: 'entrance'; style: EntranceStyle });
+
+/** Surgimento das peças no começo da partida (animação no tabuleiro). */
+export interface EntranceStyle {
+  effect: 'pop' | 'ground' | 'rain' | 'glitch' | 'pixel' | 'teleport' | 'blackhole' | 'hero' | 'lightning';
+  emoji: string;
+  /** Cor de destaque do efeito (brilho, raio, portal...). */
+  color: string;
+}
 
 const board = (
   id: string, name: string, description: string, price: number, rarity: Rarity, style: BoardStyle,
@@ -92,6 +101,9 @@ const avatar = (
 const character = (
   id: string, name: string, description: string, price: number, rarity: Rarity, style: CharacterStyle,
 ): ShopItem => ({ id, type: 'character', name, description, price, rarity, style });
+const entrance = (
+  id: string, name: string, description: string, price: number, rarity: Rarity, effect: EntranceStyle['effect'], emoji: string, color: string,
+): ShopItem => ({ id, type: 'entrance', name, description, price, rarity, style: { effect, emoji, color } });
 const move = (
   id: string, name: string, description: string, price: number, rarity: Rarity, emoji: string,
 ): ShopItem => ({ id, type: 'move', name, description, price, rarity, style: { animation: id.replace('move_', ''), emoji } });
@@ -270,6 +282,17 @@ const ITEMS: ShopItem[] = [
   move('move_flip', 'Mortal para Trás', 'Um salto mortal completo para fechar com estilo.', 900, 'epico', '🤸'),
   move('move_crown', 'Coroação', 'Uma coroa desce do céu entre confetes.', 1200, 'epico', '👑'),
   move('move_lightning', 'Fúria do Trovão', 'Raios atingem o adversário derrotado.', 2200, 'lendario', '⚡'),
+
+  // ----------------------------------------------------------- surgimento das peças (começo da partida)
+  entrance('entrance_pop', 'Pop', 'As peças aparecem quicando, uma a uma.', 0, 'comum', 'pop', '🫧', '#ffffff'),
+  entrance('entrance_ground', 'Brota do Chão', 'O chão racha e as peças sobem espalhando terra.', 150, 'comum', 'ground', '🕳️', '#5b3a1e'),
+  entrance('entrance_rain', 'Chuva de Peças', 'As peças despencam do céu e levantam poeira.', 300, 'raro', 'rain', '🌧️', '#cfd8dc'),
+  entrance('entrance_glitch', 'Glitch', 'Falha na matrix: as peças surgem tremendo em RGB.', 600, 'epico', 'glitch', '📺', '#ff2fd6'),
+  entrance('entrance_pixel', 'Pixel 8-bits', 'Cada peça é montada bloquinho por bloquinho.', 900, 'epico', 'pixel', '🧱', '#2ee59d'),
+  entrance('entrance_teleport', 'Teletransporte Quântico', 'Um feixe de luz desce e materializa cada peça.', 1500, 'lendario', 'teleport', '🛸', '#00e5ff'),
+  entrance('entrance_blackhole', 'Buraco Negro', 'Um buraco negro gira na casa e cospe a peça girando.', 2500, 'lendario', 'blackhole', '🌀', '#a259ff'),
+  entrance('entrance_hero', 'Aterrissagem de Herói', 'As peças caem do céu com impacto, onda de choque e rachaduras.', 2500, 'lendario', 'hero', '💥', '#ffb300'),
+  entrance('entrance_lightning', 'Tempestade de Raios', 'Um raio cai em cada casa e a peça surge eletrizada.', 3000, 'lendario', 'lightning', '⚡', '#ffe14d'),
 ];
 
 /** Lendários = compra real no app; os demais = moedas. */
@@ -283,6 +306,7 @@ export const DEFAULT_EQUIPPED: Record<ItemType, string> = {
   avatar: 'avatar_letter',
   character: 'char_rookie',
   move: 'move_jamal',
+  entrance: 'entrance_pop',
 };
 
 export const getItem = (id: string) => CATALOG.find((i) => i.id === id);

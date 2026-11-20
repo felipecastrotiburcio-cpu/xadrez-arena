@@ -68,6 +68,15 @@ export const CATALOG_EN: Record<string, { name: string; description: string }> =
   move_flip: { name: 'Backflip', description: 'A full backflip to finish in style.' },
   move_crown: { name: 'Coronation', description: 'A crown falls from the sky among confetti.' },
   move_lightning: { name: 'Thunder Fury', description: 'Lightning strikes the defeated opponent.' },
+  entrance_pop: { name: 'Pop', description: 'Pieces bounce in one by one.' },
+  entrance_ground: { name: 'Ground Burst', description: 'The ground cracks and pieces rise out of it.' },
+  entrance_rain: { name: 'Piece Rain', description: 'Pieces drop from the sky and kick up dust.' },
+  entrance_glitch: { name: 'Glitch', description: 'Matrix glitch: pieces flicker in with RGB shake.' },
+  entrance_pixel: { name: '8-bit Pixels', description: 'Each piece is built block by block.' },
+  entrance_teleport: { name: 'Quantum Teleport', description: 'A beam of light materializes every piece.' },
+  entrance_blackhole: { name: 'Black Hole', description: 'A spinning black hole spits each piece out.' },
+  entrance_hero: { name: 'Hero Landing', description: 'Pieces slam down with shockwaves and cracks.' },
+  entrance_lightning: { name: 'Lightning Storm', description: 'Lightning strikes each square and the piece sparks to life.' },
 };
 
 type Named = { id: string; name: string; description?: string };

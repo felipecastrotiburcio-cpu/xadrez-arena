@@ -17,7 +17,7 @@ export interface PublicUser {
   cosmetics: { avatar: string; character: string; move: string };
 }
 
-export type ItemType = 'board' | 'pieces' | 'avatar' | 'character' | 'move';
+export type ItemType = 'board' | 'pieces' | 'avatar' | 'character' | 'move' | 'entrance';
 export type Rarity = 'comum' | 'raro' | 'epico' | 'lendario';
 
 export interface PrivateUser extends PublicUser {
@@ -81,7 +81,15 @@ export type ShopItem =
   | (ShopItemBase & { type: 'pieces'; style: PieceStyle })
   | (ShopItemBase & { type: 'avatar'; style: AvatarStyle })
   | (ShopItemBase & { type: 'character'; style: CharacterStyle })
-  | (ShopItemBase & { type: 'move'; style: { animation: string; emoji: string } });
+  | (ShopItemBase & { type: 'move'; style: { animation: string; emoji: string } })
+  | (ShopItemBase & { type: 'entrance'; style: EntranceStyle });
+
+/** Surgimento das peças no começo da partida. */
+export interface EntranceStyle {
+  effect: 'pop' | 'ground' | 'rain' | 'glitch' | 'pixel' | 'teleport' | 'blackhole' | 'hero' | 'lightning';
+  emoji: string;
+  color: string;
+}
 
 export interface AppNotification {
   id: string;

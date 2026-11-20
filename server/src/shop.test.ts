@@ -35,7 +35,7 @@ test('novo jogador começa com moedas e itens padrão equipados', async () => {
   const { user } = await register('gui');
   assert.equal(user.coins, 300);
   assert.deepEqual(user.equipped, {
-    board: 'board_classic', pieces: 'pieces_classic', avatar: 'avatar_letter', character: 'char_rookie', move: 'move_jamal',
+    board: 'board_classic', pieces: 'pieces_classic', avatar: 'avatar_letter', character: 'char_rookie', move: 'move_jamal', entrance: 'entrance_pop',
   });
   assert.ok(user.inventory.includes('move_67'), 'movimento do 67 é padrão');
 });

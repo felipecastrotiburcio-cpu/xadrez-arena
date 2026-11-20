@@ -4,6 +4,7 @@ import { Alert, Platform, StyleSheet, Text, useWindowDimensions, View } from 're
 import { Chess } from 'chess.js';
 import * as Haptics from 'expo-haptics';
 import { ChessBoard, SLIDE_MS, type BoardMove } from '../../components/ChessBoard';
+import { ENTRANCE_MAX_MS } from '../../components/PieceEntrance';
 import { Finale } from '../../components/Finale';
 import { GameOverModal } from '../../components/GameOverModal';
 import { MoveList } from '../../components/MoveList';
@@ -73,6 +74,8 @@ export default function AiGame() {
   const chessRef = useRef(new Chess());
   const fenHistory = useRef<string[]>([]);
   const [fen, setFen] = useState(chessRef.current.fen());
+  /** Cada partida nova faz as peças surgirem com o efeito equipado. */
+  const [entranceKey, setEntranceKey] = useState(1);
   const [lastMove, setLastMove] = useState<{ from: string; to: string } | null>(null);
   const [thinking, setThinking] = useState(false);
   const [hint, setHint] = useState<{ from: string; to: string } | null>(null);
@@ -185,6 +188,8 @@ export default function AiGame() {
     (async () => {
       // Deixa a peça do jogador terminar de deslizar antes de começar a calcular.
       await wait(SLIDE_MS + 60);
+      // Primeiro lance da IA (de brancas): espera as peças terminarem de surgir.
+      if (c.history().length === 0) await wait(ENTRANCE_MAX_MS);
       const r = await findBestMoveAsync(c.fen(), { level: level.id, history: fenHistory.current, maxTimeMs });
       const rest = minThink - (Date.now() - started);
       if (rest > 0) await wait(rest);
@@ -271,6 +276,7 @@ export default function AiGame() {
   };
 
   const restart = () => {
+    setEntranceKey((k) => k + 1);
     chessRef.current = new Chess();
     fenHistory.current = [];
     rewarded.current = false;
@@ -326,6 +332,8 @@ export default function AiGame() {
         onMove={onPlayerMove}
         boardStyle={look.board}
         pieceStyle={look.pieces}
+        entrance={look.entrance}
+        entranceKey={entranceKey}
         premoveColor={over ? null : playerSide}
       />
       </View>

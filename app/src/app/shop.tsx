@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { CharacterThumb } from '../components/Character';
 import { BoardFrame, isLight, SquareSurface } from '../components/ChessBoard';
 import { ItemPreviewModal } from '../components/ItemPreviewModal';
+import { EntranceDemo } from '../components/PieceEntrance';
 import { ChessPiece, type PieceType } from '../components/ChessPiece';
 import { Finale } from '../components/Finale';
 import { Avatar, Button, Card, Coins, Screen } from '../components/ui';
@@ -26,6 +27,7 @@ const TABS: { type: ItemType; label: TranslationKey; icon: string }[] = [
   { type: 'avatar', label: 'shop.tabAvatars', icon: '🙂' },
   { type: 'character', label: 'shop.tabCharacters', icon: '🧍' },
   { type: 'move', label: 'shop.tabMoves', icon: '🕺' },
+  { type: 'entrance', label: 'shop.tabEntrances', icon: '✨' },
 ];
 
 export default function Shop() {
@@ -182,7 +184,7 @@ export default function Shop() {
             key={item.id}
             onPress={() => {
               if (item.type === 'character') setTrying(item.id);
-              else if (item.type === 'board' || item.type === 'pieces' || item.type === 'move') setPreview(item);
+              else if (item.type === 'board' || item.type === 'pieces' || item.type === 'move' || item.type === 'entrance') setPreview(item);
             }}
             style={[styles.item, { borderColor: equipped ? colors.accent : trying === item.id ? colors.primary : colors.border }]}
           >
@@ -195,8 +197,8 @@ export default function Shop() {
               {item.description ? <Text style={styles.muted}>{itemDescription(item, lang)}</Text> : null}
               {item.iap && !owned ? <Text style={styles.realBadge}>{t('shop.legendaryReal')}</Text> : null}
               <View style={styles.actions}>
-                {(item.type === 'move' || item.type === 'board' || item.type === 'pieces') && (
-                  <Button small variant="secondary" title={t('shop.view')} icon={item.type === 'move' ? '▶' : '👁'} onPress={() => setPreview(item)} />
+                {(item.type === 'move' || item.type === 'board' || item.type === 'pieces' || item.type === 'entrance') && (
+                  <Button small variant="secondary" title={t('shop.view')} icon={item.type === 'move' || item.type === 'entrance' ? '▶' : '👁'} onPress={() => setPreview(item)} />
                 )}
                 {equipped ? (
                   <Text style={styles.equipped}>{t('common.equipped')}</Text>
@@ -233,7 +235,7 @@ export default function Shop() {
         );
       })}
 
-      {preview && (preview.type === 'board' || preview.type === 'pieces') && (
+      {preview && (preview.type === 'board' || preview.type === 'pieces' || preview.type === 'entrance') && (
         <ItemPreviewModal
           item={preview}
           board={look.board}
@@ -296,6 +298,8 @@ function ItemPreview({
       return <CharacterThumb look={item.style} size={84} />;
     case 'move':
       return <Text style={{ fontSize: 46 }}>{item.style.emoji}</Text>;
+    case 'entrance':
+      return <EntranceDemo entrance={item.style} pieceStyle={pieces} light={board.light} dark={board.dark} />;
   }
 }
 

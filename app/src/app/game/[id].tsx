@@ -40,6 +40,11 @@ export default function OnlineGame() {
   const [opponentOffline, setOpponentOffline] = useState(false);
   const [rematchSent, setRematchSent] = useState(false);
   const receivedAt = useRef(Date.now());
+  // Peças surgem com o efeito equipado só ao abrir uma partida que ainda não começou.
+  const [entranceKey] = useState(() => {
+    const s = gameCache.get(id);
+    return !s || s.moves.length === 0 ? 1 : 0;
+  });
   const [, setTick] = useState(0);
 
   const apply = useCallback((s: GameState | GameOver) => {
@@ -211,6 +216,8 @@ export default function OnlineGame() {
         onMove={onMove}
         boardStyle={look.board}
         pieceStyle={look.pieces}
+        entrance={look.entrance}
+        entranceKey={entranceKey}
         premoveColor={over ? null : mySide}
       />
       </View>

@@ -11,7 +11,7 @@ create publication supabase_realtime;
 grant usage on schema public, auth to anon, authenticated;
 `;
 await db.exec(stub);
-await db.exec(readFileSync(process.argv[2], 'utf8'));
+for (const file of process.argv.slice(2)) await db.exec(readFileSync(file, 'utf8'));
 await db.exec(`grant select on all tables in schema public to anon, authenticated;`);
 const q = async (sql, params) => (await db.query(sql, params)).rows;
 const as = async (uid, sql, params) => {
@@ -73,3 +73,8 @@ ok((await q(`select equipped->>'board' b from profiles where id=$1`, [a]))[0].b 
 for (const fn of ['claim_daily($1,50)', 'ai_reward($1,1000,9999)', "equip_item($1,'board','x')", "buy_item($1,'x',0)"]) {
   try { await as(a, `select ${fn}`, [a]); ok(false, `app não chama ${fn.split('(')[0]}`); } catch { ok(true, `app não chama ${fn.split('(')[0]}`); }
 }
+
+// Migração do surgimento das peças
+ok((await q(`select equipped->>'entrance' e from profiles where id=$1`, [a]))[0].e === 'entrance_pop', 'contas antigas recebem o surgimento padrão');
+const c = await mk('carla', 'PT');
+ok((await q(`select 'entrance_pop' = any(inventory) v from wallets where user_id=$1`, [c]))[0].v, 'conta nova já tem o surgimento padrão');

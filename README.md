@@ -129,12 +129,13 @@ Categorias (o preço sobe com a raridade: comum → raro → épico → lendári
 
 - **Tabuleiros** (0 a 3000): Madeira Clássica, Verde Torneio, Nogueira Entalhada, Oceano Profundo, Gelo Ártico, Confeitaria, Mármore Carrara, Neon Cyberpunk, Fliperama, Lava Vulcânica, Ouro Real, Fortaleza dos Cavaleiros, Galáxia. Além das cores, cada um tem **formato de casa** (lisa, ladrilho com rejunte, redonda, em relevo ou de vidro) e **borda no tema** (`app/src/components/FrameArt.tsx`): madeira com veios, ondas, neve e flocos, listras de doce, rocha com lava, céu estrelado, neon, ornamentos de ouro, rebites e a **muralha de castelo** com ameias, torres, bandeiras e ponte levadiça.
 - **Peças** (0 a 2800): cada conjunto tem um **modelo próprio** — Clássicas (Staunton), Marfim e Ébano / Ouro e Prata (medieval: torre com bandeira, cúpulas, coroas com joias), Cristal / Rubi e Esmeralda / Fogo e Gelo (lapidadas), Doces (fofinhas, com rostinho), Robôs (LEDs e antenas), Pixel 8-bits, Neon / Sombras (moderno geométrico) e **Cavaleiros Medievais** (soldados de escudo, cavalos de guerra com penacho, monges, rainha de hennin e rei de armadura com espada; azul contra vermelho).
+- **Surgimento das peças** (início de cada partida, `app/src/components/PieceEntrance.tsx`): Pop (grátis), Brota do Chão, Chuva de Peças, Glitch, Pixel 8-bits (moedas) e os lendários Teletransporte Quântico, Buraco Negro, Aterrissagem de Herói e Tempestade de Raios (compra real). As peças surgem em ondas a partir das fileiras de trás; a IA espera terminar para fazer o 1º lance. Na loja, cada um tem vitrine animada e prévia no tabuleiro grande com "Repetir".
 - **Prévia antes de comprar:** tabuleiros e peças abrem um tabuleiro grande onde dá para mexer as peças (com som) antes de comprar.
 - **Ícones de perfil** (0 a 2500): aparecem nos amigos, no ranking, nos convites e na partida.
 - **Bonecos** (0 a 3000): Novato (padrão), Estiloso, Descolado, Atleta, Ninja, Feiticeiro, Rei do Tabuleiro, Robô Dourado, Astronauta.
 - **Movimentos especiais** (0 a 2200): Passinho do Jamal e Movimento do 67 (grátis), Giro Vitorioso, Aviãozinho, Dança do Robô, Muque, Voadora (chute que lança o rival), Mortal para Trás, Coroação (coroa e confete) e Fúria do Trovão (raios no rival).
 
-O catálogo tem 57 itens e existe em duas cópias idênticas: `server/src/catalog.ts` e `app/src/lib/catalog.ts` (usada no modo local). Um teste do servidor falha se as duas divergirem.
+O catálogo tem 66 itens e existe em duas cópias idênticas: `server/src/catalog.ts` e `app/src/lib/catalog.ts` (usada no modo local). Um teste do servidor falha se as duas divergirem.
 
 O servidor é a fonte da verdade: confere o saldo, quem tem cada item e o que está equipado. O catálogo fica em `server/src/catalog.ts` e o app recebe dele os preços e os visuais.
 
