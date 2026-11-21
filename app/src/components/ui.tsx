@@ -88,15 +88,22 @@ export function Screen({
   children,
   scroll = true,
   style,
+  footer,
 }: {
   children: ReactNode;
   scroll?: boolean;
   style?: StyleProp<ViewStyle>;
+  /**
+   * Barra fixa no rodapé (ex.: o botão principal da tela). Fica sempre visível enquanto o
+   * conteúdo rola por trás, em qualquer tamanho de tela.
+   */
+  footer?: ReactNode;
 }) {
   return (
     <SafeAreaView style={styles.screen} edges={['bottom', 'left', 'right']}>
       {scroll ? (
         <ScrollView
+          style={{ flex: 1 }}
           contentContainerStyle={[styles.content, style]}
           keyboardShouldPersistTaps="handled"
           // iOS: rola sozinho para o campo em foco não ficar escondido atrás do teclado.
@@ -108,6 +115,11 @@ export function Screen({
       ) : (
         <View style={[styles.content, { flex: 1 }, style]}>{children}</View>
       )}
+      {footer ? (
+        <View style={styles.footer}>
+          <View style={styles.footerInner}>{footer}</View>
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -215,6 +227,15 @@ export function PageTitle({ title, subtitle }: { title: string; subtitle?: strin
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { padding: 16, gap: 14, width: '100%', maxWidth: 640, alignSelf: 'center' },
+  footer: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: colors.bg,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 12,
+  },
+  footerInner: { width: '100%', maxWidth: 608, alignSelf: 'center', gap: 8 },
   button: {
     minHeight: 52,
     borderRadius: radius.md,

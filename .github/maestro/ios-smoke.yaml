@@ -25,9 +25,10 @@ appId: app.xadrezarena
           visible: ".*Peão Curioso.*"
           timeout: 10000
 - tapOn: ".*Peão Curioso.*"
-- scrollUntilVisible:
-    element:
-      id: "seg-5"
+# O botão "Começar partida" fica fixo no rodapé. Rola a lista até o fim: a opção de tempo
+# fica logo acima dele (sem rolar, ela pode estar atrás do rodapé e o toque cairia no botão).
+- scroll
+- scroll
 - tapOn:
     id: "seg-5"
 - tapOn: ".*Começar partida.*"

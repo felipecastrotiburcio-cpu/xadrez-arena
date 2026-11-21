@@ -27,8 +27,21 @@ export default function AiSetup() {
     }, []),
   );
 
+  const start = () => {
+    const c = color === 'random' ? (Math.random() < 0.5 ? 'w' : 'b') : color;
+    router.push({ pathname: '/ai/play', params: { level: String(level), color: c, time } });
+  };
+
   return (
-    <Screen>
+    // O botão de começar fica fixo no rodapé: visível sem rolar, em qualquer celular.
+    <Screen
+      footer={
+        <>
+          <Button title={t('ai.start')} iconName="play" onPress={start} />
+          <Text style={styles.footnote}>{t('ai.footnote')}</Text>
+        </>
+      }
+    >
       <SectionTitle>{t('ai.chooseOpponent')}</SectionTitle>
       {AI_LEVELS.map((l, i) => {
         const active = l.id === level;
@@ -77,15 +90,6 @@ export default function AiSetup() {
         ]}
       />
 
-      <Button
-        title={t('ai.start')}
-        iconName="play"
-        onPress={() => {
-          const c = color === 'random' ? (Math.random() < 0.5 ? 'w' : 'b') : color;
-          router.push({ pathname: '/ai/play', params: { level: String(level), color: c, time } });
-        }}
-      />
-      <Text style={styles.footnote}>{t('ai.footnote')}</Text>
     </Screen>
   );
 }
