@@ -169,14 +169,14 @@ function Stat({ label, value, color }: { label: string; value: number | string; 
 
 const styles = StyleSheet.create({
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
-  name: { color: colors.text, fontSize: 24, fontFamily: fonts.black },
-  rating: { color: colors.accent, fontSize: 40, fontFamily: fonts.black },
+  name: { color: colors.text, fontSize: 26, fontFamily: fonts.display, letterSpacing: -0.3 },
+  rating: { color: colors.text, fontSize: 48, fontFamily: fonts.display, letterSpacing: -1, fontVariant: ['tabular-nums'] },
   muted: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 13, textAlign: 'center' },
-  track: { height: 8, alignSelf: 'stretch', backgroundColor: colors.surfaceAlt, borderRadius: 4, overflow: 'hidden' },
+  track: { height: 4, alignSelf: 'stretch', backgroundColor: colors.raised, borderRadius: 2, overflow: 'hidden', marginTop: 6 },
   fill: { height: '100%', backgroundColor: colors.accent },
   stats: { flexDirection: 'row', gap: 8 },
   stat: { flex: 1, backgroundColor: colors.surface, borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
-  statValue: { color: colors.text, fontSize: 20, fontFamily: fonts.black },
+  statValue: { color: colors.text, fontSize: 22, fontFamily: fonts.display, fontVariant: ['tabular-nums'] },
   statLabel: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 11 },
   game: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12 },
   outcomeBar: { width: 4, alignSelf: 'stretch', borderRadius: 2 },
