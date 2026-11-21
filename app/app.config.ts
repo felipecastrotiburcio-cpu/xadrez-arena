@@ -80,6 +80,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     // Compras com dinheiro real (Google Play Billing / StoreKit 2) dos itens lendários.
     'expo-iap',
     './plugins/withReleaseSigning',
+    './plugins/withNoGwpAsan',
     [
       'expo-build-properties',
       {
