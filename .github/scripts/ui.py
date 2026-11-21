@@ -6,6 +6,7 @@
   ui.py findlast <ui.xml> <regex> -> igual, mas o último elemento que casa
   ui.py edit  <ui.xml> <n>       -> imprime "x y" do n-ésimo campo de texto (0 = primeiro)
   ui.py board <ui.xml>           -> imprime as peças do tabuleiro, ex: "e2:branco:p"
+  ui.py focused <ui.xml>         -> imprime o índice do campo de texto com o foco (0 = primeiro)
 """
 import re
 import sys
@@ -46,6 +47,15 @@ def edit(path, index):
     return 0
 
 
+def focused(path):
+    fields = [n for n in nodes(path) if n.get('class') == 'android.widget.EditText']
+    for i, n in enumerate(fields):
+        if n.get('focused') == 'true':
+            print(i)
+            return 0
+    return 1
+
+
 def board(path):
     # As casas têm descrição "e2 branco p" (com peça) ou "e4" (vazia).
     for n in nodes(path):
@@ -59,6 +69,8 @@ if __name__ == '__main__':
     cmd = sys.argv[1]
     if cmd == 'board':
         sys.exit(board(sys.argv[2]))
+    if cmd == 'focused':
+        sys.exit(focused(sys.argv[2]))
     if cmd == 'edit':
         sys.exit(edit(sys.argv[2], int(sys.argv[3])))
     sys.exit(find(sys.argv[2], sys.argv[3], last=(cmd == 'findlast')))

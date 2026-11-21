@@ -144,8 +144,16 @@ if tap 'Criar conta'; then
   USERNAME="robo$(date +%s | tail -c 5)"
   dump
   if xy=$(python3 "$UI" edit "$OUT/ui.xml" 0); then adb shell input tap $xy; sleep 1; adb shell input text "$USERNAME"; fi
+  # "Próximo" no teclado leva ao campo de senha, como uma pessoa faria. Tocar na posição do
+  # campo falha quando ele fica escondido atrás do teclado (o toque cai numa tecla).
+  adb shell input keyevent KEYCODE_ENTER
+  sleep 1
   dump
-  if xy=$(python3 "$UI" edit "$OUT/ui.xml" 1); then adb shell input tap $xy; sleep 1; adb shell input text "segredo123"; fi
+  if [ "$(python3 "$UI" focused "$OUT/ui.xml")" != "1" ]; then
+    log "ℹ️  'Próximo' não levou à senha; tocando no campo"
+    if xy=$(python3 "$UI" edit "$OUT/ui.xml" 1); then adb shell input tap $xy; sleep 1; fi
+  fi
+  adb shell input text "segredo123"
   adb shell input keyevent KEYCODE_BACK   # fecha o teclado
   sleep 1
   taplast 'Criar conta'

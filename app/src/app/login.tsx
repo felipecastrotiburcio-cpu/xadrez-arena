@@ -41,7 +41,7 @@ export default function Login() {
       <Screen>
         <View style={styles.brand}>
           <View style={styles.mark}>
-            <Icon name="knight" size={30} color={colors.accent} />
+            <Icon name="knight" size={24} color={colors.accent} />
           </View>
           <Text style={styles.title}>{t('login.welcome')}</Text>
           <Text style={styles.tagline}>{t('login.tagline')}</Text>
@@ -116,20 +116,21 @@ export default function Login() {
 }
 
 const styles = StyleSheet.create({
-  brand: { alignItems: 'center', gap: 8, marginTop: 12, marginBottom: 8 },
+  // Cabeçalho compacto: o formulário fica alto na tela e não some atrás do teclado.
+  brand: { alignItems: 'center', gap: 6, marginTop: 4, marginBottom: 4 },
   mark: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 15,
     backgroundColor: colors.accentSoft,
     borderWidth: 1,
     borderColor: 'rgba(220, 171, 79, 0.35)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6,
+    marginBottom: 4,
   },
-  title: { color: colors.text, fontSize: 30, fontFamily: fonts.display, textAlign: 'center', letterSpacing: -0.3 },
-  tagline: { color: colors.textMuted, fontSize: 14, fontFamily: fonts.regular, textAlign: 'center', maxWidth: 300, lineHeight: 20 },
+  title: { color: colors.text, fontSize: 27, fontFamily: fonts.display, textAlign: 'center', letterSpacing: -0.3 },
+  tagline: { color: colors.textMuted, fontSize: 14, fontFamily: fonts.regular, textAlign: 'center', maxWidth: 340, lineHeight: 20 },
   label: { color: colors.textMuted, fontSize: 13, fontFamily: fonts.bold },
   input: {
     backgroundColor: colors.surfaceAlt,
