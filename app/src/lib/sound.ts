@@ -64,6 +64,57 @@ export function playSound(name: BoardSound) {
   }
 }
 
+// ------------------------------------------------------------------ sons dos surgimentos
+
+/** Som de cada surgimento de peças (gerados por scripts/gen-entrance-sounds.mjs). */
+const ENTRANCE_SOURCES: Record<string, number> = {
+  pop: require('../../assets/sounds/entrance_pop.mp3'),
+  ground: require('../../assets/sounds/entrance_ground.mp3'),
+  rain: require('../../assets/sounds/entrance_rain.mp3'),
+  glitch: require('../../assets/sounds/entrance_glitch.mp3'),
+  pixel: require('../../assets/sounds/entrance_pixel.mp3'),
+  teleport: require('../../assets/sounds/entrance_teleport.mp3'),
+  blackhole: require('../../assets/sounds/entrance_blackhole.mp3'),
+  hero: require('../../assets/sounds/entrance_hero.mp3'),
+  lightning: require('../../assets/sounds/entrance_lightning.mp3'),
+};
+
+const entrancePlayers: Record<string, AudioPlayer | undefined> = {};
+let entranceNow: AudioPlayer | null = null;
+
+/** Toca o som do surgimento (do começo), sincronizado com a animação que começa agora. */
+export function playEntranceSound(effect: string) {
+  stopEntranceSound();
+  if (!enabled) return;
+  const src = ENTRANCE_SOURCES[effect];
+  if (!src) return;
+  try {
+    let p = entrancePlayers[effect];
+    if (!p) {
+      p = createAudioPlayer(src);
+      p.volume = 0.9;
+      entrancePlayers[effect] = p;
+    }
+    p.seekTo(0).catch(() => {});
+    p.play();
+    entranceNow = p;
+  } catch {
+    entrancePlayers[effect] = undefined;
+  }
+}
+
+/** Para o som do surgimento (ex.: alguém mexeu uma peça antes de terminar). */
+export function stopEntranceSound() {
+  const p = entranceNow;
+  entranceNow = null;
+  if (!p) return;
+  try {
+    p.pause();
+  } catch {
+    // já liberado
+  }
+}
+
 // ------------------------------------------------------------------ músicas das finalizações
 
 /** Música de cada movimento especial (composições originais em scripts/gen-sounds.mjs). */

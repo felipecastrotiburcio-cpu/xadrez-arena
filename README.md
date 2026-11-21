@@ -111,7 +111,7 @@ Testes: `cd app && npm run test:local`.
 - **Pré-lance:** na vez do adversário você já escolhe o próximo lance (casas em rosa); ele sai na hora se ainda for legal, senão é descartado. Tocar em outra casa cancela.
 - **En passant:** ao selecionar o peão, a casa de destino e o peão que será capturado (contorno tracejado) ficam marcados; ao capturar aparece o aviso "En passant!".
 - **Empates (como Lichess/Chess.com):** automáticos por afogamento, material insuficiente, repetição tripla e regra dos 50 lances; quem perde no tempo empata se o adversário não tiver material para dar mate. Proposta de empate: online o adversário aceita ou recusa; contra a IA ela aceita a partir do 10º lance se não estiver melhor (avaliação ≤ +0,3 peão para ela).
-- **Sons** (síntese própria em `app/scripts/gen-sounds.mjs`): toc de madeira no tabuleiro, captura (peça contra peça + tabuleiro), xeque e xeque-mate. **Músicas originais** nas finalizações: phonk de cowbell no Movimento do 67, funk tamborzão no Passinho do Jamal e fanfarra 8 bits nos demais. Liga/desliga em **Configurações**. O app usa `expo-audio` sem permissão de microfone.
+- **Sons** (síntese própria em `app/scripts/gen-sounds.mjs`): toc de madeira no tabuleiro, captura (peça contra peça + tabuleiro), xeque e xeque-mate. **Músicas originais** nas finalizações: phonk de cowbell no Movimento do 67, funk tamborzão no Passinho do Jamal e fanfarra 8 bits nos demais. Cada **surgimento de peças** tem som próprio em estéreo, sincronizado com a animação de cada peça (`app/scripts/gen-entrance-sounds.mjs`, exporta MP3 com ffmpeg). Liga/desliga em **Configurações**. O app usa `expo-audio` sem permissão de microfone.
 
 ## Loja e moedas
 

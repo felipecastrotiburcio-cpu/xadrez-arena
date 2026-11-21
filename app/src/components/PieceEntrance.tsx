@@ -4,6 +4,7 @@ import Svg, { Path } from 'react-native-svg';
 import { Chess, type Square } from 'chess.js';
 import { ChessPiece, type PieceType } from './ChessPiece';
 import type { EntranceStyle, PieceStyle, Side } from '../lib/types';
+import { playEntranceSound, stopEntranceSound } from '../lib/sound';
 
 /**
  * Surgimento das peças no começo da partida (categoria da loja). As peças aparecem uma a uma,
@@ -89,10 +90,17 @@ function EntranceLayerBase({ fen, orientation, sq, pieceStyle, entrance, playKey
       Animated.timing(v, { toValue: 1, duration: ms, delay: list[i].delay, easing: Easing.linear, useNativeDriver: native }),
     );
     const all = Animated.parallel(anims);
+    let ended = false;
+    playEntranceSound(entrance.effect);
     all.start(({ finished }) => {
-      if (finished) doneRef.current();
+      if (!finished) return;
+      ended = true; // a cauda do som (reverberação) continua tocando até o fim
+      doneRef.current();
     });
-    return () => all.stop();
+    return () => {
+      all.stop();
+      if (!ended) stopEntranceSound();
+    };
   }, [values, list, entrance.effect]);
 
   return (
