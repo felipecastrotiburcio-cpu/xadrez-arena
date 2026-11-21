@@ -254,6 +254,23 @@ test('loja: moedas, item lendário só por compra real, equipar, bônus diário 
   await assert.rejects(B.call('purchase', { platform: 'android', productId: 'board_galaxy', purchaseToken: 'x' }), /não configuradas|não encontrada/);
 });
 
+test('modo desenvolvedor: desligado por padrão, senha errada recusada, app não liga sozinho', async () => {
+  assert.equal((await B.call('me')).user.devMode, false);
+  await assert.rejects(B.call('dev_unlock', { password: 'senha-errada' }), /incorreta/);
+  await B.sb.from('wallets').update({ dev_mode: true }).eq('user_id', B.id);
+  assert.equal((await B.call('me')).user.devMode, false, 'RLS impede o app de ligar o modo');
+  await assert.rejects(B.call('buy', { itemId: 'board_galaxy' }), /compra no app/);
+  // A senha certa não fica no repositório público: só é testada quando vem de um segredo.
+  const pw = process.env.DEV_MODE_PASSWORD;
+  if (!pw) return;
+  const on = await B.call('dev_unlock', { password: pw });
+  assert.equal(on.user.devMode, true);
+  const r = await B.call('buy', { itemId: 'board_galaxy' });
+  assert.equal(r.user.coins, on.user.coins, 'lendário de graça');
+  assert.ok(r.user.inventory.includes('board_galaxy'));
+  assert.equal((await B.call('dev_lock')).user.devMode, false);
+});
+
 test('sessão: partida ativa é devolvida ao abrir o app', async () => {
   const { data: inv } = await A.sb.rpc('send_invite', { p_to: B.id, p_time_control: '5+0', p_rated: false, p_color: 'random' });
   const { gameId: g } = await B.call('invite_accept', { inviteId: inv.id });

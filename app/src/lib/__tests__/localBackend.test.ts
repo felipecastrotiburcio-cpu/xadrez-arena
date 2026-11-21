@@ -97,3 +97,20 @@ test('dados continuam após reiniciar o app', async () => {
   assert.equal(r.user.coins, 200);
   assert.ok(r.user.inventory.includes('board_tournament'));
 });
+
+test('modo desenvolvedor: senha errada recusada; com a senha certa a loja sai de graça', async () => {
+  const { token } = await call('/auth/register', { username: 'devlocal', password: 'segredo123' });
+  assert.equal((await call('/me', undefined, token)).user.devMode, false);
+  await assert.rejects(call('/dev/unlock', { password: 'errada123' }, token), /incorreta/);
+  // A senha certa não fica no repositório (ele é público): só é testada quando vem de fora.
+  const pw = process.env.DEV_MODE_PASSWORD;
+  if (!pw) return;
+  const on = await call('/dev/unlock', { password: pw }, token);
+  assert.equal(on.user.devMode, true);
+  const r = await call('/shop/buy', { itemId: 'board_galaxy' }, token);
+  assert.equal(r.user.coins, on.user.coins);
+  const r2 = await call('/shop/buy', { itemId: 'board_lava' }, token);
+  assert.equal(r2.user.coins, on.user.coins, 'item caro de moedas também é grátis');
+  assert.equal((await call('/dev/lock', {}, token)).user.devMode, false);
+  await assert.rejects(call('/shop/buy', { itemId: 'board_royal' }, token), /compra no app/);
+});

@@ -27,6 +27,8 @@ export interface User {
   /** Vitórias seguidas em partidas online. */
   winStreak: number;
   bestStreak: number;
+  /** Modo desenvolvedor (senha nas Configurações do app): loja de graça. */
+  devMode?: boolean;
   /** Incrementado para invalidar todos os tokens JWT emitidos (ex: "sair de todos os aparelhos"). */
   tokenVersion: number;
 }

@@ -51,7 +51,7 @@ jobs:
         run: |
           cd supabase/tests && npm ci && npm run test:sql
           cd ../functions && deno check --config arena/deno.json arena/index.ts
-          deno test --config arena/deno.json --allow-env arena/purchases.test.ts
+          deno test --config arena/deno.json --allow-env arena/purchases.test.ts arena/devMode.test.ts
 
       - name: Conferir a raiz da Apple fixada no código
         run: |

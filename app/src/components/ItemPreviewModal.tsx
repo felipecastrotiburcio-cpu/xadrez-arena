@@ -23,13 +23,15 @@ interface Props {
   /** Item lendário: preço da loja do aparelho (compra com dinheiro real). */
   storePrice?: string;
   busy: boolean;
+  /** Modo desenvolvedor: comprar sai de graça. */
+  free?: boolean;
   onBuy: () => void;
   onEquip: () => void;
   onClose: () => void;
 }
 
 /** Prévia de tabuleiro/peças antes de comprar: um tabuleiro grande onde dá para mexer as peças. */
-export function ItemPreviewModal({ item, board, pieces, owned, equipped, coins, storePrice, busy, onBuy, onEquip, onClose }: Props) {
+export function ItemPreviewModal({ item, board, pieces, owned, equipped, coins, storePrice, busy, free, onBuy, onEquip, onClose }: Props) {
   const { width, height } = useWindowDimensions();
   const size = Math.min(width - 48, height * 0.5, 440);
   const isEntrance = item.type === 'entrance';
@@ -92,6 +94,8 @@ export function ItemPreviewModal({ item, board, pieces, owned, equipped, coins, 
                 <Text style={styles.equipped}>{t('common.equipped')}</Text>
               ) : owned ? (
                 <Button small variant="secondary" title={t('common.equip')} loading={busy} onPress={onEquip} />
+              ) : free ? (
+                <Button small variant="gold" title={`🛠 ${t('shop.devFree')}`} loading={busy} onPress={onBuy} />
               ) : (
                 <Button
                   small
@@ -103,7 +107,7 @@ export function ItemPreviewModal({ item, board, pieces, owned, equipped, coins, 
                 />
               )}
             </View>
-            {!owned && !item.iap && coins < item.price && (
+            {!owned && !free && !item.iap && coins < item.price && (
               <Text style={styles.hint}>
                 {t('shop.missingCoins', { count: (item.price - coins).toLocaleString(locale) })}
               </Text>

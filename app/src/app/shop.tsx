@@ -73,6 +73,9 @@ export default function Shop() {
     );
   }
 
+  /** Modo desenvolvedor (Configurações): todos os itens de graça, sem confirmação. */
+  const dev = !!user.devMode;
+
   const run = async (itemId: string, action: 'buy' | 'equip') => {
     setBusy(itemId);
     try {
@@ -142,6 +145,7 @@ export default function Shop() {
           <Text style={styles.muted}>{t('shop.bonusClaimed')}</Text>
         )}
       </Card>
+      {dev && <Text style={styles.devBanner}>{t('shop.devBanner')}</Text>}
       <Text style={styles.hint}>
         {isLocalMode()
           ? t('shop.hintLocal')
@@ -195,7 +199,7 @@ export default function Shop() {
               <Text style={styles.name}>{itemName(item, lang)}</Text>
               <Text style={[styles.rarity, { color: rarity.color }]}>{t(`rarity.${item.rarity}` as TranslationKey)}</Text>
               {item.description ? <Text style={styles.muted}>{itemDescription(item, lang)}</Text> : null}
-              {item.iap && !owned ? <Text style={styles.realBadge}>{t('shop.legendaryReal')}</Text> : null}
+              {item.iap && !owned && !dev ? <Text style={styles.realBadge}>{t('shop.legendaryReal')}</Text> : null}
               <View style={styles.actions}>
                 {(item.type === 'move' || item.type === 'board' || item.type === 'pieces' || item.type === 'entrance') && (
                   <Button small variant="secondary" title={t('shop.view')} icon={item.type === 'move' || item.type === 'entrance' ? '▶' : '👁'} onPress={() => setPreview(item)} />
@@ -204,6 +208,8 @@ export default function Shop() {
                   <Text style={styles.equipped}>{t('common.equipped')}</Text>
                 ) : owned ? (
                   <Button small variant="secondary" title={t('common.equip')} loading={busy === item.id} onPress={() => run(item.id, 'equip')} />
+                ) : dev ? (
+                  <Button small variant="gold" title={`🛠 ${t('shop.devFree')}`} loading={busy === item.id} onPress={() => run(item.id, 'buy')} />
                 ) : item.iap ? (
                   <Button
                     small
@@ -245,8 +251,11 @@ export default function Shop() {
           coins={user.coins}
           storePrice={preview.iap ? prices[preview.iap] : undefined}
           busy={busy === preview.id}
+          free={dev}
           onBuy={() =>
-            preview.iap
+            dev
+              ? run(preview.id, 'buy')
+              : preview.iap
               ? buyReal(preview)
               : confirmAction(
               t('shop.buyQ', { name: itemName(preview, lang) }),
@@ -337,6 +346,7 @@ function MiniBoard({ board, pieces }: { board: BoardStyle; pieces: PieceStyle })
 }
 
 const styles = StyleSheet.create({
+  devBanner: { color: colors.accent, fontFamily: fonts.black, textAlign: 'center', fontSize: 14 },
   wallet: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   text: { color: colors.text, fontSize: 15 },
   muted: { color: colors.textMuted, fontSize: 13 },

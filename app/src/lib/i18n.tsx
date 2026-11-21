@@ -81,6 +81,7 @@ const SERVER_FIXED: Record<string, string> = {
   'Esse nome de usuário já existe.': 'That username is already taken.',
   'Usuário ou senha incorretos.': 'Wrong username or password.',
   'Item não encontrado.': 'Item not found.',
+  'Senha do modo desenvolvedor incorreta.': 'Wrong developer mode password.',
   'Você já possui este item.': 'You already own this item.',
   'Compre o item antes de equipar.': 'Buy the item before equipping it.',
   'Você já resgatou o bônus de hoje. Volte amanhã!': "You already claimed today's bonus. Come back tomorrow!",

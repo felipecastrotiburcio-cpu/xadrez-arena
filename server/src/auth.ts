@@ -91,6 +91,7 @@ export function privateUser(u: User) {
     inventory: u.inventory,
     equipped: u.equipped,
     dailyBonusAvailable: u.lastDailyBonus !== today(),
+    devMode: !!u.devMode,
   };
 }
 

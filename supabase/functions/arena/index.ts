@@ -9,6 +9,7 @@ import { CATALOG, DAILY_BONUS, LEVEL_UP_BONUS, aiCoinReward, coinReward, getItem
 import { levelFor, ratingDelta } from '../_shared/levels.ts';
 import { getTimeControl, type TimeControl } from '../_shared/timeControls.ts';
 import { PurchaseError, verifyPurchase } from './purchases.ts';
+import { checkDevPassword } from './devMode.ts';
 
 type Side = 'w' | 'b';
 type Json = Record<string, unknown>;
@@ -57,6 +58,7 @@ interface WalletRow {
   coins: number;
   inventory: string[];
   last_daily: string | null;
+  dev_mode?: boolean;
 }
 
 /** Mesmo formato de PublicUser do app (mais o país). */
@@ -89,6 +91,7 @@ function privateUser(p: ProfileRow, w: WalletRow) {
     inventory: w.inventory,
     equipped: p.equipped,
     dailyBonusAvailable: w.last_daily !== today,
+    devMode: !!w.dev_mode,
   };
 }
 
@@ -588,16 +591,36 @@ class Arena {
   async buy(itemId: string) {
     const item = getItem(itemId);
     if (!item) throw new UserError('Item não encontrado.', 404);
-    if (item.iap) throw new UserError('Este item é vendido como compra no app (Google Play / App Store).');
-    const { data: left, error } = await this.db.rpc('buy_item', { p_user: this.userId, p_item: item.id, p_price: item.price });
+    // Modo desenvolvedor: tudo de graça, inclusive os lendários de dinheiro real.
+    const dev = !!(await this.wallet()).dev_mode;
+    if (item.iap && !dev) throw new UserError('Este item é vendido como compra no app (Google Play / App Store).');
+    const price = dev ? 0 : item.price;
+    const { data: left, error } = await this.db.rpc('buy_item', { p_user: this.userId, p_item: item.id, p_price: price });
     if (error) throw new Error(error.message);
     if (left === null) {
       const w = await this.wallet();
       if (w.inventory.includes(item.id)) throw new UserError('Você já possui este item.', 409);
-      throw new UserError(`Faltam ${item.price - w.coins} moedas para comprar ${item.name}.`, 402);
+      throw new UserError(`Faltam ${price - w.coins} moedas para comprar ${item.name}.`, 402);
     }
     await this.db.rpc('equip_item', { p_user: this.userId, p_type: item.type, p_item: item.id });
     return { user: await this.me() };
+  }
+
+  /** Liga o modo desenvolvedor depois de conferir a senha (só a derivação dela fica no código). */
+  async devUnlock(password: string) {
+    if (!(await checkDevPassword(password))) throw new UserError('Senha do modo desenvolvedor incorreta.', 403);
+    await this.setDevMode(true);
+    return { user: await this.me() };
+  }
+
+  async devLock() {
+    await this.setDevMode(false);
+    return { user: await this.me() };
+  }
+
+  async setDevMode(on: boolean) {
+    const { error } = await this.db.from('wallets').update({ dev_mode: on }).eq('user_id', this.userId);
+    if (error) throw new Error(error.message);
   }
 
   async equip(itemId: string) {
@@ -682,6 +705,10 @@ Deno.serve(async (req) => {
         return json({ state: await arena.sync(s('gameId')) });
       case 'buy':
         return json(await arena.buy(s('itemId')));
+      case 'dev_unlock':
+        return json(await arena.devUnlock(s('password')));
+      case 'dev_lock':
+        return json(await arena.devLock());
       case 'equip':
         return json(await arena.equip(s('itemId')));
       case 'daily':

@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import Constants from 'expo-constants';
 import { router } from 'expo-router';
-import { StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { Segmented } from '../components/TimeControlPicker';
 import { Button, Card, Screen, SectionTitle } from '../components/ui';
 import { api, getServerUrl, setServerUrl, usingSupabase } from '../lib/api';
@@ -106,12 +107,95 @@ export default function Settings() {
           </Card>
         </>
       )}
+
+      <DeveloperMode />
     </Screen>
+  );
+}
+
+const DEV_TAPS = 7;
+
+/**
+ * Modo desenvolvedor, escondido: aparece depois de tocar 7 vezes na versão do app (como no
+ * Android). Ativar pede a senha, conferida pelo servidor (ou pelo aparelho, nas contas locais).
+ */
+function DeveloperMode() {
+  const { user, setUser } = useAuth();
+  const { t } = useT();
+  const toast = useToast();
+  const [taps, setTaps] = useState(0);
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const last = useRef(0);
+  const visible = taps >= DEV_TAPS || !!user?.devMode;
+
+  const tap = () => {
+    const now = Date.now();
+    // toques espaçados demais recomeçam a contagem
+    const n = now - last.current > 1500 ? 1 : taps + 1;
+    last.current = now;
+    setTaps(n);
+    if (n >= 3 && n < DEV_TAPS) toast(t('settings.devTapsLeft', { n: DEV_TAPS - n }), 'info');
+  };
+
+  const toggle = async (on: boolean) => {
+    setBusy(true);
+    try {
+      const r = await api<{ user: PrivateUser }>(on ? '/dev/unlock' : '/dev/lock', { body: on ? { password } : {} });
+      setUser(r.user);
+      setPassword('');
+      toast(t(on ? 'settings.devActivated' : 'settings.devDeactivated'), 'success');
+    } catch (e) {
+      toast(translateServerText((e as Error).message), 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      {visible && (
+        <>
+          <SectionTitle>{t('settings.dev')}</SectionTitle>
+          <Card>
+            {!user ? (
+              <Text style={styles.muted}>{t('settings.devLogin')}</Text>
+            ) : user.devMode ? (
+              <>
+                <Text style={styles.text}>{t('settings.devOn')}</Text>
+                <Button title={t('settings.devDeactivate')} variant="secondary" loading={busy} onPress={() => toggle(false)} />
+              </>
+            ) : (
+              <>
+                <Text style={styles.muted}>{t('settings.devDesc')}</Text>
+                <TextInput
+                  style={styles.input}
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder={t('settings.devPassword')}
+                  placeholderTextColor={colors.textMuted}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  onSubmitEditing={() => password && toggle(true)}
+                  testID="dev-password"
+                />
+                <Button title={t('settings.devActivate')} icon="🛠" loading={busy} disabled={!password} onPress={() => toggle(true)} />
+              </>
+            )}
+          </Card>
+        </>
+      )}
+      <Pressable onPress={tap} accessibilityRole="text" testID="app-version" style={styles.version}>
+        <Text style={styles.muted}>{t('settings.version', { v: Constants.expoConfig?.version ?? '?' })}</Text>
+      </Pressable>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  version: { alignItems: 'center', paddingVertical: 18 },
   muted: { color: colors.textMuted, fontSize: 13 },
   text: { color: colors.text, fontSize: 16 },
   input: {

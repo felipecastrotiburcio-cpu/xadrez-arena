@@ -122,3 +122,20 @@ test('catálogo do app é igual ao do servidor', async () => {
   assert.deepEqual(app.DEFAULT_EQUIPPED, server.DEFAULT_EQUIPPED);
   assert.equal(app.STARTING_COINS, server.STARTING_COINS);
 });
+
+test('modo desenvolvedor: senha errada recusada; com a senha certa a loja sai de graça', async () => {
+  const { token } = await register('dev_tester');
+  assert.equal((await api('/me', { token })).data.user.devMode, false);
+  assert.equal((await api('/dev/unlock', { token, body: { password: 'errada123' } })).status, 403);
+  assert.equal((await api('/shop/buy', { token, body: { itemId: 'board_galaxy' } })).status, 400);
+  // A senha certa não fica no repositório (ele é público): só é testada quando vem de fora.
+  const pw = process.env.DEV_MODE_PASSWORD;
+  if (!pw) return;
+  const on = await api('/dev/unlock', { token, body: { password: pw } });
+  assert.equal(on.data.user.devMode, true);
+  const r = await api('/shop/buy', { token, body: { itemId: 'board_galaxy' } });
+  assert.equal(r.status, 200);
+  assert.equal(r.data.user.coins, on.data.user.coins);
+  const off = await api('/dev/lock', { token, body: {} });
+  assert.equal(off.data.user.devMode, false);
+});

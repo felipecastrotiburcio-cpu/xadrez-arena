@@ -78,3 +78,16 @@ for (const fn of ['claim_daily($1,50)', 'ai_reward($1,1000,9999)', "equip_item($
 ok((await q(`select equipped->>'entrance' e from profiles where id=$1`, [a]))[0].e === 'entrance_pop', 'contas antigas recebem o surgimento padrão');
 const c = await mk('carla', 'PT');
 ok((await q(`select 'entrance_pop' = any(inventory) v from wallets where user_id=$1`, [c]))[0].v, 'conta nova já tem o surgimento padrão');
+
+// Modo desenvolvedor
+ok((await q(`select dev_mode d from wallets where user_id=$1`, [c]))[0].d === false, 'modo desenvolvedor começa desligado');
+try {
+  await as(c, `update wallets set dev_mode = true where user_id = $1`, [c]);
+} catch {
+  // sem permissão de escrita: ótimo
+}
+ok((await q(`select dev_mode d from wallets where user_id=$1`, [c]))[0].d === false, 'o app não consegue ligar o modo desenvolvedor sozinho');
+await q(`update wallets set dev_mode = true where user_id = $1`, [c]);
+const coinsC = (await q(`select coins from wallets where user_id=$1`, [c]))[0].coins;
+ok((await q(`select buy_item($1,'board_galaxy',0) r`, [c]))[0].r === coinsC, 'modo desenvolvedor: item lendário de graça');
+ok((await q(`select 'board_galaxy' = any(inventory) v from wallets where user_id=$1`, [c]))[0].v, 'item grátis entra no inventário');

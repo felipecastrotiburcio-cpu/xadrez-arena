@@ -8,6 +8,7 @@ import {
   CATALOG,
   DAILY_BONUS,
   DEFAULT_EQUIPPED,
+  DEV_MODE_KDF,
   DEFAULT_ITEMS,
   getItem,
   LEVEL_UP_BONUS,
@@ -49,6 +50,8 @@ interface LocalUser {
   lastDailyBonus: string | null;
   winStreak: number;
   bestStreak: number;
+  /** Modo desenvolvedor (senha nas Configurações): loja de graça. */
+  devMode?: boolean;
 }
 
 interface LocalGame extends Omit<GameSummary, 'opponent'> {
@@ -155,6 +158,13 @@ function publicUser(u: LocalUser) {
   };
 }
 
+/** Confere a senha do modo desenvolvedor contra a derivação guardada no catálogo. */
+async function checkDevPassword(password: string) {
+  if (!password || password.length > 128) return false;
+  const key = await pbkdf2Async(sha256, password, DEV_MODE_KDF.salt, { c: DEV_MODE_KDF.iterations, dkLen: 32 });
+  return bytesToHex(key) === DEV_MODE_KDF.hash;
+}
+
 function privateUser(u: LocalUser) {
   return {
     ...publicUser(u),
@@ -162,6 +172,7 @@ function privateUser(u: LocalUser) {
     inventory: u.inventory,
     equipped: u.equipped,
     dailyBonusAvailable: u.lastDailyBonus !== today(),
+    devMode: !!u.devMode,
   };
 }
 
@@ -290,19 +301,33 @@ async function handle(data: Data, method: string, route: string, body: Record<st
     if (!item) throw new ApiError('Item não encontrado.', 404);
     if (route === '/shop/buy') {
       if (user.inventory.includes(item.id)) throw new ApiError('Você já possui este item.', 409);
-      if (item.iap) {
+      // Modo desenvolvedor: tudo de graça, inclusive os lendários de dinheiro real.
+      const price = user.devMode ? 0 : item.price;
+      if (item.iap && !user.devMode) {
         throw new ApiError('Este item é vendido como compra no app (Google Play / App Store).', 400);
       }
-      if (user.coins < item.price) {
-        throw new ApiError(`Faltam ${item.price - user.coins} moedas para comprar ${item.name}.`, 402);
+      if (user.coins < price) {
+        throw new ApiError(`Faltam ${price - user.coins} moedas para comprar ${item.name}.`, 402);
       }
-      user.coins -= item.price;
+      user.coins -= price;
       user.inventory.push(item.id);
     } else if (!user.inventory.includes(item.id)) {
       throw new ApiError('Compre o item antes de equipar.', 403);
     }
     // Comprar já equipa: é o que o jogador quer ver em seguida.
     user.equipped = { ...user.equipped, [item.type]: item.id };
+    return { user: privateUser(user) };
+  }
+
+  if (method === 'POST' && route === '/dev/unlock') {
+    const user = requireUser(data, token);
+    if (!(await checkDevPassword(String(body.password ?? '')))) throw new ApiError('Senha do modo desenvolvedor incorreta.', 403);
+    user.devMode = true;
+    return { user: privateUser(user) };
+  }
+  if (method === 'POST' && route === '/dev/lock') {
+    const user = requireUser(data, token);
+    user.devMode = false;
     return { user: privateUser(user) };
   }
 

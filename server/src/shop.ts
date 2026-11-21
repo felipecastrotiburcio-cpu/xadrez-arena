@@ -1,6 +1,8 @@
+import { pbkdf2 } from 'node:crypto';
+import { promisify } from 'node:util';
 import { Router } from 'express';
 import { privateUser, today, type Auth, type AuthedRequest } from './auth.js';
-import { CATALOG, DAILY_BONUS, getItem } from './catalog.js';
+import { CATALOG, DAILY_BONUS, DEV_MODE_KDF, getItem } from './catalog.js';
 import type { Database } from './db.js';
 import type { Notifier } from './notifications.js';
 
@@ -19,19 +21,32 @@ export function createShopRoutes(db: Database, auth: Auth, notifier: Notifier) {
     const item = getItem(String(req.body?.itemId ?? ''));
     if (!item) return res.status(404).json({ error: 'Item não encontrado.' });
     if (user.inventory.includes(item.id)) return res.status(409).json({ error: 'Você já possui este item.' });
-    if (item.iap) {
+    // Modo desenvolvedor: tudo de graça, inclusive os lendários de dinheiro real.
+    const price = user.devMode ? 0 : item.price;
+    if (item.iap && !user.devMode) {
       return res.status(400).json({ error: 'Este item é vendido como compra no app (Google Play / App Store).' });
     }
-    if (user.coins < item.price) {
-      return res.status(402).json({ error: `Faltam ${item.price - user.coins} moedas para comprar ${item.name}.` });
+    if (user.coins < price) {
+      return res.status(402).json({ error: `Faltam ${price - user.coins} moedas para comprar ${item.name}.` });
     }
     // Comprar já equipa: é o que o jogador quer ver em seguida.
     const updated = db.updateUser(user.id, {
-      coins: user.coins - item.price,
+      coins: user.coins - price,
       inventory: [...user.inventory, item.id],
       equipped: { ...user.equipped, [item.type]: item.id },
     })!;
     res.json({ user: privateUser(updated) });
+  });
+
+  r.post('/dev/unlock', auth.requireAuth, async (req: AuthedRequest, res) => {
+    if (!(await checkDevPassword(String(req.body?.password ?? '')))) {
+      return res.status(403).json({ error: 'Senha do modo desenvolvedor incorreta.' });
+    }
+    res.json({ user: privateUser(db.updateUser(req.userId!, { devMode: true })!) });
+  });
+
+  r.post('/dev/lock', auth.requireAuth, (req: AuthedRequest, res) => {
+    res.json({ user: privateUser(db.updateUser(req.userId!, { devMode: false })!) });
   });
 
   r.post('/shop/equip', auth.requireAuth, (req: AuthedRequest, res) => {
@@ -69,4 +84,13 @@ export function createShopRoutes(db: Database, auth: Auth, notifier: Notifier) {
   });
 
   return r;
+}
+
+const pbkdf2Async = promisify(pbkdf2);
+
+/** Confere a senha do modo desenvolvedor (só a derivação PBKDF2 dela fica no código). */
+export async function checkDevPassword(password: string) {
+  if (!password || password.length > 128) return false;
+  const key = await pbkdf2Async(password, DEV_MODE_KDF.salt, DEV_MODE_KDF.iterations, 32, 'sha256');
+  return key.toString('hex') === DEV_MODE_KDF.hash;
 }

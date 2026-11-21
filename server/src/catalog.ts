@@ -310,6 +310,17 @@ export const getItem = (id: string) => CATALOG.find((i) => i.id === id);
 // ------------------------------------------------------------- economia
 export const STARTING_COINS = 300;
 export const DAILY_BONUS = 50;
+
+/**
+ * Modo desenvolvedor: com ele ativo na conta, todos os itens da loja saem de graça.
+ * A senha NUNCA fica no código (o repositório é público): guardamos só a derivação
+ * PBKDF2-SHA256 dela; quem confere é o servidor (ou o aparelho, nas contas locais).
+ */
+export const DEV_MODE_KDF = {
+  salt: 'xadrez-arena/dev-mode/v1',
+  iterations: 60000,
+  hash: 'b53c500622b0d3453ba95fe2d6b8f92730f92f4410fb9cca6e45d29cb13cc7a3',
+} as const;
 export const LEVEL_UP_BONUS = 100;
 /** Bônus por vitória a partir da 3ª vitória seguida (máx. +50). */
 export function streakBonus(streak: number) {

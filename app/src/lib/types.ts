@@ -25,6 +25,8 @@ export interface PrivateUser extends PublicUser {
   inventory: string[];
   equipped: Record<ItemType, string>;
   dailyBonusAvailable: boolean;
+  /** Modo desenvolvedor ativo na conta: todos os itens da loja de graça. */
+  devMode?: boolean;
 }
 
 export interface BoardStyle {
