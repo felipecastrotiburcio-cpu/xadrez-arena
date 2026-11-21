@@ -310,7 +310,6 @@ export const en: Dictionary & Record<string, string> = {
   'shop.filterAll': 'All',
   'shop.filterOwned': 'Owned',
   'shop.featured': 'Featured',
-  'shop.watch': 'Watch',
   'shop.noneOwned': "You don't own anything in this category yet.",
   'shop.earnTitle': 'How to earn coins',
   'shop.fittingRoom': 'Fitting room',

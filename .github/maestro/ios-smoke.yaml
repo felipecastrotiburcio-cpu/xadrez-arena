@@ -118,9 +118,15 @@ appId: app.xadrezarena
           timeout: 5000
       - tapOn: ".*Loja.*"
       - extendedWaitUntil:
-          visible: ".*Verde Torneio.*"
+          visible: ".*Tabuleiros.*"
           timeout: 10000
-# Abre a prévia do "Verde Torneio" (150) e compra por ela
+# Os itens ficam numa grade abaixo do destaque: rola até o "Verde Torneio" (150) aparecer
+- scrollUntilVisible:
+    element:
+      text: ".*Verde Torneio.*"
+    direction: DOWN
+    timeout: 20000
+# Abre a prévia do "Verde Torneio" e compra por ela
 - tapOn: ".*Verde Torneio.*"
 - extendedWaitUntil:
     visible: ".*Toque nas peças.*"
@@ -132,6 +138,11 @@ appId: app.xadrezarena
     timeout: 15000
 - takeScreenshot: ${OUT}/07-compra
 - tapOn: ".*Fechar.*"
+- scrollUntilVisible:
+    element:
+      text: ".*Nogueira Entalhada.*"
+    direction: DOWN
+    timeout: 20000
 - tapOn: ".*Nogueira Entalhada.*"
 - extendedWaitUntil:
     visible: ".*Toque nas peças.*"

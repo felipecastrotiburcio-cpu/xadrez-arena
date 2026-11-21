@@ -56,9 +56,26 @@ taplast() {
   return 1
 }
 seen() { dump; python3 "$UI" find "$OUT/ui.xml" "$1" > /dev/null; }
+# Rolagem da tela (a loja tem itens abaixo da dobra): para baixo procura, para cima volta ao topo.
+scroll_down() { adb shell input swipe "$((SW / 2))" "$((SH * 7 / 10))" "$((SW / 2))" "$((SH * 4 / 10))" 400; sleep 1; }
+scroll_top() { for _ in 1 2 3; do adb shell input swipe "$((SW / 2))" "$((SH * 35 / 100))" "$((SW / 2))" "$((SH * 8 / 10))" 300; done; sleep 1; }
+# Como tap(), mas rola a tela para baixo até achar o elemento.
+tapscroll() {
+  for _ in $(seq 1 6); do
+    dump
+    if xy=$(python3 "$UI" find "$OUT/ui.xml" "$1"); then
+      adb shell input tap $xy
+      return 0
+    fi
+    scroll_down
+  done
+  return 1
+}
 alive() { adb shell pidof "$PKG" > /dev/null; }
 
 log "Dispositivo: $(adb shell getprop ro.product.model | tr -d '\r') · Android $(adb shell getprop ro.build.version.release | tr -d '\r') (API $(adb shell getprop ro.build.version.sdk | tr -d '\r'))"
+read -r SW SH <<< "$(adb shell wm size | grep -oE '[0-9]+x[0-9]+' | tail -1 | tr 'x' ' ')"
+SW=${SW:-1080}; SH=${SH:-2400}
 
 # 1. Instalação
 if adb install -r "$APK" > "$OUT/install.txt" 2>&1; then ok "APK instalado"; else fail "Falha ao instalar: $(cat "$OUT/install.txt")"; exit 1; fi
@@ -170,14 +187,16 @@ if tap 'Criar conta'; then
   if tap 'Loja'; then
     sleep 4
     shot 12-loja
-    if tap '150'; then
+    if tapscroll '150'; then
       sleep 2
       tap 'comprar' || true   # botão do diálogo de confirmação
       sleep 3
       shot 13-compra
-      if seen '.*153.*|.*150.*' && seen '.*Equipado.*'; then ok "Compra na loja feita e item equipado (saldo atualizado)"; else fail "Compra na loja não confirmada"; fi
+      EQUIPPED=0; seen '.*Equipado.*' && EQUIPPED=1
+      scroll_top   # o saldo fica no topo da loja
+      if [ "$EQUIPPED" = "1" ] && seen '.*153.*|.*150.*'; then ok "Compra na loja feita e item equipado (saldo atualizado)"; else fail "Compra na loja não confirmada"; fi
       # Prévia de tabuleiro antes de comprar
-      if tap 'Nogueira Entalhada'; then
+      if tapscroll 'Nogueira Entalhada'; then
         sleep 3
         shot 14-previa-tabuleiro
         if seen 'Toque nas peças.*' && seen 'Comprar · .*'; then ok "Prévia do tabuleiro abriu com botão de compra"; else fail "Prévia do tabuleiro não abriu"; fi

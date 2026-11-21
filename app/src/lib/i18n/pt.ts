@@ -311,7 +311,6 @@ export const pt = {
   'shop.filterAll': 'Todos',
   'shop.filterOwned': 'Meus',
   'shop.featured': 'Destaque',
-  'shop.watch': 'Assistir',
   'shop.noneOwned': 'Você ainda não tem itens desta categoria.',
   'shop.earnTitle': 'Como ganhar moedas',
   'shop.fittingRoom': 'Provador',

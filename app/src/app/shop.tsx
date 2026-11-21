@@ -291,31 +291,36 @@ export default function Shop() {
         </View>
       )}
 
-      {/* Destaque da categoria */}
+      {/* Destaque da categoria: cartão horizontal e compacto, para a grade aparecer logo abaixo */}
       {featured && tab !== 'character' && (
-        <Pressable onPress={() => open(featured)} style={styles.featured}>
+        <Pressable
+          onPress={() => open(featured)}
+          style={({ pressed }) => [styles.featured, pressed && { backgroundColor: colors.surfaceAlt }]}
+        >
           <View style={[styles.featuredArt, { backgroundColor: tintFor(featured.rarity) }]}>
-            <ItemPreview item={featured} board={look.board} pieces={look.pieces} username={user.username} size={150} />
+            <ItemPreview item={featured} board={look.board} pieces={look.pieces} username={user.username} size={112} />
+            {featured.type !== 'avatar' && featured.type !== 'move' && (
+              <View style={styles.artBadge}>
+                <Icon name={featured.type === 'entrance' ? 'play' : 'eye'} size={13} color={colors.text} strokeWidth={2} />
+              </View>
+            )}
           </View>
           <View style={styles.featuredBody}>
             <View style={styles.featuredTag}>
               <Icon name="crown" size={12} color={RARITY[featured.rarity].color} strokeWidth={2.2} />
-              <Text style={[styles.eyebrow, { color: RARITY[featured.rarity].color }]}>
+              <Text style={[styles.eyebrow, { color: RARITY[featured.rarity].color }]} numberOfLines={1}>
                 {t('shop.featured')} · {t(`rarity.${featured.rarity}` as TranslationKey)}
               </Text>
             </View>
-            <Text style={styles.featuredName}>{itemName(featured, lang)}</Text>
+            <Text style={styles.featuredName} numberOfLines={2}>
+              {itemName(featured, lang)}
+            </Text>
             {featured.description ? (
-              <Text style={styles.featuredDesc} numberOfLines={3}>
+              <Text style={styles.featuredDesc} numberOfLines={2}>
                 {itemDescription(featured, lang)}
               </Text>
             ) : null}
-            <View style={{ flexDirection: 'row', gap: 8, marginTop: 6, alignItems: 'center' }}>
-              {action(featured)}
-              {featured.type !== 'avatar' && (
-                <Text style={styles.link}>{featured.type === 'move' || featured.type === 'entrance' ? t('shop.watch') : t('shop.view')}</Text>
-              )}
-            </View>
+            <View style={styles.featuredAction}>{action(featured)}</View>
           </View>
         </Pressable>
       )}
@@ -591,18 +596,31 @@ const styles = StyleSheet.create({
   filterOn: { backgroundColor: colors.raised },
   filterText: { color: colors.textMuted, fontFamily: fonts.bold, fontSize: 12 },
   featured: {
+    flexDirection: 'row',
+    gap: 14,
+    padding: 8,
     borderRadius: radius.lg,
-    overflow: 'hidden',
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  featuredArt: { height: 200, alignItems: 'center', justifyContent: 'center' },
-  featuredBody: { padding: 18, gap: 6 },
+  featuredArt: { width: 132, height: 132, borderRadius: 15, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  artBadge: {
+    position: 'absolute',
+    right: 7,
+    bottom: 7,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(15, 14, 12, 0.75)',
+  },
+  featuredBody: { flex: 1, paddingVertical: 6, paddingRight: 6, gap: 4 },
   featuredTag: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  featuredName: { color: colors.text, fontFamily: fonts.display, fontSize: 26, letterSpacing: -0.3 },
-  featuredDesc: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 14, lineHeight: 20 },
-  link: { color: colors.accent, fontFamily: fonts.bold, fontSize: 14, paddingHorizontal: 8 },
+  featuredName: { color: colors.text, fontFamily: fonts.display, fontSize: 21, lineHeight: 25, letterSpacing: -0.3 },
+  featuredDesc: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 13, lineHeight: 18 },
+  featuredAction: { flexDirection: 'row', marginTop: 'auto', paddingTop: 6 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   card: {
     borderRadius: radius.lg,
