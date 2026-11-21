@@ -154,7 +154,7 @@ function publicUser(u: LocalUser) {
     createdAt: u.createdAt,
     winStreak: u.winStreak,
     bestStreak: u.bestStreak,
-    cosmetics: { avatar: u.equipped.avatar, character: u.equipped.character, move: u.equipped.move },
+    cosmetics: { avatar: u.equipped.avatar, character: u.equipped.character, move: u.equipped.move, pieces: u.equipped.pieces, entrance: u.equipped.entrance },
   };
 }
 

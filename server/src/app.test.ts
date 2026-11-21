@@ -116,6 +116,9 @@ test('amizade, convite, partida com mate e atualização de rating', async () =>
   // Vencedor ganha 30 moedas (ranqueada), perdedor 5.
   assert.deepEqual(result.coinRewards, { black: 30, white: 5 });
   assert.equal(result.black.cosmetics.move, 'move_jamal');
+  // Cada jogador leva as próprias peças e o próprio surgimento para a partida.
+  assert.equal(result.white.cosmetics.pieces, 'pieces_classic');
+  assert.equal(result.black.cosmetics.entrance, 'entrance_pop');
   assert.deepEqual(result.streaks, { black: 1, white: 0 });
 
   const profile = await api(`/users/${ana.user.id}`, { token: bruno.token });

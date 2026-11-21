@@ -1,6 +1,6 @@
 import { memo, type ReactNode } from 'react';
 import Svg, { Circle, Defs, Ellipse, G, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
-import type { PieceStyle, Side } from '../lib/types';
+import { forSide, type PieceStyle, type Side, type SidedStyle } from '../lib/types';
 
 /**
  * Peças de xadrez vetoriais (desenho próprio, viewBox 100x100).
@@ -931,11 +931,13 @@ const MODELS: Record<PieceModel, (type: PieceType, p: Paint) => ReactNode> = {
 interface Props {
   type: PieceType;
   color: Side;
-  style: PieceStyle;
+  /** Um estilo só, ou um por lado (peças de cada jogador). */
+  style: SidedStyle<PieceStyle>;
   size: number;
 }
 
-function ChessPieceBase({ type, color, style, size }: Props) {
+function ChessPieceBase({ type, color, style: sided, size }: Props) {
+  const style = forSide(sided, color);
   const white = color === 'w';
   const base = white ? style.whiteFill : style.blackFill;
   const outline = white ? style.whiteOutline : style.blackOutline;

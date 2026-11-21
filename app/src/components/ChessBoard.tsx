@@ -7,7 +7,7 @@ import { EntranceLayer } from './PieceEntrance';
 import { useT } from '../lib/i18n';
 import { colors } from '../lib/theme';
 import { playSound, preloadSounds, type BoardSound } from '../lib/sound';
-import type { BoardStyle, EntranceStyle, PieceStyle, Side } from '../lib/types';
+import type { BoardStyle, EntranceStyle, PieceStyle, Side, SidedStyle } from '../lib/types';
 
 export interface BoardMove {
   from: string;
@@ -25,13 +25,14 @@ interface Props {
   hint?: { from: string; to: string } | null;
   onMove: (move: BoardMove) => void;
   boardStyle: BoardStyle;
-  pieceStyle: PieceStyle;
+  /** Um estilo de peças para as duas cores, ou um por lado (cada jogador com as suas). */
+  pieceStyle: SidedStyle<PieceStyle>;
   /** Tocar sons dos lances (padrão: sim). */
   sounds?: boolean;
   /** Cor que pode fazer pré-lance enquanto o adversário pensa (null = sem pré-lance). */
   premoveColor?: Side | null;
   /** Surgimento das peças (item da loja) e a "chave" que faz ele tocar (muda a cada partida nova). */
-  entrance?: EntranceStyle | null;
+  entrance?: SidedStyle<EntranceStyle> | null;
   entranceKey?: number;
 }
 
@@ -365,7 +366,7 @@ interface SquareProps {
   fileLabel: string;
   sq: number;
   boardStyle: BoardStyle;
-  pieceStyle: PieceStyle;
+  pieceStyle: SidedStyle<PieceStyle>;
   onPressSquare: (square: Square) => void;
 }
 
@@ -422,7 +423,7 @@ function MovingPiece({
   animate: boolean;
   orientation: Side;
   sq: number;
-  pieceStyle: PieceStyle;
+  pieceStyle: SidedStyle<PieceStyle>;
 }) {
   const progress = useRef(new Animated.Value(animate ? 0 : 1)).current;
   useEffect(() => {

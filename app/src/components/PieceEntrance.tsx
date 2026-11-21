@@ -3,7 +3,7 @@ import { Animated, Easing, Platform, StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { Chess, type Square } from 'chess.js';
 import { ChessPiece, type PieceType } from './ChessPiece';
-import type { EntranceStyle, PieceStyle, Side } from '../lib/types';
+import { forSide, type EntranceStyle, type PieceStyle, type Side, type SidedStyle } from '../lib/types';
 import { playEntranceSound, stopEntranceSound } from '../lib/sound';
 
 /**
@@ -71,8 +71,9 @@ interface Props {
   fen: string;
   orientation: Side;
   sq: number;
-  pieceStyle: PieceStyle;
-  entrance: EntranceStyle;
+  pieceStyle: SidedStyle<PieceStyle>;
+  /** Um efeito para todas as peças, ou um por lado (cada jogador com o seu surgimento). */
+  entrance: SidedStyle<EntranceStyle>;
   /** Muda a cada vez que o surgimento deve tocar. */
   playKey: number;
   onDone: () => void;
@@ -84,14 +85,23 @@ function EntranceLayerBase({ fen, orientation, sq, pieceStyle, entrance, playKey
   const doneRef = useRef(onDone);
   doneRef.current = onDone;
 
+  const white = forSide(entrance, 'w');
+  const black = forSide(entrance, 'b');
+  const fx = (c: Side) => (c === 'w' ? white : black);
+
   useEffect(() => {
-    const ms = PIECE_MS[entrance.effect] ?? 700;
     const anims = values.map((v, i) =>
-      Animated.timing(v, { toValue: 1, duration: ms, delay: list[i].delay, easing: Easing.linear, useNativeDriver: native }),
+      Animated.timing(v, {
+        toValue: 1,
+        duration: PIECE_MS[fx(list[i].color).effect] ?? 700,
+        delay: list[i].delay,
+        easing: Easing.linear,
+        useNativeDriver: native,
+      }),
     );
     const all = Animated.parallel(anims);
     let ended = false;
-    playEntranceSound(entrance.effect);
+    playEntranceSound([white.effect, black.effect]);
     all.start(({ finished }) => {
       if (!finished) return;
       ended = true; // a cauda do som (reverberação) continua tocando até o fim
@@ -101,13 +111,14 @@ function EntranceLayerBase({ fen, orientation, sq, pieceStyle, entrance, playKey
       all.stop();
       if (!ended) stopEntranceSound();
     };
-  }, [values, list, entrance.effect]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [values, list, white.effect, black.effect]);
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       {list.map((s, i) => (
         <View key={`${s.square}-${playKey}`} style={{ position: 'absolute', left: s.x, top: s.y, width: sq, height: sq }}>
-          <EffectPiece effect={entrance.effect} color={entrance.color} p={values[i]} sq={sq} seed={i}>
+          <EffectPiece effect={fx(s.color).effect} color={fx(s.color).color} p={values[i]} sq={sq} seed={i}>
             <ChessPiece type={s.type} color={s.color} style={pieceStyle} size={sq} />
           </EffectPiece>
         </View>

@@ -11,7 +11,7 @@ import { PlayerBar } from '../../components/PlayerBar';
 import { Button, Card, Screen } from '../../components/ui';
 import { useAuth } from '../../lib/auth';
 import { confirmAction } from '../../lib/confirm';
-import { useCharacterStyle, useCosmetics, useMyLook } from '../../lib/cosmetics';
+import { DEFAULT_LOOK, useCharacterStyle, useCosmetics, useEntranceStyle, useMyLook, usePieceStyle } from '../../lib/cosmetics';
 import { materialInfo, resultText } from '../../lib/chessUtils';
 import { itemName } from '../../lib/catalogI18n';
 import { timeControlLabel, translateServerText, useT } from '../../lib/i18n';
@@ -106,6 +106,23 @@ export default function OnlineGame() {
   const material = useMemo(() => materialInfo(state?.fen ?? new Chess().fen()), [state?.fen]);
   const whiteLook = useCharacterStyle(state?.white.cosmetics?.character);
   const blackLook = useCharacterStyle(state?.black.cosmetics?.character);
+  // Cada jogador usa as próprias peças e o próprio surgimento: o meu lado com os meus itens,
+  // o do adversário com os dele (quem joga numa versão antiga aparece com os itens padrão).
+  const whitePieces = usePieceStyle(state?.white.cosmetics?.pieces);
+  const blackPieces = usePieceStyle(state?.black.cosmetics?.pieces);
+  const whiteEntrance = useEntranceStyle(state?.white.cosmetics?.entrance ?? DEFAULT_LOOK.entrance);
+  const blackEntrance = useEntranceStyle(state?.black.cosmetics?.entrance ?? DEFAULT_LOOK.entrance);
+  const myId = user?.id;
+  const meWhite = state?.white.id === myId;
+  const meBlack = state?.black.id === myId;
+  const pieceStyle = useMemo(
+    () => ({ w: meWhite ? look.pieces : whitePieces, b: meBlack ? look.pieces : blackPieces }),
+    [meWhite, meBlack, look.pieces, whitePieces, blackPieces],
+  );
+  const entrance = useMemo(
+    () => ({ w: meWhite ? look.entrance : whiteEntrance, b: meBlack ? look.entrance : blackEntrance }),
+    [meWhite, meBlack, look.entrance, whiteEntrance, blackEntrance],
+  );
 
   if (!state || !user) {
     return (
@@ -215,8 +232,8 @@ export default function OnlineGame() {
         lastMove={state.lastMove}
         onMove={onMove}
         boardStyle={look.board}
-        pieceStyle={look.pieces}
-        entrance={look.entrance}
+        pieceStyle={pieceStyle}
+        entrance={entrance}
         entranceKey={entranceKey}
         premoveColor={over ? null : mySide}
       />

@@ -80,38 +80,46 @@ const ENTRANCE_SOURCES: Record<string, number> = {
 };
 
 const entrancePlayers: Record<string, AudioPlayer | undefined> = {};
-let entranceNow: AudioPlayer | null = null;
+let entranceNow: AudioPlayer[] = [];
 
-/** Toca o som do surgimento (do começo), sincronizado com a animação que começa agora. */
-export function playEntranceSound(effect: string) {
+/**
+ * Toca o som do surgimento (do começo), sincronizado com a animação que começa agora.
+ * Com dois efeitos diferentes (cada jogador com o seu), os dois tocam juntos, um pouco mais baixos.
+ */
+export function playEntranceSound(effects: string | string[]) {
   stopEntranceSound();
   if (!enabled) return;
-  const src = ENTRANCE_SOURCES[effect];
-  if (!src) return;
-  try {
-    let p = entrancePlayers[effect];
-    if (!p) {
-      p = createAudioPlayer(src);
-      p.volume = 0.9;
-      entrancePlayers[effect] = p;
+  const list = [...new Set(Array.isArray(effects) ? effects : [effects])];
+  const volume = list.length > 1 ? 0.65 : 0.9;
+  for (const effect of list) {
+    const src = ENTRANCE_SOURCES[effect];
+    if (!src) continue;
+    try {
+      let p = entrancePlayers[effect];
+      if (!p) {
+        p = createAudioPlayer(src);
+        entrancePlayers[effect] = p;
+      }
+      p.volume = volume;
+      p.seekTo(0).catch(() => {});
+      p.play();
+      entranceNow.push(p);
+    } catch {
+      entrancePlayers[effect] = undefined;
     }
-    p.seekTo(0).catch(() => {});
-    p.play();
-    entranceNow = p;
-  } catch {
-    entrancePlayers[effect] = undefined;
   }
 }
 
 /** Para o som do surgimento (ex.: alguém mexeu uma peça antes de terminar). */
 export function stopEntranceSound() {
-  const p = entranceNow;
-  entranceNow = null;
-  if (!p) return;
-  try {
-    p.pause();
-  } catch {
-    // já liberado
+  const now = entranceNow;
+  entranceNow = [];
+  for (const p of now) {
+    try {
+      p.pause();
+    } catch {
+      // já liberado
+    }
   }
 }
 

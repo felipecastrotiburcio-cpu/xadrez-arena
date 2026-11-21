@@ -79,6 +79,8 @@ export function publicUser(u: User) {
       avatar: u.equipped.avatar,
       character: u.equipped.character,
       move: u.equipped.move,
+      pieces: u.equipped.pieces,
+      entrance: u.equipped.entrance,
     },
   };
 }

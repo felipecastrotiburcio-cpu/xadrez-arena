@@ -14,7 +14,8 @@ export interface PublicUser {
   createdAt: number;
   winStreak: number;
   bestStreak: number;
-  cosmetics: { avatar: string; character: string; move: string };
+  /** Itens equipados que aparecem para os outros (peças e surgimento só nas versões novas). */
+  cosmetics: { avatar: string; character: string; move: string; pieces?: string; entrance?: string };
 }
 
 export type ItemType = 'board' | 'pieces' | 'avatar' | 'character' | 'move' | 'entrance';
@@ -181,4 +182,11 @@ export interface Ack {
   ok?: boolean;
   error?: string;
   [key: string]: unknown;
+}
+
+/** Um estilo para cada lado do tabuleiro: cada jogador usa os próprios itens na partida. */
+export type PerSide<T> = { w: T; b: T };
+export type SidedStyle<T> = T | PerSide<T>;
+export function forSide<T extends object>(v: SidedStyle<T>, side: Side): T {
+  return 'w' in v && 'b' in v ? (v as PerSide<T>)[side] : (v as T);
 }

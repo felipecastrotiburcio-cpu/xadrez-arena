@@ -14,7 +14,7 @@ import { AI_LEVELS, evaluateAsync, findBestMoveAsync, suggestMoveAsync } from '.
 import { recordAiResult } from '../../lib/aiStats';
 import { api, isLocalMode } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
-import { AI_CHARACTER, useCharacterStyle, useCosmetics, useMyLook } from '../../lib/cosmetics';
+import { AI_CHARACTER, DEFAULT_LOOK, useCharacterStyle, useCosmetics, useEntranceStyle, useMyLook, usePieceStyle } from '../../lib/cosmetics';
 import { hasMatingMaterial, materialInfo, resultText } from '../../lib/chessUtils';
 import { itemName } from '../../lib/catalogI18n';
 import { translateServerText, useT, type TranslationKey } from '../../lib/i18n';
@@ -66,6 +66,18 @@ export default function AiGame() {
   const look = useMyLook();
   const { get } = useCosmetics();
   const myCharacter = useCharacterStyle(look.equipped.character);
+  // Cada jogador com os próprios itens: o meu lado com as minhas peças e o meu surgimento,
+  // o lado da IA com os itens padrão.
+  const aiPieces = usePieceStyle(DEFAULT_LOOK.pieces);
+  const aiEntrance = useEntranceStyle(DEFAULT_LOOK.entrance);
+  const pieceStyle = useMemo(
+    () => (playerSide === 'w' ? { w: look.pieces, b: aiPieces } : { w: aiPieces, b: look.pieces }),
+    [playerSide, look.pieces, aiPieces],
+  );
+  const entrance = useMemo(
+    () => (playerSide === 'w' ? { w: look.entrance, b: aiEntrance } : { w: aiEntrance, b: look.entrance }),
+    [playerSide, look.entrance, aiEntrance],
+  );
   const navigation = useNavigation();
   const { width } = useWindowDimensions();
   // Tabuleiro de ponta a ponta na tela do celular.
@@ -331,8 +343,8 @@ export default function AiGame() {
         hint={hint}
         onMove={onPlayerMove}
         boardStyle={look.board}
-        pieceStyle={look.pieces}
-        entrance={look.entrance}
+        pieceStyle={pieceStyle}
+        entrance={entrance}
         entranceKey={entranceKey}
         premoveColor={over ? null : playerSide}
       />

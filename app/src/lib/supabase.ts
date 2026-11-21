@@ -98,7 +98,7 @@ export function publicUser(p: ProfileRow): PublicUser {
     createdAt: Date.parse(p.created_at),
     winStreak: p.win_streak,
     bestStreak: p.best_streak,
-    cosmetics: { avatar: p.equipped.avatar, character: p.equipped.character, move: p.equipped.move },
+    cosmetics: { avatar: p.equipped.avatar, character: p.equipped.character, move: p.equipped.move, pieces: p.equipped.pieces, entrance: p.equipped.entrance },
   };
 }
 
