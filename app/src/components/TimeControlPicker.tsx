@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, radius } from '../lib/theme';
+import { colors, radius, fonts } from '../lib/theme';
 import { timeControlLabel, useT } from '../lib/i18n';
 import { TIME_CONTROLS } from '../lib/timeControls';
 
@@ -55,18 +55,25 @@ const styles = StyleSheet.create({
   option: {
     flexGrow: 1,
     flexBasis: '30%',
-    backgroundColor: colors.surfaceAlt,
+    backgroundColor: colors.surface,
     borderRadius: radius.md,
-    paddingVertical: 12,
+    paddingVertical: 14,
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'transparent',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  active: { borderColor: colors.accent },
-  id: { color: colors.text, fontSize: 20, fontWeight: '800' },
-  label: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
-  segmented: { flexDirection: 'row', backgroundColor: colors.surfaceAlt, borderRadius: radius.md, padding: 4 },
+  active: { borderColor: colors.accent, backgroundColor: colors.accentSoft },
+  id: { color: colors.text, fontSize: 22, fontFamily: fonts.display, fontVariant: ['tabular-nums'] },
+  label: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 12, marginTop: 2 },
+  segmented: {
+    flexDirection: 'row',
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   segment: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: radius.sm },
-  segmentActive: { backgroundColor: colors.accent },
-  segmentText: { color: colors.text, fontWeight: '700' },
+  segmentActive: { backgroundColor: colors.text },
+  segmentText: { color: colors.textMuted, fontFamily: fonts.bold, fontSize: 14 },
 });

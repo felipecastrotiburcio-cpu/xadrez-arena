@@ -67,8 +67,8 @@ try {
   const B = await newPlayer('ben', 'en-US');
   await A.page.screenshot({ path: `${out}/01-ana-inicio-pt.png` });
   await B.page.screenshot({ path: `${out}/02-ben-home-en.png` });
-  check(await A.page.getByText('JOGAR!').count() > 0, 'Ana vê o app em português');
-  check(await B.page.getByText(/PLAY!/).count() > 0, 'Ben sees the app in English');
+  check(await A.page.getByText('Jogar', { exact: true }).count() > 0, 'Ana vê o app em português');
+  check(await B.page.getByText('Play', { exact: true }).count() > 0, 'Ben sees the app in English');
 
   for (const p of [A, B]) {
     await p.page.goto(`${BASE}/play`);

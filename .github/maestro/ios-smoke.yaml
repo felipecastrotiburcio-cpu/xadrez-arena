@@ -1,12 +1,12 @@
 # Teste de uso no simulador de iPhone (o Maestro toca na tela como uma pessoa).
-# No iOS um botão junta os textos de dentro num rótulo só ("JOGAR!, Contra a IA…"),
+# No iOS um botão junta os textos de dentro num rótulo só ("Jogar, Partida ranqueada…"),
 # por isso os textos usam ".*…*" (contém) e os campos usam identificadores fixos (testID).
 appId: app.xadrezarena
 ---
 - launchApp:
     clearState: true
 - extendedWaitUntil:
-    visible: ".*JOGAR!.*"
+    visible: ".*Jogar.*"
     timeout: 90000
 - waitForAnimationToEnd:
     timeout: 8000
@@ -72,7 +72,7 @@ appId: app.xadrezarena
 - launchApp:
     stopApp: true
 - extendedWaitUntil:
-    visible: ".*JOGAR!.*"
+    visible: ".*Jogar.*"
     timeout: 60000
 - retry:
     maxRetries: 3
@@ -102,7 +102,7 @@ appId: app.xadrezarena
 - pressKey: Enter
 # Conta criada: volta para a tela inicial, com o nome e o saldo de 300 moedas
 - extendedWaitUntil:
-    visible: ".*JOGAR!.*"
+    visible: ".*Jogar.*"
     timeout: 30000
 - assertVisible: ".*${USERNAME}.*"
 - assertNotVisible:

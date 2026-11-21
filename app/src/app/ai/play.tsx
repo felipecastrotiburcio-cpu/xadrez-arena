@@ -19,7 +19,7 @@ import { hasMatingMaterial, materialInfo, resultText } from '../../lib/chessUtil
 import { itemName } from '../../lib/catalogI18n';
 import { translateServerText, useT, type TranslationKey } from '../../lib/i18n';
 import { useToast } from '../../lib/toast';
-import { colors } from '../../lib/theme';
+import { colors, fonts } from '../../lib/theme';
 import type { PrivateUser, Side } from '../../lib/types';
 
 interface Reward {
@@ -366,14 +366,14 @@ export default function AiGame() {
         </Text>
       )}
       <View style={styles.actions}>
-        {!timed && <Button small variant="secondary" title={t('aiPlay.undo')} icon="↶" style={styles.action} onPress={undo} disabled={thinking} />}
-        <Button small variant="secondary" title={t('aiPlay.hint')} icon="💡" style={styles.action} onPress={showHint} disabled={thinking || hinting || !!over} loading={hinting} />
+        {!timed && <Button small variant="secondary" title={t('aiPlay.undo')} iconName="back" style={styles.action} onPress={undo} disabled={thinking} />}
+        <Button small variant="secondary" title={t('aiPlay.hint')} iconName="sparkle" style={styles.action} onPress={showHint} disabled={thinking || hinting || !!over} loading={hinting} />
         {over ? (
-          <Button small title={t('aiPlay.new')} icon="↻" style={styles.action} onPress={restart} />
+          <Button small title={t('aiPlay.new')} iconName="refresh" style={styles.action} onPress={restart} />
         ) : (
           <>
             <Button small variant="secondary" title={t('common.draw')} icon="½" style={styles.action} onPress={offerDraw} disabled={thinking} loading={drawBusy} />
-            <Button small variant="secondary" title={t('common.resign')} icon="⚑" style={styles.action} onPress={resign} />
+            <Button small variant="secondary" title={t('common.resign')} iconName="flag" style={styles.action} onPress={resign} />
           </>
         )}
       </View>
@@ -422,7 +422,7 @@ export default function AiGame() {
           {!user && (
             <Button title={t('aiPlay.signUpCoins')} variant="gold" onPress={() => router.push('/login')} />
           )}
-          <Button title={t('aiPlay.playAgain')} onPress={restart} />
+          <Button title={t('aiPlay.playAgain')} variant={user ? 'primary' : 'secondary'} onPress={restart} />
           <Button title={t('aiPlay.analyze')} variant="secondary" onPress={() => setShowModal(false)} />
           <Button title={t('aiPlay.changeOpponent')} variant="ghost" onPress={() => router.back()} />
         </GameOverModal>
@@ -434,5 +434,5 @@ export default function AiGame() {
 const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: 8 },
   action: { flex: 1 },
-  status: { color: colors.accent, textAlign: 'center', fontWeight: '700' },
+  status: { color: colors.accent, textAlign: 'center', fontFamily: fonts.bold },
 });

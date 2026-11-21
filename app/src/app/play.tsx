@@ -6,7 +6,7 @@ import { Button, Card, LevelBadge, Screen, SectionTitle } from '../components/ui
 import { useAuth } from '../lib/auth';
 import { translateServerText, useT } from '../lib/i18n';
 import { useSocket } from '../lib/socket';
-import { colors } from '../lib/theme';
+import { colors, fonts } from '../lib/theme';
 import { useToast } from '../lib/toast';
 
 export default function Play() {
@@ -93,7 +93,7 @@ export default function Play() {
           <TimeControlPicker value={timeControl} onChange={setTimeControl} />
           <Text style={styles.muted}>{t('play.pairingNote')}</Text>
           {connected ? (
-            <Button title={t('play.find')} icon="⚔️" onPress={start} testID="queue-join" />
+            <Button title={t('play.find')} iconName="swords" onPress={start} testID="queue-join" />
           ) : (
             <View style={{ flexDirection: 'row', gap: 8, justifyContent: 'center' }}>
               <ActivityIndicator color={colors.accent} />
@@ -102,7 +102,7 @@ export default function Play() {
           )}
           <Button
             title={t('play.challengeFriend')}
-            icon="👥"
+            iconName="users"
             variant="secondary"
             onPress={() => router.push('/friends')}
           />
@@ -113,8 +113,8 @@ export default function Play() {
 }
 
 const styles = StyleSheet.create({
-  title: { color: colors.text, fontSize: 18, fontWeight: '800' },
-  rating: { color: colors.accent, fontSize: 28, fontWeight: '900' },
-  muted: { color: colors.textMuted, fontSize: 13, textAlign: 'center' },
-  knight: { fontSize: 64, color: colors.accent },
+  title: { color: colors.text, fontSize: 18, fontFamily: fonts.black },
+  rating: { color: colors.accent, fontSize: 28, fontFamily: fonts.black },
+  muted: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 13, textAlign: 'center' },
+  knight: { fontFamily: fonts.regular, fontSize: 64, color: colors.accent },
 });

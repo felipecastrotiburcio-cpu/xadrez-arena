@@ -9,20 +9,19 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAvatarStyle } from '../lib/cosmetics';
 import { levelName, useT } from '../lib/i18n';
 import { LEVEL_ICONS } from '../lib/levels';
-import { colors, fonts, gradients, radius } from '../lib/theme';
+import { colors, fonts, radius } from '../lib/theme';
+import { CoinIcon, Icon, type IconName } from './Icon';
 
 type Variant = 'primary' | 'gold' | 'secondary' | 'danger' | 'ghost';
-const GRADIENT_VARIANTS: Partial<Record<Variant, readonly [string, string]>> = {
-  primary: gradients.primary,
-  gold: gradients.gold,
-  danger: ['#ff4d6d', '#c9184a'],
-};
 
+/**
+ * Botão: latão sólido para a ação principal, superfície com contorno fino para as demais.
+ * Sem gradientes nem "degrau" 3D: o peso visual vem da cor e do tamanho, não de efeitos.
+ */
 export function Button({
   title,
   onPress,
@@ -30,6 +29,7 @@ export function Button({
   loading,
   disabled,
   icon,
+  iconName,
   style,
   small,
   testID,
@@ -40,13 +40,18 @@ export function Button({
   variant?: Variant;
   loading?: boolean;
   disabled?: boolean;
+  /** Símbolo de texto antes do título (ex.: ½, ⚑). */
   icon?: string;
+  /** Ícone desenhado (preferível a emojis). */
+  iconName?: IconName;
   style?: StyleProp<ViewStyle>;
   small?: boolean;
 }) {
   const inactive = disabled || loading;
-  const gradient = GRADIENT_VARIANTS[variant];
-  const textColor = variant === 'gold' ? colors.accentText : colors.text;
+  const filled = variant === 'primary' || variant === 'gold';
+  // Desabilitado: superfície neutra (em vez de latão "apagado", que parece sujo no fundo escuro).
+  const dead = disabled && !loading;
+  const textColor = dead ? colors.textFaint : filled ? colors.accentText : variant === 'danger' ? colors.danger : colors.text;
   return (
     <Pressable
       testID={testID}
@@ -57,26 +62,23 @@ export function Button({
         styles.button,
         small && styles.buttonSmall,
         styles[variant],
-        pressed && { transform: [{ scale: 0.96 }] },
-        inactive && { opacity: 0.5 },
+        pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
+        dead && filled && { backgroundColor: colors.raised },
+        dead && !filled && { opacity: 0.5 },
+        loading && { opacity: 0.7 },
         style,
       ]}
     >
-      {gradient && (
-        <LinearGradient
-          colors={gradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[StyleSheet.absoluteFill, { borderRadius: small ? radius.sm : radius.md }]}
-        />
-      )}
       {loading ? (
         <ActivityIndicator color={textColor} />
       ) : (
-        <Text style={[styles.buttonText, small && { fontSize: 15 }, { color: textColor }]}>
-          {icon ? `${icon}  ` : ''}
-          {title}
-        </Text>
+        <View style={styles.buttonRow}>
+          {iconName && <Icon name={iconName} size={small ? 16 : 19} color={textColor} strokeWidth={2} />}
+          <Text style={[styles.buttonText, small && { fontFamily: fonts.regular, fontSize: 14 }, { color: textColor }]} numberOfLines={1}>
+            {icon ? `${icon}  ` : ''}
+            {title}
+          </Text>
+        </View>
       )}
     </Pressable>
   );
@@ -154,7 +156,7 @@ export function Avatar({
           width: size,
           height: size,
           borderRadius: size / 2,
-          backgroundColor: style.background || `hsl(${h}, 45%, 42%)`,
+          backgroundColor: style.background || `hsl(${h}, 18%, 24%)`,
           borderWidth: ring,
           borderColor: style.ring,
           alignItems: 'center',
@@ -163,8 +165,8 @@ export function Avatar({
       >
         <Text
           style={{
-            color: '#fff',
-            fontWeight: '800',
+            color: style.background ? '#fff' : `hsl(${h}, 35%, 82%)`,
+            fontFamily: style.emoji ? undefined : fonts.display,
             fontSize: style.emoji ? size * 0.5 : size * 0.42,
             lineHeight: size * 0.62,
           }}
@@ -179,21 +181,33 @@ export function Avatar({
   );
 }
 
-export function Coins({ amount, size = 15 }: { amount: number; size?: number }) {
+export function Coins({ amount, size = 15, plain }: { amount: number; size?: number; plain?: boolean }) {
   const { locale } = useT();
   return (
-    <View style={styles.coins}>
-      <Text style={{ fontSize: size }}>🪙</Text>
-      <Text style={[styles.coinsText, { fontSize: size }]}>{amount.toLocaleString(locale)}</Text>
+    <View style={[styles.coins, plain && styles.coinsPlain]}>
+      <CoinIcon size={size + 2} />
+      <Text style={[styles.coinsText, { fontFamily: fonts.regular, fontSize: size }]}>{amount.toLocaleString(locale)}</Text>
     </View>
   );
 }
 
-export function EmptyState({ icon, text }: { icon: string; text: string }) {
+export function EmptyState({ icon, text, iconName }: { icon?: string; text: string; iconName?: IconName }) {
   return (
-    <View style={{ alignItems: 'center', paddingVertical: 32, gap: 8 }}>
-      <Text style={{ fontSize: 40 }}>{icon}</Text>
-      <Text style={{ color: colors.textMuted, textAlign: 'center' }}>{text}</Text>
+    <View style={{ alignItems: 'center', paddingVertical: 36, gap: 12 }}>
+      <View style={styles.emptyIcon}>
+        {iconName ? <Icon name={iconName} size={26} color={colors.textMuted} /> : <Text style={{ fontFamily: fonts.regular, fontSize: 26 }}>{icon}</Text>}
+      </View>
+      <Text style={{ color: colors.textMuted, textAlign: 'center', fontFamily: fonts.regular, fontSize: 14, maxWidth: 280, lineHeight: 20 }}>{text}</Text>
+    </View>
+  );
+}
+
+/** Título de tela grande (serifada) com subtítulo opcional. */
+export function PageTitle({ title, subtitle }: { title: string; subtitle?: string }) {
+  return (
+    <View style={{ gap: 4, marginBottom: 2 }}>
+      <Text style={styles.pageTitle}>{title}</Text>
+      {subtitle ? <Text style={styles.pageSub}>{subtitle}</Text> : null}
     </View>
   );
 }
@@ -204,17 +218,18 @@ const styles = StyleSheet.create({
   button: {
     minHeight: 52,
     borderRadius: radius.md,
-    paddingHorizontal: 18,
+    paddingHorizontal: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  buttonSmall: { minHeight: 38, paddingHorizontal: 12, borderRadius: radius.sm },
-  primary: { backgroundColor: colors.primary, overflow: 'hidden', borderBottomWidth: 4, borderBottomColor: '#5a2fd1' },
-  gold: { backgroundColor: colors.accent, overflow: 'hidden', borderBottomWidth: 4, borderBottomColor: '#c98a00' },
-  secondary: { backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border, borderBottomWidth: 4 },
-  danger: { backgroundColor: colors.danger, overflow: 'hidden', borderBottomWidth: 4, borderBottomColor: '#8f0f2e' },
+  buttonRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  buttonSmall: { minHeight: 40, paddingHorizontal: 14, borderRadius: radius.sm },
+  primary: { backgroundColor: colors.accent },
+  gold: { backgroundColor: colors.accent },
+  secondary: { backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.borderStrong },
+  danger: { backgroundColor: 'rgba(226, 90, 82, 0.1)', borderWidth: 1, borderColor: 'rgba(226, 90, 82, 0.4)' },
   ghost: { backgroundColor: 'transparent' },
-  buttonText: { color: colors.text, fontSize: 18, fontFamily: fonts.bold, letterSpacing: 0.3 },
+  buttonText: { color: colors.text, fontSize: 16, fontFamily: fonts.bold, letterSpacing: 0.2 },
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
@@ -224,31 +239,47 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   sectionTitle: {
-    color: colors.textMuted,
-    fontSize: 14,
-    fontFamily: fonts.bold,
-    letterSpacing: 1,
+    color: colors.textFaint,
+    fontSize: 12,
+    fontFamily: fonts.black,
+    letterSpacing: 1.4,
     textTransform: 'uppercase',
-    marginTop: 6,
+    marginTop: 10,
   },
   badge: {
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(224, 165, 38, 0.15)',
+    backgroundColor: colors.accentSoft,
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 3,
   },
-  badgeText: { color: colors.accent, fontFamily: fonts.bold, fontSize: 13 },
+  badgeText: { color: colors.accent, fontFamily: fonts.bold, fontSize: 12, letterSpacing: 0.2 },
   coins: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(224, 165, 38, 0.15)',
+    gap: 6,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
     borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingLeft: 6,
+    paddingRight: 11,
+    paddingVertical: 5,
   },
-  coinsText: { color: colors.accent, fontFamily: fonts.black },
+  coinsPlain: { backgroundColor: 'transparent', borderWidth: 0, paddingHorizontal: 0, paddingVertical: 0 },
+  coinsText: { color: colors.text, fontFamily: fonts.black, fontVariant: ['tabular-nums'] },
+  emptyIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pageTitle: { color: colors.text, fontFamily: fonts.display, fontSize: 30, letterSpacing: -0.3 },
+  pageSub: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 14, lineHeight: 20 },
   onlineDot: {
     position: 'absolute',
     right: -1,

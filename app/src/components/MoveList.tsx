@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { ScrollView, StyleSheet, Text, View, type ScrollViewInstance } from 'react-native';
 import { useT } from '../lib/i18n';
-import { colors } from '../lib/theme';
+import { colors, fonts } from '../lib/theme';
 
 export function MoveList({ moves }: { moves: string[] }) {
   const ref = useRef<ScrollViewInstance>(null);
@@ -30,7 +30,7 @@ export function MoveList({ moves }: { moves: string[] }) {
 const styles = StyleSheet.create({
   list: { flexGrow: 0, backgroundColor: colors.surface, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 8 },
   pair: { flexDirection: 'row', gap: 5, marginRight: 12 },
-  num: { color: colors.textMuted, fontSize: 14 },
-  move: { color: colors.text, fontSize: 14, fontWeight: '600' },
-  empty: { color: colors.textMuted, fontSize: 14 },
+  num: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 14 },
+  move: { color: colors.text, fontSize: 14, fontFamily: fonts.bold },
+  empty: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 14 },
 });

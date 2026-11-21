@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, radius } from './theme';
+import { colors, fonts, radius } from './theme';
 
 type Kind = 'info' | 'success' | 'error';
 interface Toast {
@@ -55,5 +55,5 @@ const styles = StyleSheet.create({
   },
   error: { borderColor: colors.danger },
   success: { borderColor: colors.success },
-  text: { color: colors.text, fontSize: 15, textAlign: 'center' },
+  text: { color: colors.text, fontFamily: fonts.regular, fontSize: 15, textAlign: 'center' },
 });

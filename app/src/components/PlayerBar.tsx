@@ -2,7 +2,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useMyLook } from '../lib/cosmetics';
 import { useT } from '../lib/i18n';
 import { ChessPiece, type PieceType } from './ChessPiece';
-import { colors } from '../lib/theme';
+import { colors, fonts } from '../lib/theme';
 import { formatClock } from '../lib/timeControls';
 import { Avatar } from './ui';
 import { Flag } from './Flag';
@@ -61,10 +61,10 @@ export function PlayerBar({ name, subtitle, captured, capturedColor, advantage, 
 
 const styles = StyleSheet.create({
   bar: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
-  name: { color: colors.text, fontWeight: '700', fontSize: 16, flexShrink: 1 },
-  subtitle: { color: colors.textMuted, fontSize: 13 },
-  offline: { color: colors.danger, fontSize: 12 },
-  captured: { color: colors.textMuted, fontSize: 14, fontWeight: '700' },
+  name: { color: colors.text, fontFamily: fonts.bold, fontSize: 16, flexShrink: 1 },
+  subtitle: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 13 },
+  offline: { color: colors.danger, fontFamily: fonts.regular, fontSize: 12 },
+  captured: { color: colors.textMuted, fontSize: 14, fontFamily: fonts.bold },
   capturedRow: { flexDirection: 'row', alignItems: 'center', minHeight: 20 },
   clock: {
     minWidth: 86,
@@ -76,5 +76,5 @@ const styles = StyleSheet.create({
   },
   clockActive: { backgroundColor: colors.accent },
   clockLow: { backgroundColor: colors.danger },
-  clockText: { color: colors.text, fontSize: 20, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  clockText: { color: colors.text, fontSize: 20, fontFamily: fonts.black, fontVariant: ['tabular-nums'] },
 });

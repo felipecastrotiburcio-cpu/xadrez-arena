@@ -74,14 +74,14 @@ function buildStage(width: number, height: number, board: BoardStyle, bg: string
   scene.background = new THREE.Color(bg);
   scene.fog = new THREE.Fog(bg, 18, 40);
 
-  scene.add(new THREE.HemisphereLight('#d9ccff', '#2a1d5c', 1.5));
+  scene.add(new THREE.HemisphereLight('#f3e6d0', '#2a2016', 1.5));
   const sun = new THREE.DirectionalLight('#ffffff', 1.8);
   sun.position.set(5, 12, 9);
   scene.add(sun);
-  const rimPink = new THREE.DirectionalLight('#ff4fd8', 1.2);
+  const rimPink = new THREE.DirectionalLight('#e6b95e', 1.1);
   rimPink.position.set(-8, 6, -8);
   scene.add(rimPink);
-  const rimCyan = new THREE.DirectionalLight('#2ec5ff', 0.9);
+  const rimCyan = new THREE.DirectionalLight('#7aa7d6', 0.6);
   rimCyan.position.set(8, 4, -6);
   scene.add(rimCyan);
 
@@ -100,8 +100,8 @@ function buildStage(width: number, height: number, board: BoardStyle, bg: string
   base.position.y = -0.41;
   scene.add(base);
   const neon = new THREE.Mesh(
-    new THREE.TorusGeometry(radius + 0.15, 0.12, 8, 64),
-    new THREE.MeshBasicMaterial({ color: '#ff4fd8' }),
+    new THREE.TorusGeometry(radius + 0.15, 0.08, 8, 64),
+    new THREE.MeshBasicMaterial({ color: '#c8913a' }),
   );
   neon.rotation.x = PI / 2;
   neon.position.y = 0.02;

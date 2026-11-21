@@ -8,7 +8,7 @@ import { ONLINE_ONLY } from '../lib/localDevice';
 import { useAuth } from '../lib/auth';
 import { translateServerText, useT } from '../lib/i18n';
 import { useSocket } from '../lib/socket';
-import { colors, radius } from '../lib/theme';
+import { colors, radius, fonts } from '../lib/theme';
 import { useToast } from '../lib/toast';
 import type { FriendEntry, FriendshipStatus, PublicUser } from '../lib/types';
 import { Flag } from '../components/Flag';
@@ -51,7 +51,7 @@ export default function Friends() {
   if (isLocalMode()) {
     return (
       <Screen>
-        <EmptyState icon="🌐" text={translateServerText(ONLINE_ONLY)} />
+        <EmptyState iconName="globe" text={translateServerText(ONLINE_ONLY)} />
       </Screen>
     );
   }
@@ -79,7 +79,7 @@ export default function Friends() {
 
       {tab === 'friends' &&
         (data?.friends.length === 0 ? (
-          <EmptyState icon="👥" text={t('friends.none')} />
+          <EmptyState iconName="users" text={t('friends.none')} />
         ) : (
           data?.friends.map((f) => {
             const status = presence[f.user.id] ?? { online: f.online, inGame: f.inGame };
@@ -299,7 +299,7 @@ function ChallengeModal({ user, onClose }: { user: PublicUser | null; onClose: (
               { value: 'rated', label: t('common.rated') },
             ]}
           />
-          <Button title={t('friends.sendInvite')} icon="⚔️" onPress={send} loading={sending} style={{ marginTop: 8 }} />
+          <Button title={t('friends.sendInvite')} iconName="swords" onPress={send} loading={sending} style={{ marginTop: 8 }} />
           <Button title={t('common.cancel')} variant="ghost" onPress={onClose} />
         </Pressable>
       </Pressable>
@@ -318,9 +318,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  name: { color: colors.text, fontSize: 16, fontWeight: '700' },
-  muted: { color: colors.textMuted, fontSize: 13 },
-  text: { color: colors.text, fontSize: 14, flex: 1 },
+  name: { color: colors.text, fontSize: 16, fontFamily: fonts.bold },
+  muted: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 13 },
+  text: { color: colors.text, fontFamily: fonts.regular, fontSize: 14, flex: 1 },
   inviteCard: { flexDirection: 'row', alignItems: 'center', borderColor: colors.accent },
   input: {
     backgroundColor: colors.surface,
@@ -328,6 +328,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     paddingHorizontal: 14,
     paddingVertical: 12,
+    fontFamily: fonts.regular,
     fontSize: 16,
     borderWidth: 1,
     borderColor: colors.border,
@@ -344,5 +345,5 @@ const styles = StyleSheet.create({
     maxWidth: 640,
     alignSelf: 'center',
   },
-  sheetTitle: { color: colors.text, fontSize: 22, fontWeight: '800' },
+  sheetTitle: { color: colors.text, fontSize: 22, fontFamily: fonts.black },
 });

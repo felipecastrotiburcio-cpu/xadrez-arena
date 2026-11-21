@@ -1,13 +1,14 @@
 import type React from 'react';
 import { useRef, useState } from 'react';
 import { router } from 'expo-router';
-import { KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput } from 'react-native';
+import { KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Segmented } from '../components/TimeControlPicker';
+import { Icon } from '../components/Icon';
 import { Button, Card, Screen } from '../components/ui';
 import { isLocalMode } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { translateServerText, useT } from '../lib/i18n';
-import { colors, radius } from '../lib/theme';
+import { colors, radius, fonts } from '../lib/theme';
 
 export default function Login() {
   const { login, register } = useAuth();
@@ -38,7 +39,13 @@ export default function Login() {
     // Android: o sistema redimensiona a janela. O KeyboardAvoidingView fica só como reforço no Android.
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'android' ? 'height' : undefined} enabled={Platform.OS === 'android'}>
       <Screen>
-        <Text style={styles.title}>{t('login.welcome')}</Text>
+        <View style={styles.brand}>
+          <View style={styles.mark}>
+            <Icon name="knight" size={30} color={colors.accent} />
+          </View>
+          <Text style={styles.title}>{t('login.welcome')}</Text>
+          <Text style={styles.tagline}>{t('login.tagline')}</Text>
+        </View>
         <Segmented
           value={mode}
           onChange={(m) => {
@@ -54,7 +61,7 @@ export default function Login() {
           <Card style={{ borderColor: colors.primary }}>
             <Text style={styles.notice}>
               {t('login.noticeA')}
-              <Text style={{ fontWeight: '800' }}>{t('login.noticeBold')}</Text>
+              <Text style={{ fontFamily: fonts.black }}>{t('login.noticeBold')}</Text>
               {t('login.noticeB')}
             </Text>
             <Text style={styles.noticeMuted}>{t('login.noticeMuted')}</Text>
@@ -109,20 +116,34 @@ export default function Login() {
 }
 
 const styles = StyleSheet.create({
-  title: { color: colors.text, fontSize: 26, fontWeight: '900', textAlign: 'center', marginVertical: 8 },
-  label: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
+  brand: { alignItems: 'center', gap: 8, marginTop: 12, marginBottom: 8 },
+  mark: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: colors.accentSoft,
+    borderWidth: 1,
+    borderColor: 'rgba(220, 171, 79, 0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  title: { color: colors.text, fontSize: 30, fontFamily: fonts.display, textAlign: 'center', letterSpacing: -0.3 },
+  tagline: { color: colors.textMuted, fontSize: 14, fontFamily: fonts.regular, textAlign: 'center', maxWidth: 300, lineHeight: 20 },
+  label: { color: colors.textMuted, fontSize: 13, fontFamily: fonts.bold },
   input: {
     backgroundColor: colors.surfaceAlt,
     color: colors.text,
     borderRadius: radius.sm,
     paddingHorizontal: 14,
     paddingVertical: 12,
+    fontFamily: fonts.regular,
     fontSize: 16,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  error: { color: colors.danger, fontSize: 14 },
-  hint: { color: colors.textMuted, textAlign: 'center', fontSize: 13 },
-  notice: { color: colors.text, fontSize: 15, lineHeight: 21 },
-  noticeMuted: { color: colors.textMuted, fontSize: 13 },
+  error: { color: colors.danger, fontFamily: fonts.regular, fontSize: 14 },
+  hint: { color: colors.textMuted, textAlign: 'center', fontFamily: fonts.regular, fontSize: 13 },
+  notice: { color: colors.text, fontFamily: fonts.regular, fontSize: 15, lineHeight: 21 },
+  noticeMuted: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 13 },
 });

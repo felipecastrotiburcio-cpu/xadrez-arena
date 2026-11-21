@@ -1,4 +1,5 @@
-import { Fredoka_500Medium, Fredoka_600SemiBold, Fredoka_700Bold, useFonts } from '@expo-google-fonts/fredoka';
+import { Fraunces_600SemiBold, Fraunces_700Bold, useFonts } from '@expo-google-fonts/fraunces';
+import { Manrope_500Medium, Manrope_700Bold, Manrope_800ExtraBold } from '@expo-google-fonts/manrope';
 import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View } from 'react-native';
@@ -32,7 +33,7 @@ export default function RootLayout() {
 
 function AppShell() {
   const { t } = useT();
-  const [fontsLoaded, fontError] = useFonts({ Fredoka_500Medium, Fredoka_600SemiBold, Fredoka_700Bold });
+  const [fontsLoaded, fontError] = useFonts({ Fraunces_600SemiBold, Fraunces_700Bold, Manrope_500Medium, Manrope_700Bold, Manrope_800ExtraBold });
   // Sem a fonte o app continua funcionando com a fonte do sistema.
   if (!fontsLoaded && !fontError) return blank;
   return (
@@ -48,7 +49,8 @@ function AppShell() {
                   screenOptions={{
                     headerStyle: { backgroundColor: colors.bg },
                     headerTintColor: colors.text,
-                    headerTitleStyle: { fontFamily: fonts.bold, fontSize: 20 },
+                    headerTitleStyle: { fontFamily: fonts.display, fontSize: 21 },
+                    headerBackButtonDisplayMode: 'minimal',
                     headerShadowVisible: false,
                     contentStyle: { backgroundColor: colors.bg },
                   }}

@@ -2,21 +2,22 @@ import { useCallback, useState } from 'react';
 import { router, useFocusEffect } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Button, EmptyState, Screen } from '../components/ui';
+import { Icon, type IconName } from '../components/Icon';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { translateServerText, tStatic, useT } from '../lib/i18n';
 import { useSocket } from '../lib/socket';
-import { colors, radius } from '../lib/theme';
+import { colors, radius, fonts } from '../lib/theme';
 import type { AppNotification } from '../lib/types';
 
-const ICON: Record<AppNotification['type'], string> = {
-  welcome: '🎉',
-  friend_request: '👋',
-  friend_accepted: '🤝',
-  invite_missed: '⚔️',
-  game_result: '♟',
-  level_up: '⬆️',
-  reward: '🎁',
+const ICON: Record<AppNotification['type'], IconName> = {
+  welcome: 'sparkle',
+  friend_request: 'users',
+  friend_accepted: 'users',
+  invite_missed: 'swords',
+  game_result: 'knight',
+  level_up: 'trophy',
+  reward: 'gift',
 };
 
 function timeAgo(ts: number) {
@@ -65,10 +66,12 @@ export default function Notifications() {
       {!!list?.some((n) => !n.read) && (
         <Button small variant="secondary" title={t('notif.markAll')} onPress={() => markRead()} />
       )}
-      {list?.length === 0 && <EmptyState icon="🔔" text={t('notif.empty')} />}
+      {list?.length === 0 && <EmptyState iconName="bell" text={t('notif.empty')} />}
       {list?.map((n) => (
         <Pressable key={n.id} onPress={() => open(n)} style={[styles.row, !n.read && styles.unread]}>
-          <Text style={styles.icon}>{ICON[n.type] ?? '🔔'}</Text>
+          <View style={[styles.icon, !n.read && { backgroundColor: colors.accentSoft }]}>
+            <Icon name={ICON[n.type] ?? 'bell'} size={19} color={n.read ? colors.textMuted : colors.accent} />
+          </View>
           <View style={{ flex: 1, gap: 2 }}>
             <Text style={styles.title}>{translateServerText(n.title)}</Text>
             <Text style={styles.body}>{translateServerText(n.body)}</Text>
@@ -92,10 +95,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  unread: { borderColor: colors.accent, backgroundColor: '#25231d' },
-  icon: { fontSize: 26 },
-  title: { color: colors.text, fontWeight: '800', fontSize: 15 },
-  body: { color: colors.textMuted, fontSize: 14 },
-  time: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
+  unread: { borderColor: colors.borderStrong, backgroundColor: colors.surfaceAlt },
+  icon: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.raised, alignItems: 'center', justifyContent: 'center' },
+  title: { color: colors.text, fontFamily: fonts.black, fontSize: 15 },
+  body: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 14 },
+  time: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 12, marginTop: 2 },
   dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.accent },
 });

@@ -8,7 +8,7 @@ import { api, getServerUrl, setServerUrl, usingSupabase } from '../lib/api';
 import { confirmAction } from '../lib/confirm';
 import { translateServerText, useT, type LangPref } from '../lib/i18n';
 import { useAuth } from '../lib/auth';
-import { colors, radius } from '../lib/theme';
+import { colors, radius, fonts } from '../lib/theme';
 import { useToast } from '../lib/toast';
 import { Flag, countryName } from '../components/Flag';
 import { deviceCountry } from '../lib/supabase';
@@ -35,7 +35,10 @@ export default function Settings() {
               await setSoundEnabled(on);
               if (on) playSound('move');
             }}
-            trackColor={{ true: colors.primary, false: colors.border }}
+            trackColor={{ true: colors.accent, false: colors.raised }}
+            thumbColor={colors.text}
+            // web: cor da bolinha ligada
+            {...({ activeThumbColor: colors.text } as object)}
           />
         </View>
       </Card>
@@ -180,7 +183,7 @@ function DeveloperMode() {
                   onSubmitEditing={() => password && toggle(true)}
                   testID="dev-password"
                 />
-                <Button title={t('settings.devActivate')} icon="🛠" loading={busy} disabled={!password} onPress={() => toggle(true)} />
+                <Button title={t('settings.devActivate')} iconName="wrench" loading={busy} disabled={!password} onPress={() => toggle(true)} />
               </>
             )}
           </Card>
@@ -196,14 +199,15 @@ function DeveloperMode() {
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   version: { alignItems: 'center', paddingVertical: 18 },
-  muted: { color: colors.textMuted, fontSize: 13 },
-  text: { color: colors.text, fontSize: 16 },
+  muted: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 13 },
+  text: { color: colors.text, fontFamily: fonts.regular, fontSize: 16 },
   input: {
     backgroundColor: colors.surfaceAlt,
     color: colors.text,
     borderRadius: radius.sm,
     paddingHorizontal: 14,
     paddingVertical: 12,
+    fontFamily: fonts.regular,
     fontSize: 16,
     borderWidth: 1,
     borderColor: colors.border,

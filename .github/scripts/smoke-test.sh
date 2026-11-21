@@ -77,8 +77,8 @@ sleep 25
 dump
 shot 01-inicio
 if alive; then ok "App abriu e continua em execução"; else fail "App fechou ao abrir"; fi
-if tap 'JOGAR!'; then ok "Tela inicial carregada (botão JOGAR! encontrado)"; adb shell input keyevent KEYCODE_BACK; sleep 3; else fail "Tela inicial não apareceu"; fi
-# Voltar à tela inicial (o toque em JOGAR! sem conta abre o login)
+if tap 'Jogar'; then ok "Tela inicial carregada (botão Jogar encontrado)"; adb shell input keyevent KEYCODE_BACK; sleep 3; else fail "Tela inicial não apareceu"; fi
+# Voltar à tela inicial (o toque em Jogar sem conta abre o login)
 adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 > /dev/null 2>&1
 sleep 3
 
@@ -162,7 +162,7 @@ if tap 'Criar conta'; then
   if tap 'Loja'; then
     sleep 4
     shot 12-loja
-    if tap '🪙 150'; then
+    if tap '150'; then
       sleep 2
       tap 'comprar' || true   # botão do diálogo de confirmação
       sleep 3

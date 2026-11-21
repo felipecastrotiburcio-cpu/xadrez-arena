@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { Modal, StyleSheet, Text, View } from 'react-native';
 import { useT } from '../lib/i18n';
-import { colors, radius } from '../lib/theme';
+import { Icon, type IconName } from './Icon';
+import { colors, radius, fonts } from '../lib/theme';
 
 interface Props {
   visible: boolean;
@@ -15,7 +16,7 @@ interface Props {
   children: ReactNode;
 }
 
-const ICON = { win: '🏆', loss: '♚', draw: '🤝' };
+const ICON: Record<Props['outcome'], IconName> = { win: 'trophy', loss: 'flag', draw: 'users' };
 
 export function GameOverModal({ visible, outcome, title, subtitle, ratingChange, newRating, levelUp, coins, children }: Props) {
   const { t } = useT();
@@ -23,7 +24,9 @@ export function GameOverModal({ visible, outcome, title, subtitle, ratingChange,
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent>
       <View style={styles.backdrop}>
         <View style={styles.box}>
-          <Text style={styles.icon}>{ICON[outcome]}</Text>
+          <View style={[styles.icon, outcome === 'win' && { backgroundColor: colors.accentSoft, borderColor: 'rgba(220, 171, 79, 0.4)' }]}>
+            <Icon name={ICON[outcome]} size={30} color={outcome === 'win' ? colors.accent : colors.textMuted} />
+          </View>
           <Text style={[styles.title, outcome === 'win' && { color: colors.accent }]}>{title}</Text>
           <Text style={styles.subtitle}>{subtitle}</Text>
           {ratingChange !== undefined && newRating !== undefined && (
@@ -53,7 +56,7 @@ export function GameOverModal({ visible, outcome, title, subtitle, ratingChange,
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  backdrop: { flex: 1, backgroundColor: 'rgba(8, 7, 6, 0.8)', alignItems: 'center', justifyContent: 'center', padding: 24 },
   box: {
     width: '100%',
     maxWidth: 380,
@@ -65,13 +68,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  icon: { fontSize: 52, color: colors.text },
-  title: { color: colors.text, fontSize: 28, fontWeight: '800' },
-  subtitle: { color: colors.textMuted, fontSize: 15, textAlign: 'center' },
+  icon: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 8,
+  },
+  title: { color: colors.text, fontSize: 30, fontFamily: fonts.display, letterSpacing: -0.3 },
+  subtitle: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 15, textAlign: 'center' },
   rating: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 8 },
-  ratingValue: { color: colors.text, fontSize: 32, fontWeight: '800' },
-  ratingDelta: { fontSize: 20, fontWeight: '800' },
-  coins: { color: colors.accent, fontSize: 16, fontWeight: '800' },
-  levelUp: { backgroundColor: 'rgba(224,165,38,0.18)', borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6 },
-  levelUpText: { color: colors.accent, fontWeight: '800' },
+  ratingValue: { color: colors.text, fontSize: 34, fontFamily: fonts.display },
+  ratingDelta: { fontSize: 20, fontFamily: fonts.black },
+  coins: { color: colors.accent, fontSize: 16, fontFamily: fonts.black },
+  levelUp: { backgroundColor: colors.accentSoft, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6 },
+  levelUpText: { color: colors.accent, fontFamily: fonts.black },
 });

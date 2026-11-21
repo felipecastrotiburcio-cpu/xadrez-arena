@@ -7,7 +7,7 @@ import { useAuth } from '../../lib/auth';
 import { levelName, reasonText, translateServerText, useT } from '../../lib/i18n';
 import { levelProgress, LEVELS } from '../../lib/levels';
 import { useSocket } from '../../lib/socket';
-import { colors } from '../../lib/theme';
+import { colors, fonts } from '../../lib/theme';
 import { useToast } from '../../lib/toast';
 import type { FriendshipStatus, GameSummary, PublicUser } from '../../lib/types';
 import { Flag } from '../../components/Flag';
@@ -147,7 +147,7 @@ export default function ProfileScreen() {
           <SectionTitle>{t('profile.levels')}</SectionTitle>
           <Card style={{ gap: 6 }}>
             {LEVELS.map((l) => (
-              <Text key={l.level} style={[styles.levelRow, l.level === user.level && { color: colors.accent, fontWeight: '800' }]}>
+              <Text key={l.level} style={[styles.levelRow, l.level === user.level && { color: colors.accent, fontFamily: fonts.black }]}>
                 {t('common.lv')} {l.level} · {levelName(l.level, l.name)} — {l.minRating}+
               </Text>
             ))}
@@ -169,18 +169,18 @@ function Stat({ label, value, color }: { label: string; value: number | string; 
 
 const styles = StyleSheet.create({
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
-  name: { color: colors.text, fontSize: 24, fontWeight: '900' },
-  rating: { color: colors.accent, fontSize: 40, fontWeight: '900' },
-  muted: { color: colors.textMuted, fontSize: 13, textAlign: 'center' },
+  name: { color: colors.text, fontSize: 24, fontFamily: fonts.black },
+  rating: { color: colors.accent, fontSize: 40, fontFamily: fonts.black },
+  muted: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 13, textAlign: 'center' },
   track: { height: 8, alignSelf: 'stretch', backgroundColor: colors.surfaceAlt, borderRadius: 4, overflow: 'hidden' },
   fill: { height: '100%', backgroundColor: colors.accent },
   stats: { flexDirection: 'row', gap: 8 },
   stat: { flex: 1, backgroundColor: colors.surface, borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
-  statValue: { color: colors.text, fontSize: 20, fontWeight: '900' },
-  statLabel: { color: colors.textMuted, fontSize: 11 },
+  statValue: { color: colors.text, fontSize: 20, fontFamily: fonts.black },
+  statLabel: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 11 },
   game: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12 },
   outcomeBar: { width: 4, alignSelf: 'stretch', borderRadius: 2 },
-  gameTitle: { color: colors.text, fontWeight: '700', fontSize: 15 },
-  delta: { fontWeight: '900', fontSize: 16 },
-  levelRow: { color: colors.textMuted, fontSize: 14 },
+  gameTitle: { color: colors.text, fontFamily: fonts.bold, fontSize: 15 },
+  delta: { fontFamily: fonts.black, fontSize: 16 },
+  levelRow: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 14 },
 });

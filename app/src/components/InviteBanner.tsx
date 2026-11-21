@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../lib/auth';
 import { timeControlLabel, translateServerText, useT } from '../lib/i18n';
 import { useSocket } from '../lib/socket';
-import { colors, radius } from '../lib/theme';
+import { colors, radius, fonts } from '../lib/theme';
 import { useToast } from '../lib/toast';
 import type { Invite } from '../lib/types';
 import { Avatar, Button } from './ui';
@@ -94,6 +94,6 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
   },
-  title: { color: colors.text, fontWeight: '700', fontSize: 15 },
-  sub: { color: colors.textMuted, fontSize: 13 },
+  title: { color: colors.text, fontFamily: fonts.bold, fontSize: 15 },
+  sub: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 13 },
 });

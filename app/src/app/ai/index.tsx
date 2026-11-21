@@ -3,12 +3,15 @@ import { router, useFocusEffect } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Segmented } from '../../components/TimeControlPicker';
 import { Button, Screen, SectionTitle } from '../../components/ui';
+import { ChessPiece, type PieceType } from '../../components/ChessPiece';
+import { Icon } from '../../components/Icon';
+import { useMyLook } from '../../lib/cosmetics';
 import { AI_LEVELS } from '../../ai';
 import { loadAiStats, type AiStats } from '../../lib/aiStats';
 import { useT, type TranslationKey } from '../../lib/i18n';
-import { colors, radius } from '../../lib/theme';
+import { colors, radius, fonts } from '../../lib/theme';
 
-const ICONS = ['♙', '♘', '♗', '♖', '♕'];
+const PIECES: PieceType[] = ['p', 'n', 'b', 'r', 'q'];
 
 export default function AiSetup() {
   const [level, setLevel] = useState(2);
@@ -16,6 +19,7 @@ export default function AiSetup() {
   const [time, setTime] = useState<'0' | '10' | '5' | '3'>('0');
   const [stats, setStats] = useState<AiStats>({});
   const { t } = useT();
+  const pieceStyle = useMyLook().pieces;
 
   useFocusEffect(
     useCallback(() => {
@@ -31,7 +35,9 @@ export default function AiSetup() {
         const s = stats[l.id];
         return (
           <Pressable key={l.id} onPress={() => setLevel(l.id)} style={[styles.level, active && styles.levelActive]}>
-            <Text style={styles.icon}>{ICONS[i]}</Text>
+            <View style={[styles.icon, active && { backgroundColor: colors.accentSoft }]}>
+              <ChessPiece type={PIECES[i]} color="w" style={pieceStyle} size={40} />
+            </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.name}>
                 {t(`ai.${l.id}.name` as TranslationKey)} <Text style={styles.elo}>~{l.elo}</Text>
@@ -41,7 +47,9 @@ export default function AiSetup() {
                 <Text style={styles.record}>{t('ai.record', { w: s.wins, d: s.draws, l: s.losses })}</Text>
               )}
             </View>
-            <View style={[styles.radio, active && styles.radioActive]} />
+            <View style={[styles.radio, active && styles.radioActive]}>
+              {active && <Icon name="check" size={14} color={colors.accentText} strokeWidth={2.8} />}
+            </View>
           </Pressable>
         );
       })}
@@ -71,7 +79,7 @@ export default function AiSetup() {
 
       <Button
         title={t('ai.start')}
-        icon="▶"
+        iconName="play"
         onPress={() => {
           const c = color === 'random' ? (Math.random() < 0.5 ? 'w' : 'b') : color;
           router.push({ pathname: '/ai/play', params: { level: String(level), color: c, time } });
@@ -90,16 +98,16 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radius.md,
     padding: 14,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: colors.border,
   },
-  levelActive: { borderColor: colors.accent },
-  icon: { fontSize: 34, color: colors.text, width: 40, textAlign: 'center' },
-  name: { color: colors.text, fontSize: 17, fontWeight: '800' },
-  elo: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
-  desc: { color: colors.textMuted, fontSize: 13 },
-  record: { color: colors.accent, fontSize: 12, marginTop: 2, fontWeight: '600' },
-  radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: colors.border },
+  levelActive: { borderColor: colors.accent, backgroundColor: colors.surfaceAlt },
+  icon: { width: 48, height: 48, borderRadius: 14, backgroundColor: colors.raised, alignItems: 'center', justifyContent: 'center' },
+  name: { color: colors.text, fontSize: 16, fontFamily: fonts.bold },
+  elo: { color: colors.textMuted, fontSize: 13, fontFamily: fonts.bold },
+  desc: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 13 },
+  record: { color: colors.accent, fontSize: 12, marginTop: 2, fontFamily: fonts.bold },
+  radio: { width: 24, height: 24, borderRadius: 12, borderWidth: 1.5, borderColor: colors.borderStrong, alignItems: 'center', justifyContent: 'center' },
   radioActive: { borderColor: colors.accent, backgroundColor: colors.accent },
-  footnote: { color: colors.textMuted, fontSize: 12, textAlign: 'center' },
+  footnote: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 12, textAlign: 'center' },
 });

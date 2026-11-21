@@ -5,7 +5,7 @@ import { ChessPiece, tint, type PieceType } from './ChessPiece';
 import { FrameArt } from './FrameArt';
 import { EntranceLayer } from './PieceEntrance';
 import { useT } from '../lib/i18n';
-import { colors } from '../lib/theme';
+import { colors, fonts } from '../lib/theme';
 import { playSound, preloadSounds, type BoardSound } from '../lib/sound';
 import type { BoardStyle, EntranceStyle, PieceStyle, Side, SidedStyle } from '../lib/types';
 
@@ -392,8 +392,8 @@ const BoardSquare = memo(function BoardSquare(p: SquareProps) {
           <ChessPiece type={p.pieceType as PieceType} color={p.pieceColor} style={p.pieceStyle} size={sq} />
         </View>
       )}
-      {!!p.rankLabel && <Text style={[styles.coord, styles.rankCoord, { color: coordColor, fontSize: Math.max(9, sq * 0.2) }]}>{p.rankLabel}</Text>}
-      {!!p.fileLabel && <Text style={[styles.coord, styles.fileCoord, { color: coordColor, fontSize: Math.max(9, sq * 0.2) }]}>{p.fileLabel}</Text>}
+      {!!p.rankLabel && <Text style={[styles.coord, styles.rankCoord, { color: coordColor, fontFamily: fonts.regular, fontSize: Math.max(9, sq * 0.2) }]}>{p.rankLabel}</Text>}
+      {!!p.fileLabel && <Text style={[styles.coord, styles.fileCoord, { color: coordColor, fontFamily: fonts.regular, fontSize: Math.max(9, sq * 0.2) }]}>{p.fileLabel}</Text>}
       {p.epVictim && (
         <View style={[styles.captureRing, { borderRadius: sq / 2, borderWidth: sq * 0.06, borderColor: 'rgba(230, 40, 60, 0.75)', borderStyle: 'dashed' }]} />
       )}
@@ -605,7 +605,7 @@ export function SquarePattern({ style, index, size, light }: { style: BoardStyle
 const styles = StyleSheet.create({
   row: { flexDirection: 'row' },
   pieceBox: { alignItems: 'center', justifyContent: 'center' },
-  coord: { position: 'absolute', fontSize: 10, fontWeight: '700' },
+  coord: { position: 'absolute', fontSize: 10, fontFamily: fonts.bold },
   rankCoord: { top: 2, left: 3 },
   fileCoord: { bottom: 1, right: 3 },
   dot: { position: 'absolute', backgroundColor: 'rgba(20, 30, 20, 0.35)' },
@@ -614,7 +614,7 @@ const styles = StyleSheet.create({
   flash: {
     color: '#fff',
     fontSize: 26,
-    fontWeight: '900',
+    fontFamily: fonts.black,
     backgroundColor: 'rgba(124, 77, 255, 0.92)',
     paddingHorizontal: 18,
     paddingVertical: 8,

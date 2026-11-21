@@ -16,7 +16,7 @@ import { materialInfo, resultText } from '../../lib/chessUtils';
 import { itemName } from '../../lib/catalogI18n';
 import { timeControlLabel, translateServerText, useT } from '../../lib/i18n';
 import { useSocket } from '../../lib/socket';
-import { colors } from '../../lib/theme';
+import { colors, fonts } from '../../lib/theme';
 import { useToast } from '../../lib/toast';
 import type { GameOver, GameState, Side } from '../../lib/types';
 
@@ -279,7 +279,7 @@ export default function OnlineGame() {
               disabled={state.drawOffer === mySide || state.moves.length < 2}
               onPress={offerDraw}
             />
-            <Button small variant="secondary" title={state.moves.length < 2 ? t('common.cancel') : t('common.resign')} icon="⚑" style={styles.action} onPress={resign} />
+            <Button small variant="secondary" title={state.moves.length < 2 ? t('common.cancel') : t('common.resign')} iconName="flag" style={styles.action} onPress={resign} />
           </View>
         )
       )}
@@ -318,7 +318,7 @@ export default function OnlineGame() {
           levelUp={mySide && over.levelUp[mySide === 'w' ? 'white' : 'black'] ? translateServerText(me?.levelName) : null}
         >
           {over.result && (
-            <Button title={rematchSent ? t('game.rematchSent') : t('game.rematch')} icon="↻" onPress={rematch} disabled={rematchSent} />
+            <Button title={rematchSent ? t('game.rematchSent') : t('game.rematch')} iconName="refresh" onPress={rematch} disabled={rematchSent} />
           )}
           <Button title={t('game.newGame')} variant="secondary" onPress={() => router.replace('/play')} />
           <Button title={t('game.viewBoard')} variant="ghost" onPress={() => setShowModal(false)} />
@@ -330,8 +330,8 @@ export default function OnlineGame() {
 
 const styles = StyleSheet.create({
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
-  meta: { color: colors.textMuted, textAlign: 'center', fontSize: 13 },
+  meta: { color: colors.textMuted, textAlign: 'center', fontFamily: fonts.regular, fontSize: 13 },
   actions: { flexDirection: 'row', gap: 8 },
   action: { flex: 1 },
-  drawText: { color: colors.text, fontWeight: '700', textAlign: 'center' },
+  drawText: { color: colors.text, fontFamily: fonts.bold, textAlign: 'center' },
 });

@@ -5,12 +5,13 @@ import { Avatar, EmptyState, LevelBadge, Screen } from '../components/ui';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { translateServerText, useT } from '../lib/i18n';
-import { colors, radius } from '../lib/theme';
+import { colors, radius, fonts } from '../lib/theme';
 import type { PublicUser } from '../lib/types';
 import { Flag } from '../components/Flag';
 
 type Row = PublicUser & { rank: number; online: boolean };
-const MEDALS = ['🥇', '🥈', '🥉'];
+/** Ouro, prata e bronze para os três primeiros. */
+const MEDALS = ['#dcab4f', '#b8b4ac', '#b07a4f'];
 
 export default function Leaderboard() {
   const { user, token } = useAuth();
@@ -30,14 +31,16 @@ export default function Leaderboard() {
   return (
     <Screen>
       {error ? <Text style={styles.muted}>{error}</Text> : null}
-      {players?.length === 0 && <EmptyState icon="🏆" text={t('lb.empty')} />}
+      {players?.length === 0 && <EmptyState iconName="trophy" text={t('lb.empty')} />}
       {players?.map((p) => (
         <Pressable
           key={p.id}
           onPress={() => router.push(`/profile/${p.id}`)}
-          style={[styles.row, p.id === user?.id && { borderColor: colors.accent }]}
+          style={[styles.row, p.id === user?.id && { borderColor: colors.accent, backgroundColor: colors.surfaceAlt }]}
         >
-          <Text style={styles.rank}>{MEDALS[p.rank - 1] ?? p.rank}</Text>
+          <View style={[styles.rankBox, MEDALS[p.rank - 1] ? { borderColor: MEDALS[p.rank - 1] } : null]}>
+            <Text style={[styles.rank, MEDALS[p.rank - 1] ? { color: MEDALS[p.rank - 1] } : null]}>{p.rank}</Text>
+          </View>
           <Avatar name={p.username} size={38} online={p.online} icon={p.cosmetics?.avatar} />
           <View style={{ flex: 1, gap: 3 }}>
             <Text style={styles.name}>
@@ -66,8 +69,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  rank: { color: colors.textMuted, fontSize: 18, fontWeight: '800', width: 30, textAlign: 'center' },
-  name: { color: colors.text, fontSize: 16, fontWeight: '700' },
-  rating: { color: colors.accent, fontSize: 20, fontWeight: '900' },
-  muted: { color: colors.textMuted, fontSize: 12 },
+  rankBox: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'transparent' },
+  rank: { color: colors.textMuted, fontSize: 15, fontFamily: fonts.black, fontVariant: ['tabular-nums'] },
+  name: { color: colors.text, fontSize: 16, fontFamily: fonts.bold },
+  rating: { color: colors.text, fontSize: 22, fontFamily: fonts.display, fontVariant: ['tabular-nums'] },
+  muted: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 12 },
 });

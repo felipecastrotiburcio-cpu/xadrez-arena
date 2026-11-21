@@ -83,7 +83,7 @@ export function ItemPreviewModal({ item, board, pieces, owned, equipped, coins, 
                 small
                 variant="ghost"
                 title={isEntrance ? t('shop.replay') : t('shop.reset')}
-                icon={isEntrance ? '▶' : '↺'}
+                iconName={isEntrance ? 'play' : 'refresh'}
                 onPress={() => {
                   setFen(startFen);
                   setLastMove(null);
@@ -95,7 +95,7 @@ export function ItemPreviewModal({ item, board, pieces, owned, equipped, coins, 
               ) : owned ? (
                 <Button small variant="secondary" title={t('common.equip')} loading={busy} onPress={onEquip} />
               ) : free ? (
-                <Button small variant="gold" title={`🛠 ${t('shop.devFree')}`} loading={busy} onPress={onBuy} />
+                <Button small variant="gold" iconName="wrench" title={t('shop.devFree')} loading={busy} onPress={onBuy} />
               ) : (
                 <Button
                   small
@@ -112,7 +112,7 @@ export function ItemPreviewModal({ item, board, pieces, owned, equipped, coins, 
                 {t('shop.missingCoins', { count: (item.price - coins).toLocaleString(locale) })}
               </Text>
             )}
-            <Button title={t('common.close')} variant="secondary" onPress={onClose} />
+            <Button title={t('common.close')} variant="secondary" onPress={onClose} style={{ alignSelf: 'stretch' }} />
           </Pressable>
         </ScrollView>
       </Pressable>
@@ -121,20 +121,21 @@ export function ItemPreviewModal({ item, board, pieces, owned, equipped, coins, 
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(5, 3, 20, 0.82)' },
+  backdrop: { flex: 1, backgroundColor: 'rgba(8, 7, 6, 0.86)' },
   center: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 12 },
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
-    padding: 12,
-    gap: 10,
+    padding: 14,
+    paddingTop: 20,
+    gap: 12,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.border,
   },
-  title: { color: colors.text, fontFamily: fonts.black, fontSize: 22 },
-  rarity: { fontSize: 12, fontFamily: fonts.black, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: -6 },
-  hint: { color: colors.textMuted, fontSize: 13, textAlign: 'center' },
+  title: { color: colors.text, fontFamily: fonts.display, fontSize: 26, letterSpacing: -0.3 },
+  rarity: { fontSize: 11, fontFamily: fonts.black, textTransform: 'uppercase', letterSpacing: 1.3, marginTop: -8 },
+  hint: { color: colors.textMuted, fontSize: 13, textAlign: 'center', fontFamily: fonts.regular },
   actions: { flexDirection: 'row', gap: 10, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' },
-  equipped: { color: colors.accent, fontFamily: fonts.black },
+  equipped: { color: colors.success, fontFamily: fonts.bold, fontSize: 15 },
 });
