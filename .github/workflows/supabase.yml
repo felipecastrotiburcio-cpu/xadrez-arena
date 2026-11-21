@@ -37,9 +37,11 @@ jobs:
         with:
           deno-version: v2.5.x
 
+      # Versão fixa: com "latest" a ação consulta a API do GitHub, que às vezes recusa
+      # por limite de pedidos ("rate limit exceeded") e derruba o teste sem motivo.
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 3.2.0
 
       - name: Arquivos compartilhados iguais aos do servidor
         run: |
@@ -132,7 +134,7 @@ jobs:
       - uses: supabase/setup-cli@v1
         if: steps.cfg.outputs.ok == 'true'
         with:
-          version: latest
+          version: 3.2.0
 
       - name: Publicar banco, configuração e função
         if: steps.cfg.outputs.ok == 'true'
