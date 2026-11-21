@@ -67,12 +67,14 @@ test('vencer a IA dá moedas, rating, histórico e notificação', async () => {
   assert.equal(r.user.coins, 325);
   assert.ok(r.ratingChange > 0);
   assert.equal(r.user.wins, 1);
-  assert.deepEqual(events, ['game_result']);
+  // 1ª vitória contra esta IA: avisa do emblema novo e do resultado.
+  assert.deepEqual(events, ['reward', 'game_result']);
+  assert.equal(r.newBadge, 'ai_3');
   const profile = await call(`/users/${user.id}`, undefined, token);
   assert.equal(profile.games[0].opponentName, 'Bispo Estrategista (IA)');
   assert.equal(profile.games[0].outcome, 'win');
   const notes = await call('/notifications', undefined, token);
-  assert.equal(notes.unread, 2); // boas-vindas + resultado
+  assert.equal(notes.unread, 3); // boas-vindas + emblema + resultado
   await call('/notifications/read', {}, token);
   assert.equal((await call('/notifications', undefined, token)).unread, 0);
   const board = await call('/leaderboard', undefined, token);
@@ -113,4 +115,35 @@ test('modo desenvolvedor: senha errada recusada; com a senha certa a loja sai de
   assert.equal(r2.user.coins, on.user.coins, 'item caro de moedas também é grátis');
   assert.equal((await call('/dev/lock', {}, token)).user.devMode, false);
   await assert.rejects(call('/shop/buy', { itemId: 'board_royal' }, token), /compra no app/);
+});
+
+test('emblemas: 1ª vitória contra a IA dá emblema e recompensa exclusiva (uma vez só)', async () => {
+  const { token } = await call('/auth/register', { username: 'emblema', password: 'segredo123' });
+  // Recompensas não são vendidas na loja.
+  await assert.rejects(call('/shop/buy', { itemId: 'pieces_royal' }, token), /recompensa/);
+  await assert.rejects(call('/badges/select', { badge: 'ai_5' }, token), /não conquistou/);
+
+  const loss = await call('/ai/result', { level: 5, score: 0 }, token);
+  assert.equal(loss.newBadge, null);
+  const win = await call('/ai/result', { level: 5, score: 1 }, token);
+  assert.equal(win.newBadge, 'ai_5');
+  assert.equal(win.rewardItem, 'pieces_royal');
+  assert.deepEqual(win.user.badges, ['ai_5']);
+  assert.equal(win.user.badge, 'ai_5', 'o 1º emblema já aparece no perfil');
+  assert.ok(win.user.inventory.includes('pieces_royal'));
+
+  const again = await call('/ai/result', { level: 5, score: 1 }, token);
+  assert.equal(again.newBadge, null, 'o emblema não repete');
+  assert.equal(again.user.inventory.filter((i: string) => i === 'pieces_royal').length, 1);
+
+  const w1 = await call('/ai/result', { level: 1, score: 1 }, token);
+  assert.equal(w1.rewardItem, 'avatar_pawn_medal');
+  assert.equal(w1.user.badge, 'ai_5', 'continua mostrando o emblema escolhido');
+  const sel = await call('/badges/select', { badge: 'ai_1' }, token);
+  assert.equal(sel.user.badge, 'ai_1');
+  const none = await call('/badges/select', { badge: null }, token);
+  assert.equal(none.user.badge, null);
+  // A recompensa pode ser equipada como qualquer item.
+  const eq = await call('/shop/equip', { itemId: 'pieces_royal' }, token);
+  assert.equal(eq.user.equipped.pieces, 'pieces_royal');
 });

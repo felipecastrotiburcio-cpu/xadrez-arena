@@ -78,6 +78,8 @@ export interface ProfileRow {
   best_streak: number;
   equipped: Record<string, string>;
   created_at: string;
+  badges?: string[];
+  badge?: string | null;
 }
 
 /** Linha da tabela profiles → PublicUser (mesmo formato do servidor). */
@@ -98,6 +100,8 @@ export function publicUser(p: ProfileRow): PublicUser {
     createdAt: Date.parse(p.created_at),
     winStreak: p.win_streak,
     bestStreak: p.best_streak,
+    badge: p.badge ?? null,
+    badges: p.badges ?? [],
     cosmetics: { avatar: p.equipped.avatar, character: p.equipped.character, move: p.equipped.move, pieces: p.equipped.pieces, entrance: p.equipped.entrance },
   };
 }

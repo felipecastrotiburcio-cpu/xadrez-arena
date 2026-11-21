@@ -1,6 +1,10 @@
 import type { ReactNode } from 'react';
 import { Modal, StyleSheet, Text, View } from 'react-native';
-import { useT } from '../lib/i18n';
+import { useT, type TranslationKey } from '../lib/i18n';
+import { useCosmetics } from '../lib/cosmetics';
+import { itemName } from '../lib/catalogI18n';
+import { getBadge } from '../lib/badges';
+import { Emblem } from './Emblem';
 import { Icon, type IconName } from './Icon';
 import { colors, radius, fonts } from '../lib/theme';
 
@@ -13,13 +17,19 @@ interface Props {
   newRating?: number;
   levelUp?: string | null;
   coins?: number;
+  /** Emblema conquistado agora (1ª vitória contra a IA) e a recompensa exclusiva liberada. */
+  newBadge?: string | null;
+  rewardItem?: string | null;
   children: ReactNode;
 }
 
 const ICON: Record<Props['outcome'], IconName> = { win: 'trophy', loss: 'flag', draw: 'users' };
 
-export function GameOverModal({ visible, outcome, title, subtitle, ratingChange, newRating, levelUp, coins, children }: Props) {
-  const { t } = useT();
+export function GameOverModal({ visible, outcome, title, subtitle, ratingChange, newRating, levelUp, coins, newBadge, rewardItem, children }: Props) {
+  const { t, lang } = useT();
+  const { get } = useCosmetics();
+  const reward = get(rewardItem ?? undefined);
+  const badge = getBadge(newBadge);
   return (
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent>
       <View style={styles.backdrop}>
@@ -46,6 +56,15 @@ export function GameOverModal({ visible, outcome, title, subtitle, ratingChange,
           {levelUp && (
             <View style={styles.levelUp}>
               <Text style={styles.levelUpText}>{t('gameOver.levelUp', { name: levelUp })}</Text>
+            </View>
+          )}
+          {badge && (
+            <View style={styles.badgeBox}>
+              <Emblem id={badge.id} size={54} />
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={styles.badgeTitle}>{t('badges.new', { name: t(`ai.${badge.level}.name` as TranslationKey) })}</Text>
+                {reward ? <Text style={styles.badgeSub}>{t('badges.rewardUnlocked', { item: itemName(reward, lang) })}</Text> : null}
+              </View>
             </View>
           )}
           <View style={{ gap: 10, alignSelf: 'stretch', marginTop: 8 }}>{children}</View>
@@ -86,5 +105,19 @@ const styles = StyleSheet.create({
   ratingDelta: { fontSize: 20, fontFamily: fonts.black },
   coins: { color: colors.accent, fontSize: 16, fontFamily: fonts.black },
   levelUp: { backgroundColor: colors.accentSoft, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6 },
+  badgeBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    alignSelf: 'stretch',
+    marginTop: 8,
+    padding: 12,
+    borderRadius: 18,
+    backgroundColor: colors.accentSoft,
+    borderWidth: 1.5,
+    borderColor: 'rgba(244, 185, 66, 0.45)',
+  },
+  badgeTitle: { color: colors.accent, fontFamily: fonts.display, fontSize: 17 },
+  badgeSub: { color: colors.text, fontFamily: fonts.bold, fontSize: 13, lineHeight: 18 },
   levelUpText: { color: colors.accent, fontFamily: fonts.black },
 });

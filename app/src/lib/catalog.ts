@@ -36,7 +36,7 @@ export interface PieceStyle {
   /** Raio do brilho em volta da peça (0 = contorno simples). */
   glow: number;
   /** Modelo (formato) das peças — cada conjunto tem um desenho próprio. */
-  model: 'staunton' | 'modern' | 'medieval' | 'crystal' | 'cute' | 'robot' | 'pixel' | 'knights';
+  model: 'staunton' | 'modern' | 'medieval' | 'crystal' | 'cute' | 'robot' | 'pixel' | 'knights' | 'royal';
 }
 
 export interface AvatarStyle {
@@ -71,6 +71,11 @@ export interface ShopItemBase {
    * É o ID do produto cadastrado nas lojas (igual ao ID do item). Sem isso, o item é comprado com moedas.
    */
   iap?: string;
+  /**
+   * Recompensa exclusiva: não é vendida na loja. Só se ganha vencendo a IA deste nível
+   * pela primeira vez (junto com o emblema dela).
+   */
+  unlock?: number;
 }
 
 export type ShopItem =
@@ -293,12 +298,54 @@ const ITEMS: ShopItem[] = [
   entrance('entrance_blackhole', 'Buraco Negro', 'Um buraco negro gira na casa e cospe a peça girando.', 2500, 'lendario', 'blackhole', '🌀', '#a259ff'),
   entrance('entrance_hero', 'Aterrissagem de Herói', 'As peças caem do céu com impacto, onda de choque e rachaduras.', 2500, 'lendario', 'hero', '💥', '#ffb300'),
   entrance('entrance_lightning', 'Tempestade de Raios', 'Um raio cai em cada casa e a peça surge eletrizada.', 3000, 'lendario', 'lightning', '⚡', '#ffe14d'),
+
+  // ----------------------------------------------------------- recompensas exclusivas das IAs
+  // Não são vendidas: cada uma é liberada ao vencer a IA do nível indicado pela primeira vez.
+  { ...avatar('avatar_pawn_medal', 'Medalha do Peão', 0, 'raro', { emoji: '🎖️', background: '#4a3315', ring: '#cd8a4b' }), unlock: 1 },
+  {
+    ...board('board_knight_meadow', 'Campo do Cavaleiro', 'O gramado onde o Cavalo Aprendiz treina seus saltos.', 0, 'raro', {
+      light: '#eef4d0', dark: '#7fae4f', border: '#5a3a1e', frame: 10,
+      coord: { light: '#5f8a33', dark: '#eef4d0' }, pattern: 'grain', patternColor: 'rgba(40, 80, 20, 0.14)',
+      highlight: 'rgba(255, 214, 64, 0.55)',
+      shape: 'tiles', frameStyle: 'wood',
+    }),
+    unlock: 2,
+  },
+  {
+    ...board('board_bishop_glass', 'Vitral do Bispo', 'Casas de vidro colorido, como os vitrais da catedral do Bispo Estrategista.', 0, 'epico', {
+      light: '#d8e6ff', dark: '#6a4fc9', border: '#2b1f5c', frame: 10,
+      coord: { light: '#4b38a0', dark: '#e6eeff' }, pattern: 'shine', patternColor: 'rgba(255, 255, 255, 0.35)',
+      highlight: 'rgba(255, 200, 60, 0.55)',
+      shape: 'glass', frameStyle: 'ornate',
+    }),
+    unlock: 3,
+  },
+  {
+    ...character('char_tower_guard', 'Guardião da Torre', 'Elmo e armadura de quem derrubou a Torre Implacável.', 0, 'epico', {
+      skin: '#f1c27d', shirt: '#7d8790', pants: '#4a525a', shoes: '#2b3036', hat: 'helmet', hatColor: '#aab4bd', face: 'grin',
+    }),
+    unlock: 4,
+  },
+  {
+    ...pieces('pieces_royal', 'Realeza da Dama Mestra', 'Conjunto único de pérola e obsidiana, com frisos de ouro e joias. Só para quem venceu a Dama Mestra.', 0, 'lendario', {
+      whiteFill: '#f7f2e6', whiteOutline: '#6b4e12', blackFill: '#1d1733', blackOutline: '#d9b45a', glow: 4, model: 'royal',
+    }),
+    unlock: 5,
+  },
 ];
 
 /** Lendários = compra real no app; os demais = moedas. */
-export const CATALOG: ShopItem[] = ITEMS.map((i) => (i.rarity === 'lendario' ? { ...i, iap: i.id } : i));
+export const CATALOG: ShopItem[] = ITEMS.map((i) => (i.rarity === 'lendario' && !i.unlock ? { ...i, iap: i.id } : i));
 
-export const DEFAULT_ITEMS = CATALOG.filter((i) => i.price === 0).map((i) => i.id);
+/** Itens que toda conta já ganha ao ser criada (os gratuitos da loja; recompensas não). */
+export const DEFAULT_ITEMS = CATALOG.filter((i) => i.price === 0 && !i.unlock).map((i) => i.id);
+
+// ------------------------------------------------------------- emblemas e recompensas das IAs
+/** Emblema ganho ao vencer a IA de cada nível (1 a 5). */
+export const badgeId = (aiLevel: number) => `ai_${aiLevel}`;
+export const BADGE_IDS = [1, 2, 3, 4, 5].map(badgeId);
+/** Recompensa exclusiva de cada IA (liberada na 1ª vitória contra ela). */
+export const aiRewardItem = (aiLevel: number) => CATALOG.find((i) => i.unlock === aiLevel);
 
 export const DEFAULT_EQUIPPED: Record<ItemType, string> = {
   board: 'board_classic',

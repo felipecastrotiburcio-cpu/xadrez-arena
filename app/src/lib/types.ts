@@ -16,6 +16,10 @@ export interface PublicUser {
   bestStreak: number;
   /** Itens equipados que aparecem para os outros (peças e surgimento só nas versões novas). */
   cosmetics: { avatar: string; character: string; move: string; pieces?: string; entrance?: string };
+  /** Emblema que o jogador escolheu mostrar (perfil e partidas). */
+  badge?: string | null;
+  /** Emblemas conquistados (um por IA vencida). */
+  badges?: string[];
 }
 
 export type ItemType = 'board' | 'pieces' | 'avatar' | 'character' | 'move' | 'entrance';
@@ -50,7 +54,7 @@ export interface PieceStyle {
   blackFill: string;
   blackOutline: string;
   glow: number;
-  model?: 'staunton' | 'modern' | 'medieval' | 'crystal' | 'cute' | 'robot' | 'pixel' | 'knights';
+  model?: 'staunton' | 'modern' | 'medieval' | 'crystal' | 'cute' | 'robot' | 'pixel' | 'knights' | 'royal';
 }
 
 export interface AvatarStyle {
@@ -77,6 +81,8 @@ interface ShopItemBase {
   rarity: Rarity;
   /** ID do produto nas lojas (itens comprados com dinheiro real). */
   iap?: string;
+  /** Recompensa exclusiva: liberada ao vencer a IA deste nível (não é vendida). */
+  unlock?: number;
 }
 
 export type ShopItem =

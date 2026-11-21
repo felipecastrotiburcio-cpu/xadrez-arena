@@ -5,6 +5,8 @@ import { AI_LEVELS } from '../ai';
 import { ApiError } from './apiError';
 import {
   aiCoinReward,
+  aiRewardItem,
+  badgeId,
   CATALOG,
   DAILY_BONUS,
   DEFAULT_EQUIPPED,
@@ -32,6 +34,9 @@ const PBKDF2_ITERATIONS = 10_000;
 const USERNAME_RE = /^[a-zA-Z0-9_]{3,20}$/;
 export const ONLINE_ONLY = 'Amigos, convites e partidas online precisam do servidor online, que ainda não está disponível.';
 
+/** Recompensas das IAs não são vendidas na loja. */
+const REWARD_ONLY = 'Este item não é vendido: é uma recompensa por vencer uma IA.';
+
 interface LocalUser {
   id: string;
   username: string;
@@ -52,6 +57,9 @@ interface LocalUser {
   bestStreak: number;
   /** Modo desenvolvedor (senha nas Configurações): loja de graça. */
   devMode?: boolean;
+  /** Emblemas conquistados (um por IA vencida) e o escolhido para aparecer. */
+  badges?: string[];
+  badge?: string | null;
 }
 
 interface LocalGame extends Omit<GameSummary, 'opponent'> {
@@ -143,6 +151,8 @@ function publicUser(u: LocalUser) {
   return {
     id: u.id,
     username: u.username,
+    badge: u.badge ?? null,
+    badges: u.badges ?? [],
     rating: u.rating,
     peakRating: u.peakRating,
     level: level.level,
@@ -306,6 +316,7 @@ async function handle(data: Data, method: string, route: string, body: Record<st
       if (item.iap && !user.devMode) {
         throw new ApiError('Este item é vendido como compra no app (Google Play / App Store).', 400);
       }
+      if (item.unlock && !user.devMode) throw new ApiError(REWARD_ONLY, 403);
       if (user.coins < price) {
         throw new ApiError(`Faltam ${price - user.coins} moedas para comprar ${item.name}.`, 402);
       }
@@ -316,6 +327,15 @@ async function handle(data: Data, method: string, route: string, body: Record<st
     }
     // Comprar já equipa: é o que o jogador quer ver em seguida.
     user.equipped = { ...user.equipped, [item.type]: item.id };
+    return { user: privateUser(user) };
+  }
+
+  // ---- emblemas: o jogador escolhe qual mostrar (ou nenhum)
+  if (method === 'POST' && route === '/badges/select') {
+    const user = requireUser(data, token);
+    const badge = body.badge ? String(body.badge) : null;
+    if (badge && !(user.badges ?? []).includes(badge)) throw new ApiError('Você ainda não conquistou este emblema.', 403);
+    user.badge = badge;
     return { user: privateUser(user) };
   }
 
@@ -363,6 +383,27 @@ async function handle(data: Data, method: string, route: string, body: Record<st
       winStreak,
       bestStreak: Math.max(user.bestStreak, winStreak),
     });
+    // 1ª vitória contra esta IA: emblema + recompensa exclusiva.
+    let newBadge: string | null = null;
+    let rewardItem: string | null = null;
+    if (score === 1) {
+      const badge = badgeId(level.id);
+      if (!(user.badges ?? []).includes(badge)) {
+        user.badges = [...(user.badges ?? []), badge];
+        newBadge = badge;
+        if (!user.badge) user.badge = badge;
+        const reward = aiRewardItem(level.id);
+        if (reward && !user.inventory.includes(reward.id)) {
+          user.inventory.push(reward.id);
+          rewardItem = reward.id;
+        }
+        notify(data, user.id, {
+          type: 'reward',
+          title: `Novo emblema: ${level.name}!`,
+          body: reward ? `Você também liberou uma recompensa exclusiva: ${reward.name}.` : 'Escolha o emblema que aparece no seu perfil.',
+        });
+      }
+    }
     const outcome = score === 1 ? 'win' : score === 0 ? 'loss' : 'draw';
     const color = body.color === 'black' ? 'black' : 'white';
     data.games.push({
@@ -392,7 +433,7 @@ async function handle(data: Data, method: string, route: string, body: Record<st
         body: `Agora você é ${l.name}. Bônus de ${LEVEL_UP_BONUS} moedas!`,
       });
     }
-    return { user: privateUser(user), ratingChange: rating - before, coins, levelUp };
+    return { user: privateUser(user), ratingChange: rating - before, coins, levelUp, newBadge, rewardItem };
   }
 
   // ---- notificações

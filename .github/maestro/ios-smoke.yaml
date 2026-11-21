@@ -51,7 +51,7 @@ appId: app.xadrezarena
 
 # Desistir -> finalização 3D com música -> resultado
 - tapOn: ".*Desistir.*"
-- tapOn: "Desistir"   # botão do alerta de confirmação do iOS
+- tapOn: "Sim, desistir"   # botão do alerta de confirmação do iOS
 - extendedWaitUntil:
     visible: ".*Pular.*"
     timeout: 20000

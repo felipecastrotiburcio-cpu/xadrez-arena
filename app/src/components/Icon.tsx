@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import Svg, { Circle, Path, Rect } from 'react-native-svg';
+import Svg, { Circle, G, Path, Rect } from 'react-native-svg';
 import { colors } from '../lib/theme';
 
 /**
@@ -10,7 +10,10 @@ export type IconName =
   | 'back' | 'bell' | 'gear' | 'bag' | 'trophy' | 'users' | 'cpu' | 'swords' | 'check' | 'lock'
   | 'eye' | 'play' | 'gift' | 'chevron' | 'plus' | 'search' | 'clock' | 'flag' | 'refresh'
   | 'sparkle' | 'user' | 'palette' | 'close' | 'card' | 'wrench' | 'knight' | 'board' | 'crown'
-  | 'smile' | 'music' | 'globe' | 'server' | 'logout' | 'fire' | 'dice';
+  | 'smile' | 'music' | 'globe' | 'server' | 'logout' | 'fire' | 'dice'
+  // Ícones cheios (coloridos), usados nos atalhos e botões grandes:
+  | 'robotFill' | 'friendsFill' | 'trophyFill' | 'chestFill' | 'moonFill' | 'starFill' | 'fireFill'
+  | 'bulbFill' | 'flagFill' | 'giftFill' | 'targetFill' | 'medalFill' | 'lockFill' | 'boltFill';
 
 const P: Record<IconName, (c: string) => React.ReactNode> = {
   back: () => <Path d="M15 5l-7 7 7 7" />,
@@ -156,6 +159,85 @@ const P: Record<IconName, (c: string) => React.ReactNode> = {
   ),
   logout: () => <Path d="M14 4.5H7a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h7M10.5 12H20M16.5 8.5L20 12l-3.5 3.5" />,
   fire: () => <Path d="M12 21a6.5 6.5 0 0 0 6.5-6.5c0-4.5-4-6-4.5-10.5-2.5 1.5-4 4-3.5 6.5-1.2-.5-2-1.7-2.2-3C6.5 9.5 5.5 12 5.5 14.5A6.5 6.5 0 0 0 12 21z" />,
+  robotFill: (c) => (
+    <G fill={c} stroke="none">
+      <Rect x={11} y={2.5} width={2} height={4} rx={1} />
+      <Circle cx={12} cy={2.6} r={1.7} />
+      <Rect x={1.6} y={11} width={2.4} height={5} rx={1.2} />
+      <Rect x={20} y={11} width={2.4} height={5} rx={1.2} />
+      <Path fillRule="evenodd" d="M8 6.5h8a4.5 4.5 0 0 1 4.5 4.5v5a4.5 4.5 0 0 1-4.5 4.5H8A4.5 4.5 0 0 1 3.5 16v-5A4.5 4.5 0 0 1 8 6.5zM9 10.6a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm6 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM9.8 16.4a.8.8 0 0 0 0 1.6h4.4a.8.8 0 0 0 0-1.6z" />
+    </G>
+  ),
+  friendsFill: (c) => (
+    <G fill={c} stroke="none">
+      <Circle cx={9} cy={7.6} r={3.6} />
+      <Path d="M2.2 20c0-3.9 3-7 6.8-7s6.8 3.1 6.8 7z" />
+      <Circle cx={17.2} cy={8.6} r={2.9} opacity={0.8} />
+      <Path d="M15.4 13.3c.6-.2 1.2-.3 1.8-.3 3 0 5.3 2.5 5.3 5.7V20h-5.4c0-2.6-.6-4.9-1.7-6.7z" opacity={0.8} />
+    </G>
+  ),
+  trophyFill: (c) => (
+    <G>
+      <Path d="M6.5 3h11v6.2a5.5 5.5 0 0 1-11 0z" fill={c} stroke="none" />
+      <Path d="M6.6 5.2H3.8c0 2.6 1.4 4.4 3.6 4.8M17.4 5.2h2.8c0 2.6-1.4 4.4-3.6 4.8" stroke={c} strokeWidth={2} fill="none" />
+      <Rect x={10.6} y={14} width={2.8} height={3.6} fill={c} stroke="none" />
+      <Rect x={6.8} y={17.6} width={10.4} height={3.4} rx={1.4} fill={c} stroke="none" />
+    </G>
+  ),
+  chestFill: (c) => (
+    <G fill={c} stroke="none">
+      <Path d="M3 10.5A4.5 4.5 0 0 1 7.5 6h9a4.5 4.5 0 0 1 4.5 4.5V11H3z" />
+      <Path fillRule="evenodd" d="M5.2 12.2h13.6a2.2 2.2 0 0 1 2.2 2.2v3.9a2.2 2.2 0 0 1-2.2 2.2H5.2A2.2 2.2 0 0 1 3 18.3v-3.9a2.2 2.2 0 0 1 2.2-2.2zM11.5 12.6a1.2 1.2 0 0 0-1.2 1.2v1.4a1.2 1.2 0 0 0 1.2 1.2h1a1.2 1.2 0 0 0 1.2-1.2v-1.4a1.2 1.2 0 0 0-1.2-1.2z" />
+    </G>
+  ),
+  moonFill: (c) => <Path d="M19.8 14.8A8.3 8.3 0 1 1 9.2 4.2a6.6 6.6 0 0 0 10.6 10.6z" fill={c} stroke="none" />,
+  starFill: (c) => <Path d="M12 2.6l2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 16.9l-5.6 2.9 1.1-6.2L3 9.2l6.2-.9z" fill={c} stroke="none" />,
+  fireFill: (c) => (
+    <Path d="M12 21.5a6.8 6.8 0 0 0 6.8-6.8c0-4.7-4.2-6.3-4.7-11-2.6 1.6-4.2 4.2-3.7 6.8-1.3-.5-2.1-1.8-2.3-3.1-1.6 1.6-2.9 4.3-2.9 7.3a6.8 6.8 0 0 0 6.8 6.8z" fill={c} stroke="none" />
+  ),
+  bulbFill: (c) => (
+    <G fill={c} stroke="none">
+      <Path d="M12 2.4a6.6 6.6 0 0 0-3.9 11.9c.6.5.9 1.1.9 1.8V17h6v-.9c0-.7.3-1.3.9-1.8A6.6 6.6 0 0 0 12 2.4z" />
+      <Rect x={9} y={18.2} width={6} height={2} rx={1} />
+      <Rect x={10} y={20.8} width={4} height={1.6} rx={0.8} />
+    </G>
+  ),
+  flagFill: (c) => (
+    <G fill={c} stroke="none">
+      <Rect x={4.6} y={2.6} width={2.4} height={19} rx={1.2} />
+      <Path d="M7 3.6h12l-2.8 4.8L19 13.2H7z" />
+    </G>
+  ),
+  giftFill: (c) => (
+    <G fill={c} stroke="none">
+      <Rect x={3.5} y={10.5} width={7.5} height={10} rx={1.5} />
+      <Rect x={13} y={10.5} width={7.5} height={10} rx={1.5} />
+      <Rect x={2.5} y={7} width={8.5} height={3} rx={1} />
+      <Rect x={13} y={7} width={8.5} height={3} rx={1} />
+      <Path d="M11.5 6.6c-1.6-3.8-6-3.8-5.4-1C6.5 7 11.5 6.6 11.5 6.6zM12.5 6.6c1.6-3.8 6-3.8 5.4-1-.4 1.4-5.4 1-5.4 1z" />
+    </G>
+  ),
+  targetFill: (c) => (
+    <G>
+      <Circle cx={12} cy={12} r={9} fill="none" stroke={c} strokeWidth={2.2} />
+      <Circle cx={12} cy={12} r={5} fill="none" stroke={c} strokeWidth={2.2} />
+      <Circle cx={12} cy={12} r={1.9} fill={c} stroke="none" />
+    </G>
+  ),
+  medalFill: (c) => (
+    <G stroke="none">
+      <Path d="M7 2.5h3.4l2.2 5.4-3.2 1.6zM17 2.5h-3.4l-2.2 5.4 3.2 1.6z" fill={c} opacity={0.7} />
+      <Circle cx={12} cy={14.5} r={6.8} fill={c} />
+      <Path d="M12 10.3l1.3 2.6 2.9.4-2.1 2 .5 2.9-2.6-1.4-2.6 1.4.5-2.9-2.1-2 2.9-.4z" fill="#00000040" />
+    </G>
+  ),
+  lockFill: (c) => (
+    <G>
+      <Path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke={c} strokeWidth={2.2} />
+      <Rect x={5} y={10.5} width={14} height={10} rx={2.6} fill={c} stroke="none" />
+    </G>
+  ),
+  boltFill: (c) => <Path d="M13.5 2.5L5 13.5h6l-1.5 8 8.5-11h-6z" fill={c} stroke="none" />,
   dice: () => (
     <>
       <Rect x={4} y={4} width={16} height={16} rx={3.5} />
@@ -179,7 +261,7 @@ export const CoinIcon = memo(function CoinIcon({ size = 16 }: { size?: number })
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24">
       <Circle cx={12} cy={12} r={11} fill="#b8862f" />
-      <Circle cx={12} cy={12} r={9.2} fill="#e2b45a" />
+      <Circle cx={12} cy={12} r={9.2} fill="#f2be55" />
       <Circle cx={12} cy={12} r={9.2} fill="none" stroke="#f6d48d" strokeWidth={0.8} opacity={0.8} />
       <Path transform="translate(3.4 3.2) scale(0.175)" d="M70 74 C72 58 70 44 63 34 C58 27 52 22 45 20 L47 11 L38 18 C30 21 24 29 21 37 C19 43 21 48 26 49 C31 50 34 47 38 46 C42 46 44 49 41 55 C37 62 33 68 33 74 Z M27 80 H76 V89 H27 Z" fill="#8a5f1c" />
     </Svg>

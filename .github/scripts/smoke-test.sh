@@ -137,7 +137,7 @@ if tap '.*Dica'; then sleep 4; shot 06-dica; ok "Botão de dica respondeu"; else
 # Desistir -> finalização 3D da IA -> resultado
 if tap '.*Desistir'; then
   sleep 2
-  if tap 'desistir'; then ok "Desistência confirmada"; else fail "Confirmação de desistência não apareceu"; fi
+  if tap 'sim, desistir'; then ok "Desistência confirmada"; else fail "Confirmação de desistência não apareceu"; fi
   sleep 3; shot 07-finalizacao-3d-a
   sleep 2; shot 08-finalizacao-3d-b
   if alive; then ok "Finalização 3D exibida sem travar o app"; else fail "App fechou durante a finalização 3D"; fi

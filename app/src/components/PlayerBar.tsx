@@ -6,6 +6,7 @@ import { colors, fonts } from '../lib/theme';
 import { formatClock } from '../lib/timeControls';
 import { Avatar } from './ui';
 import { Flag } from './Flag';
+import { Emblem } from './Emblem';
 
 interface Props {
   name: string;
@@ -22,9 +23,11 @@ interface Props {
   avatar?: string;
   /** País do jogador (bandeira ao lado do nome). */
   country?: string | null;
+  /** Emblema escolhido pelo jogador (aparece ao lado do nome). */
+  badge?: string | null;
 }
 
-export function PlayerBar({ name, subtitle, captured, capturedColor, advantage, clockMs, active, thinking, offline, avatar, country }: Props) {
+export function PlayerBar({ name, subtitle, captured, capturedColor, advantage, clockMs, active, thinking, offline, avatar, country, badge }: Props) {
   const { pieces } = useMyLook();
   const { t } = useT();
   const low = clockMs !== undefined && clockMs < 20_000;
@@ -37,6 +40,7 @@ export function PlayerBar({ name, subtitle, captured, capturedColor, advantage, 
           <Text style={styles.name} numberOfLines={1}>
             {name}
           </Text>
+          {badge ? <Emblem id={badge} size={22} /> : null}
           {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
           {thinking && <ActivityIndicator size="small" color={colors.accent} />}
           {offline && <Text style={styles.offline}>{t('player.offline')}</Text>}

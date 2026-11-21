@@ -15,12 +15,13 @@ import { levelName, useT } from '../lib/i18n';
 import { LEVEL_ICONS } from '../lib/levels';
 import { colors, fonts, radius } from '../lib/theme';
 import { CoinIcon, Icon, type IconName } from './Icon';
+import { StarrySky } from './StarrySky';
 
 type Variant = 'primary' | 'gold' | 'secondary' | 'danger' | 'ghost';
 
 /**
- * Botão: latão sólido para a ação principal, superfície com contorno fino para as demais.
- * Sem gradientes nem "degrau" 3D: o peso visual vem da cor e do tamanho, não de efeitos.
+ * Botão "fofinho": cor sólida com uma sombra embaixo; ao tocar, ele afunda (a sombra diminui
+ * e o botão desce), como um botão de brinquedo. Dourado para a ação principal.
  */
 export function Button({
   title,
@@ -62,8 +63,8 @@ export function Button({
         styles.button,
         small && styles.buttonSmall,
         styles[variant],
-        pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
-        dead && filled && { backgroundColor: colors.raised },
+        pressed && variant !== 'ghost' && styles.pressed,
+        dead && filled && { backgroundColor: colors.raised, borderBottomColor: colors.shadow },
         dead && !filled && { opacity: 0.5 },
         loading && { opacity: 0.7 },
         style,
@@ -74,7 +75,7 @@ export function Button({
       ) : (
         <View style={styles.buttonRow}>
           {iconName && <Icon name={iconName} size={small ? 16 : 19} color={textColor} strokeWidth={2} />}
-          <Text style={[styles.buttonText, small && { fontFamily: fonts.regular, fontSize: 14 }, { color: textColor }]} numberOfLines={1}>
+          <Text style={[styles.buttonText, small && { fontSize: 14 }, { color: textColor }]} numberOfLines={1}>
             {icon ? `${icon}  ` : ''}
             {title}
           </Text>
@@ -89,9 +90,12 @@ export function Screen({
   scroll = true,
   style,
   footer,
+  stars = true,
 }: {
   children: ReactNode;
   scroll?: boolean;
+  /** Céu estrelado discreto atrás do conteúdo (padrão: sim). */
+  stars?: boolean;
   style?: StyleProp<ViewStyle>;
   /**
    * Barra fixa no rodapé (ex.: o botão principal da tela). Fica sempre visível enquanto o
@@ -101,6 +105,7 @@ export function Screen({
 }) {
   return (
     <SafeAreaView style={styles.screen} edges={['bottom', 'left', 'right']}>
+      {stars && <StarrySky />}
       {scroll ? (
         <ScrollView
           style={{ flex: 1 }}
@@ -237,30 +242,35 @@ const styles = StyleSheet.create({
   },
   footerInner: { width: '100%', maxWidth: 608, alignSelf: 'center', gap: 8 },
   button: {
-    minHeight: 52,
+    minHeight: 54,
     borderRadius: radius.md,
     paddingHorizontal: 20,
     alignItems: 'center',
     justifyContent: 'center',
+    borderBottomWidth: 5,
+    marginBottom: 0,
   },
+  pressed: { borderBottomWidth: 2, marginBottom: 3, transform: [{ translateY: 3 }] },
   buttonRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  buttonSmall: { minHeight: 40, paddingHorizontal: 14, borderRadius: radius.sm },
-  primary: { backgroundColor: colors.accent },
-  gold: { backgroundColor: colors.accent },
-  secondary: { backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.borderStrong },
-  danger: { backgroundColor: 'rgba(226, 90, 82, 0.1)', borderWidth: 1, borderColor: 'rgba(226, 90, 82, 0.4)' },
-  ghost: { backgroundColor: 'transparent' },
-  buttonText: { color: colors.text, fontSize: 16, fontFamily: fonts.bold, letterSpacing: 0.2 },
+  buttonSmall: { minHeight: 42, paddingHorizontal: 14, borderRadius: radius.sm, borderBottomWidth: 4 },
+  primary: { backgroundColor: colors.accent, borderBottomColor: colors.accentDark },
+  gold: { backgroundColor: colors.accent, borderBottomColor: colors.accentDark },
+  secondary: { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border, borderBottomColor: colors.shadow },
+  danger: { backgroundColor: 'rgba(255, 107, 107, 0.12)', borderWidth: 1.5, borderColor: 'rgba(255, 107, 107, 0.45)', borderBottomColor: 'rgba(255, 107, 107, 0.45)' },
+  ghost: { backgroundColor: 'transparent', borderBottomWidth: 0 },
+  buttonText: { color: colors.text, fontSize: 16, fontFamily: fonts.black, letterSpacing: 0.2 },
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: 16,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.border,
+    borderBottomWidth: 5,
+    borderBottomColor: colors.shadow,
     gap: 10,
   },
   sectionTitle: {
-    color: colors.textFaint,
+    color: colors.textMuted,
     fontSize: 12,
     fontFamily: fonts.black,
     letterSpacing: 1.4,
@@ -279,8 +289,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
     borderColor: colors.border,
     borderRadius: 999,
     paddingLeft: 6,
@@ -299,7 +309,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  pageTitle: { color: colors.text, fontFamily: fonts.display, fontSize: 30, letterSpacing: -0.3 },
+  pageTitle: { color: colors.text, fontFamily: fonts.display, fontSize: 30 },
   pageSub: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 14, lineHeight: 20 },
   onlineDot: {
     position: 'absolute',

@@ -91,3 +91,19 @@ await q(`update wallets set dev_mode = true where user_id = $1`, [c]);
 const coinsC = (await q(`select coins from wallets where user_id=$1`, [c]))[0].coins;
 ok((await q(`select buy_item($1,'board_galaxy',0) r`, [c]))[0].r === coinsC, 'modo desenvolvedor: item lendário de graça');
 ok((await q(`select 'board_galaxy' = any(inventory) v from wallets where user_id=$1`, [c]))[0].v, 'item grátis entra no inventário');
+
+// Emblemas das IAs
+ok((await q(`select badges, badge from profiles where id=$1`, [c]))[0].badges.length === 0, 'conta nova sem emblemas');
+ok((await q(`select grant_ai_badge($1,'ai_5','pieces_royal') g`, [c]))[0].g === true, '1ª vitória: emblema novo');
+ok((await q(`select grant_ai_badge($1,'ai_5','pieces_royal') g`, [c]))[0].g === false, 'emblema não repete');
+const pc = (await q(`select badges, badge from profiles where id=$1`, [c]))[0];
+ok(pc.badges.join() === 'ai_5' && pc.badge === 'ai_5', 'emblema salvo e escolhido automaticamente');
+ok((await q(`select array_length(array_positions(inventory,'pieces_royal'),1) n from wallets where user_id=$1`, [c]))[0].n === 1, 'recompensa exclusiva no inventário (uma vez)');
+ok((await q(`select select_badge($1,'ai_1') s`, [c]))[0].s === false, 'não escolhe emblema que não tem');
+ok((await q(`select select_badge($1,null) s`, [c]))[0].s === true, 'pode esconder o emblema');
+ok((await q(`select badge from profiles where id=$1`, [c]))[0].badge === null, 'emblema escondido');
+for (const fn of ["grant_ai_badge($1,'ai_1','avatar_pawn_medal')", "select_badge($1,'ai_5')"]) {
+  try { await as(c, `select ${fn}`, [c]); ok(false, `app não chama ${fn.split('(')[0]}`); } catch { ok(true, `app não chama ${fn.split('(')[0]}`); }
+}
+try { await as(c, `update profiles set badges = '{ai_1,ai_2}' where id = $1`, [c]); } catch { /* sem permissão */ }
+ok((await q(`select badges from profiles where id=$1`, [c]))[0].badges.join() === 'ai_5', 'o app não consegue se dar emblemas');

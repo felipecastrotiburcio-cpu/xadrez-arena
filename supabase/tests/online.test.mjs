@@ -248,8 +248,18 @@ test('loja: moedas, item lendário só por compra real, equipar, bônus diário 
   await assert.rejects(B.call('daily'), /amanhã/);
   const ai = await B.call('ai_result', { level: 3, score: 1 });
   assert.equal(ai.coins, 25);
+  // 1ª vitória contra a IA 3: emblema + recompensa exclusiva (Vitral do Bispo), uma vez só.
+  assert.equal(ai.newBadge, 'ai_3');
+  assert.equal(ai.rewardItem, 'board_bishop_glass');
+  assert.equal(ai.user.badge, 'ai_3');
+  assert.ok(ai.user.inventory.includes('board_bishop_glass'));
   const ai2 = await B.call('ai_result', { level: 3, score: 1 });
   assert.equal(ai2.coins, 0, 'no máximo uma recompensa a cada 30 s');
+  assert.equal(ai2.newBadge, null, 'o emblema não repete');
+  await assert.rejects(B.call('buy', { itemId: 'pieces_royal' }), /recompensa/);
+  await assert.rejects(B.call('badge_select', { badge: 'ai_5' }), /não conquistou/);
+  assert.equal((await B.call('badge_select', { badge: null })).user.badge, null);
+  assert.equal((await B.call('badge_select', { badge: 'ai_3' })).user.badge, 'ai_3');
   await assert.rejects(B.call('purchase', { platform: 'ios', productId: 'board_galaxy', jws: 'a.b.c' }), /inválida|Apple/);
   await assert.rejects(B.call('purchase', { platform: 'android', productId: 'board_galaxy', purchaseToken: 'x' }), /não configuradas|não encontrada/);
 });

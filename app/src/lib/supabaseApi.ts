@@ -138,6 +138,7 @@ export async function supabaseApi<T = any>(path: string, method: string, body: a
   if (method === 'POST' && route === '/rewards/daily') return arena<T>('daily');
   if (method === 'POST' && route === '/dev/unlock') return arena<T>('dev_unlock', { password: body?.password });
   if (method === 'POST' && route === '/dev/lock') return arena<T>('dev_lock');
+  if (method === 'POST' && route === '/badges/select') return arena<T>('badge_select', { badge: body?.badge ?? null });
   if (method === 'POST' && route === '/ai/result') return arena<T>('ai_result', { level: body?.level, score: body?.score });
   if (method === 'POST' && route === '/shop/purchase') return arena<T>('purchase', body ?? {});
 

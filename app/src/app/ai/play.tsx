@@ -24,9 +24,12 @@ import type { PrivateUser, Side } from '../../lib/types';
 
 interface Reward {
   coins: number;
-  ratingChange: number;
-  newRating: number;
+  ratingChange?: number;
+  newRating?: number;
   levelUp: string | null;
+  /** 1ª vitória contra esta IA: emblema novo e recompensa exclusiva. */
+  newBadge?: string | null;
+  rewardItem?: string | null;
 }
 
 function gameResult(chess: Chess): { result: string; reason: string } | null {
@@ -116,20 +119,24 @@ export default function AiGame() {
   const report = useCallback(
     (outcome: 'win' | 'loss' | 'draw', reason: string) => {
       recordAiResult(level.id, outcome);
-      // Conta do aparelho: moedas e rating (no modo online a IA não paga, pois o servidor não confere a partida).
-      if (!user || !isLocalMode() || rewarded.current) return;
+      // Conta do aparelho: moedas, rating e emblemas. Online: moedas (com limite diário) e emblemas;
+      // o rating online só muda em partidas contra pessoas.
+      if (!user || rewarded.current) return;
       rewarded.current = true;
+      const local = isLocalMode();
       const score = outcome === 'win' ? 1 : outcome === 'draw' ? 0.5 : 0;
-      api<{ user: PrivateUser; coins: number; ratingChange: number; levelUp: boolean }>('/ai/result', {
+      api<{ user: PrivateUser; coins: number; ratingChange: number; levelUp: boolean; newBadge?: string | null; rewardItem?: string | null }>('/ai/result', {
         body: { level: level.id, score, reason, color: playerSide === 'w' ? 'white' : 'black' },
       })
         .then((r) => {
           setUser(r.user);
           setReward({
             coins: r.coins,
-            ratingChange: r.ratingChange,
-            newRating: r.user.rating,
+            ratingChange: local ? r.ratingChange : undefined,
+            newRating: local ? r.user.rating : undefined,
             levelUp: r.levelUp ? r.user.levelName : null,
+            newBadge: r.newBadge ?? null,
+            rewardItem: r.rewardItem ?? null,
           });
         })
         .catch(() => {});
@@ -312,7 +319,7 @@ export default function AiGame() {
     if (Platform.OS === 'web') confirm();
     else Alert.alert(t('aiPlay.resignTitle'), t('aiPlay.resignBody'), [
       { text: t('common.cancel'), style: 'cancel' },
-      { text: t('common.resign'), style: 'destructive', onPress: confirm },
+      { text: t('aiPlay.resignConfirm'), style: 'destructive', onPress: confirm },
     ]);
   };
 
@@ -352,6 +359,7 @@ export default function AiGame() {
       <PlayerBar
         name={user?.username ?? t('common.you')}
         country={user?.country}
+        badge={user?.badge}
         avatar={user?.equipped.avatar}
         captured={material.captured[aiSide]}
         capturedColor={aiSide}
@@ -418,6 +426,8 @@ export default function AiGame() {
           newRating={reward?.newRating}
           coins={reward?.coins}
           levelUp={translateServerText(reward?.levelUp)}
+          newBadge={reward?.newBadge}
+          rewardItem={reward?.rewardItem}
         >
           {!user && (
             <Button title={t('aiPlay.signUpCoins')} variant="gold" onPress={() => router.push('/login')} />

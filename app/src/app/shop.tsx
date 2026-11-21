@@ -183,6 +183,16 @@ export default function Shop() {
       return <PriceButton label={t('common.equip')} kind="outline" wide={wide} loading={loading} onPress={() => run(item.id, 'equip')} />;
     if (dev)
       return <PriceButton label={t('shop.devFree')} icon="wrench" kind="gold" wide={wide} loading={loading} onPress={() => run(item.id, 'buy')} />;
+    // Recompensa exclusiva: não se compra, se ganha vencendo a IA.
+    if (item.unlock)
+      return (
+        <View style={[styles.locked, wide && styles.wide]}>
+          <Icon name="lockFill" size={14} color={colors.accent} />
+          <Text style={styles.lockedText} numberOfLines={1}>
+            {t('badges.rewardHint', { name: t(`ai.${item.unlock}.name` as TranslationKey) })}
+          </Text>
+        </View>
+      );
     if (item.iap)
       return (
         <PriceButton
@@ -419,7 +429,7 @@ export default function Shop() {
 
 /** Fundo da arte do item: o mesmo tom escuro, levemente puxado para a cor da raridade. */
 function tintFor(rarity: ShopItem['rarity']) {
-  return { comum: '#1e1c18', raro: '#1a1f22', epico: '#1f1b23', lendario: '#231e15' }[rarity];
+  return { comum: '#202a52', raro: '#1c2c55', epico: '#262458', lendario: '#2c2a50' }[rarity];
 }
 
 function PriceButton({
@@ -449,8 +459,8 @@ function PriceButton({
       accessibilityRole="button"
       style={({ pressed }) => [
         styles.priceBtn,
-        kind === 'gold' && { backgroundColor: colors.accent },
-        kind === 'outline' && { borderWidth: 1, borderColor: colors.borderStrong },
+        kind === 'gold' && { backgroundColor: colors.accent, borderBottomWidth: 4, borderBottomColor: colors.accentDark },
+        kind === 'outline' && { borderWidth: 1.5, borderColor: colors.borderStrong, borderBottomWidth: 4, borderBottomColor: colors.shadow },
         kind === 'locked' && { backgroundColor: colors.raised },
         wide && styles.wide,
         pressed && { opacity: 0.8 },
@@ -545,19 +555,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     borderRadius: radius.lg,
     backgroundColor: colors.surface,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.border,
+    borderBottomWidth: 5,
+    borderBottomColor: colors.shadow,
   },
   balanceRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  balance: { color: colors.text, fontFamily: fonts.display, fontSize: 32, letterSpacing: -0.5, fontVariant: ['tabular-nums'] },
+  balance: { color: colors.text, fontFamily: fonts.displayBold, fontSize: 32, fontVariant: ['tabular-nums'] },
   daily: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     backgroundColor: colors.accent,
     paddingHorizontal: 14,
-    paddingVertical: 11,
-    borderRadius: 999,
+    paddingVertical: 10,
+    borderRadius: 16,
+    borderBottomWidth: 5,
+    borderBottomColor: colors.accentDark,
   },
   dailyText: { color: colors.accentText, fontFamily: fonts.black, fontSize: 14 },
   dailyDone: { flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: 150 },
@@ -586,7 +600,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  tabActive: { backgroundColor: colors.text, borderColor: colors.text },
+  tabActive: { backgroundColor: colors.accent, borderColor: colors.accent, borderBottomWidth: 4, borderBottomColor: colors.accentDark },
   tabText: { color: colors.textMuted, fontFamily: fonts.bold, fontSize: 14 },
   tabTextActive: { color: colors.accentText },
   listHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: -4 },
@@ -600,9 +614,11 @@ const styles = StyleSheet.create({
     gap: 14,
     padding: 8,
     borderRadius: radius.lg,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
+    backgroundColor: '#24285e',
+    borderWidth: 1.5,
     borderColor: colors.border,
+    borderBottomWidth: 5,
+    borderBottomColor: colors.shadow,
   },
   featuredArt: { width: 132, height: 132, borderRadius: 15, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   artBadge: {
@@ -618,15 +634,17 @@ const styles = StyleSheet.create({
   },
   featuredBody: { flex: 1, paddingVertical: 6, paddingRight: 6, gap: 4 },
   featuredTag: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  featuredName: { color: colors.text, fontFamily: fonts.display, fontSize: 21, lineHeight: 25, letterSpacing: -0.3 },
+  featuredName: { color: colors.text, fontFamily: fonts.display, fontSize: 21, lineHeight: 25 },
   featuredDesc: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 13, lineHeight: 18 },
   featuredAction: { flexDirection: 'row', marginTop: 'auto', paddingTop: 6 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   card: {
     borderRadius: radius.lg,
     backgroundColor: colors.surface,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.border,
+    borderBottomWidth: 5,
+    borderBottomColor: colors.shadow,
     padding: 6,
   },
   art: { borderRadius: 15, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
@@ -642,7 +660,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(15, 14, 12, 0.7)',
   },
   cardBody: { paddingHorizontal: 8, paddingTop: 10, paddingBottom: 8, gap: 3 },
-  name: { color: colors.text, fontSize: 15, fontFamily: fonts.bold },
+  name: { color: colors.text, fontSize: 15.5, fontFamily: fonts.display },
   rarityRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   rarityDot: { width: 6, height: 6, borderRadius: 3 },
   rarity: { fontSize: 12, fontFamily: fonts.bold },
@@ -651,12 +669,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    height: 36,
+    height: 38,
     paddingHorizontal: 14,
-    borderRadius: 10,
+    borderRadius: 12,
   },
   wide: { alignSelf: 'stretch' },
   priceText: { fontFamily: fonts.black, fontSize: 14, fontVariant: ['tabular-nums'] },
+  locked: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    height: 36,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: 'rgba(244, 185, 66, 0.45)',
+    borderStyle: 'dashed',
+  },
+  lockedText: { color: colors.accent, fontFamily: fonts.black, fontSize: 12.5, flexShrink: 1 },
   state: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, height: 36 },
   stateText: { fontFamily: fonts.bold, fontSize: 14 },
   moveArt: { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.raised },

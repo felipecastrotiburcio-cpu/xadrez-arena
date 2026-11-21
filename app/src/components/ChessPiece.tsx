@@ -917,6 +917,153 @@ function knights(type: PieceType, p: Paint): ReactNode {
 
 // ===================================================================
 
+// =================================================================== REALEZA (recompensa da Dama Mestra)
+// Pérola e obsidiana com frisos de ouro e uma joia em cada peça (safira nas brancas, rubi nas pretas).
+// Não é vendida na loja: só quem vence a Dama Mestra ganha.
+
+const ROYAL_GOLD = '#f2c14e';
+
+const Gold = ({ children, p }: { children: ReactNode; p: Paint }) =>
+  p.outline ? null : (
+    <G fill={ROYAL_GOLD} stroke="#8a6512" strokeWidth={1.2} strokeLinejoin="round">
+      {children}
+    </G>
+  );
+
+const Gem = ({ cx, cy, r, p }: { cx: number; cy: number; r: number; p: Paint }) =>
+  p.outline ? null : (
+    <>
+      <Path d={`M${cx} ${cy - r} L${cx + r} ${cy} L${cx} ${cy + r} L${cx - r} ${cy} Z`} fill={p.accent} stroke="#8a6512" strokeWidth={1.1} strokeLinejoin="round" />
+      <Path d={`M${cx - r * 0.45} ${cy - r * 0.15} L${cx} ${cy - r * 0.6}`} stroke="#ffffff" strokeOpacity={0.8} strokeWidth={1.1} strokeLinecap="round" />
+    </>
+  );
+
+const RoyalBase = ({ p }: { p: Paint }) => (
+  <>
+    <Rect x={18} y={81} width={64} height={10} rx={5} {...solid(p)} />
+    <Rect x={24} y={73} width={52} height={10} rx={3.5} {...solid(p)} />
+    <Gold p={p}>
+      <Rect x={24} y={76.5} width={52} height={3.2} rx={1.6} />
+    </Gold>
+    <Gem cx={50} cy={86} r={2.8} p={p} />
+  </>
+);
+
+function royal(type: PieceType, p: Paint): ReactNode {
+  const common = solid(p);
+  switch (type) {
+    case 'p':
+      return (
+        <>
+          <RoyalBase p={p} />
+          <Path d="M36 74 C36 64 41 58 44 54 L56 54 C59 58 64 64 64 74 Z" {...common} />
+          <Gold p={p}>
+            <Ellipse cx={50} cy={53} rx={14} ry={4.2} />
+          </Gold>
+          <Circle cx={50} cy={37} r={12.5} {...common} />
+          <Gold p={p}>
+            <Circle cx={50} cy={22.5} r={3.6} />
+          </Gold>
+          <Shine d="M42 31 A9 9 0 0 1 47 27" p={p} />
+          <Shine d="M41 70 C41 64 43 60 46 57" p={p} />
+        </>
+      );
+    case 'r':
+      return (
+        <>
+          <RoyalBase p={p} />
+          <Path d="M31 74 L34 44 L66 44 L69 74 Z" {...common} />
+          <Rect x={27} y={35} width={46} height={10} rx={2.5} {...common} />
+          <Path d="M27 36 L27 18 L36 18 L36 25 L45 25 L45 18 L55 18 L55 25 L64 25 L64 18 L73 18 L73 36 Z" {...common} />
+          <Gold p={p}>
+            <Rect x={27} y={38.5} width={46} height={3.2} rx={1.6} />
+            <Rect x={33} y={56} width={34} height={3.2} rx={1.6} />
+          </Gold>
+          <Gem cx={50} cy={66} r={4.2} p={p} />
+          <Shine d="M36 70 L38 48" p={p} />
+        </>
+      );
+    case 'b':
+      return (
+        <>
+          <RoyalBase p={p} />
+          <Path d="M35 74 C37 65 42 61 44 57 L56 57 C58 61 63 65 65 74 Z" {...common} />
+          <Gold p={p}>
+            <Ellipse cx={50} cy={56} rx={14} ry={4.2} />
+          </Gold>
+          <Path d="M50 15 C64 26 66 41 58 52 L42 52 C34 41 36 26 50 15 Z" {...common} />
+          <Lines d="M57 26 L48 37" p={p} w={2.6} o={0.8} />
+          <Gem cx={50} cy={43} r={3.6} p={p} />
+          <Gold p={p}>
+            <Circle cx={50} cy={11} r={4.6} />
+          </Gold>
+          <Shine d="M42 44 C39 37 41 29 46 23" p={p} />
+        </>
+      );
+    case 'n':
+      return (
+        <>
+          <RoyalBase p={p} />
+          <Path
+            d="M70 74 C72 58 70 44 63 34 C58 27 52 22 45 20 L47 11 L38 18 C30 21 24 29 21 37 C19 43 21 48 26 49 C31 50 34 47 38 46 C42 46 44 49 41 55 C37 62 33 68 33 74 Z"
+            {...common}
+          />
+          {!p.outline && (
+            <>
+              {/* crina dourada e rédea */}
+              <Path d="M48 21 C59 25 66 35 68 50 C69 58 69 66 68 72" fill="none" stroke={ROYAL_GOLD} strokeWidth={3.6} strokeLinecap="round" />
+              <Path d="M48 21 C59 25 66 35 68 50 C69 58 69 66 68 72" fill="none" stroke="#8a6512" strokeWidth={0.9} strokeOpacity={0.6} strokeLinecap="round" />
+              <Path d="M24 42 L41 33" fill="none" stroke={ROYAL_GOLD} strokeWidth={2.6} strokeLinecap="round" />
+              <Ellipse cx={36} cy={30} rx={2.8} ry={2.3} fill={p.detail} />
+              <Circle cx={35.2} cy={29.4} r={0.9} fill="#ffffff" />
+            </>
+          )}
+          <Gem cx={44} cy={24.5} r={2.8} p={p} />
+          <Shine d="M27 36 C30 29 35 24 40 22" p={p} />
+        </>
+      );
+    case 'q':
+      return (
+        <>
+          <RoyalBase p={p} />
+          <Path d="M33 74 C35 63 40 57 42 52 L58 52 C60 57 65 63 67 74 Z" {...common} />
+          <Gold p={p}>
+            <Ellipse cx={50} cy={51} rx={15} ry={4.4} />
+          </Gold>
+          <Path d="M31 48 L26 22 L38 33 L44 16 L50 29 L56 16 L62 33 L74 22 L69 48 Z" {...common} />
+          <Gold p={p}>
+            <Rect x={31} y={42} width={38} height={4} rx={2} />
+            <Circle cx={26} cy={20} r={3.2} />
+            <Circle cx={44} cy={14} r={3.2} />
+            <Circle cx={56} cy={14} r={3.2} />
+            <Circle cx={74} cy={20} r={3.2} />
+          </Gold>
+          <Gem cx={50} cy={36} r={4.2} p={p} />
+          <Shine d="M39 70 C40 63 42 58 45 55" p={p} />
+        </>
+      );
+    case 'k':
+      return (
+        <>
+          <RoyalBase p={p} />
+          <Path d="M33 74 C35 63 40 57 42 53 L58 53 C60 57 65 63 67 74 Z" {...common} />
+          <Gold p={p}>
+            <Ellipse cx={50} cy={52} rx={15} ry={4.4} />
+          </Gold>
+          <Path d="M33 49 C29 37 36 27 50 27 C64 27 71 37 67 49 Z" {...common} />
+          <Gold p={p}>
+            <Rect x={33} y={44.5} width={34} height={4} rx={2} />
+            <Rect x={46.8} y={7} width={6.4} height={21} rx={2.2} />
+            <Rect x={41} y={12.5} width={18} height={6.2} rx={2.2} />
+          </Gold>
+          <Gem cx={50} cy={37} r={4} p={p} />
+          <Shine d="M39 70 C40 63 42 58 45 55" p={p} />
+          <Shine d="M38 43 C37 37 40 32 45 30" p={p} />
+        </>
+      );
+  }
+}
+
 const MODELS: Record<PieceModel, (type: PieceType, p: Paint) => ReactNode> = {
   staunton,
   modern,
@@ -926,6 +1073,7 @@ const MODELS: Record<PieceModel, (type: PieceType, p: Paint) => ReactNode> = {
   robot,
   pixel,
   knights,
+  royal,
 };
 
 interface Props {
@@ -950,6 +1098,8 @@ function ChessPieceBase({ type, color, style: sided, size }: Props) {
       ? white ? '#29d3ff' : '#ff4d5e'
       : style.model === 'knights'
         ? white ? '#2f6fdb' : '#c62828'
+        : style.model === 'royal'
+          ? white ? '#3d7bff' : '#ff3d6e'
         : white ? '#ff4d6d' : '#46e0ff';
   const paint: Paint = {
     fill: `url(#${id})`,

@@ -26,6 +26,10 @@ export function createShopRoutes(db: Database, auth: Auth, notifier: Notifier) {
     if (item.iap && !user.devMode) {
       return res.status(400).json({ error: 'Este item é vendido como compra no app (Google Play / App Store).' });
     }
+    // Recompensas das IAs não são vendidas: só se ganham vencendo a IA.
+    if (item.unlock && !user.devMode) {
+      return res.status(403).json({ error: 'Este item não é vendido: é uma recompensa por vencer uma IA.' });
+    }
     if (user.coins < price) {
       return res.status(402).json({ error: `Faltam ${price - user.coins} moedas para comprar ${item.name}.` });
     }
@@ -43,6 +47,16 @@ export function createShopRoutes(db: Database, auth: Auth, notifier: Notifier) {
       return res.status(403).json({ error: 'Senha do modo desenvolvedor incorreta.' });
     }
     res.json({ user: privateUser(db.updateUser(req.userId!, { devMode: true })!) });
+  });
+
+  // Emblema que aparece no perfil e nas partidas (null = nenhum).
+  r.post('/badges/select', auth.requireAuth, (req: AuthedRequest, res) => {
+    const user = db.getUser(req.userId!)!;
+    const badge = req.body?.badge ? String(req.body.badge) : null;
+    if (badge && !(user.badges ?? []).includes(badge)) {
+      return res.status(403).json({ error: 'Você ainda não conquistou este emblema.' });
+    }
+    res.json({ user: privateUser(db.updateUser(user.id, { badge })!) });
   });
 
   r.post('/dev/lock', auth.requireAuth, (req: AuthedRequest, res) => {

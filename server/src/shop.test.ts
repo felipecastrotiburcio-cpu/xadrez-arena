@@ -45,7 +45,7 @@ test('catálogo ordenado por preço e compra sem saldo recusada', async () => {
   const catalog = (await api('/shop/catalog')).data.items;
   assert.ok(catalog.length > 30);
   // Preço cresce com a raridade.
-  const boards = catalog.filter((i: any) => i.type === 'board');
+  const boards = catalog.filter((i: any) => i.type === 'board' && !i.unlock);
   assert.ok(boards.at(-1).price > boards[1].price);
 
   const caro = await api('/shop/buy', { token, body: { itemId: 'board_lava' } });
@@ -54,6 +54,17 @@ test('catálogo ordenado por preço e compra sem saldo recusada', async () => {
   assert.equal((await api('/shop/buy', { token, body: { itemId: 'board_galaxy' } })).status, 400);
   assert.match(caro.data.error, /Faltam 1300 moedas/);
   assert.equal((await api('/shop/buy', { token, body: { itemId: 'nao_existe' } })).status, 404);
+  // Recompensas das IAs não são vendidas nem vêm de presente na conta nova.
+  const royal = await api('/shop/buy', { token, body: { itemId: 'pieces_royal' } });
+  assert.equal(royal.status, 403);
+  assert.match(royal.data.error, /recompensa/);
+  const me = (await api('/me', { token })).data.user;
+  assert.ok(!me.inventory.includes('pieces_royal') && !me.inventory.includes('avatar_pawn_medal'));
+  assert.deepEqual(me.badges, []);
+  assert.equal(me.badge, null);
+  // Só dá para mostrar um emblema conquistado.
+  assert.equal((await api('/badges/select', { token, body: { badge: 'ai_5' } })).status, 403);
+  assert.equal((await api('/badges/select', { token, body: { badge: null } })).status, 200);
 });
 
 test('compra bem-sucedida desconta, equipa e não repete', async () => {

@@ -5,7 +5,11 @@ import { Segmented } from '../../components/TimeControlPicker';
 import { Button, Screen, SectionTitle } from '../../components/ui';
 import { ChessPiece, type PieceType } from '../../components/ChessPiece';
 import { Icon } from '../../components/Icon';
-import { useMyLook } from '../../lib/cosmetics';
+import { useCosmetics, useMyLook } from '../../lib/cosmetics';
+import { useAuth } from '../../lib/auth';
+import { BADGES } from '../../lib/badges';
+import { itemName } from '../../lib/catalogI18n';
+import { Emblem } from '../../components/Emblem';
 import { AI_LEVELS } from '../../ai';
 import { loadAiStats, type AiStats } from '../../lib/aiStats';
 import { useT, type TranslationKey } from '../../lib/i18n';
@@ -18,8 +22,10 @@ export default function AiSetup() {
   const [color, setColor] = useState<'w' | 'b' | 'random'>('w');
   const [time, setTime] = useState<'0' | '10' | '5' | '3'>('0');
   const [stats, setStats] = useState<AiStats>({});
-  const { t } = useT();
+  const { t, lang } = useT();
   const pieceStyle = useMyLook().pieces;
+  const { user } = useAuth();
+  const { get: reward } = useCosmetics();
 
   useFocusEffect(
     useCallback(() => {
@@ -59,6 +65,17 @@ export default function AiSetup() {
               {s && (
                 <Text style={styles.record}>{t('ai.record', { w: s.wins, d: s.draws, l: s.losses })}</Text>
               )}
+              {user && (user.badges ?? []).includes(BADGES[i].id) ? (
+                <View style={styles.earned}>
+                  <Emblem id={BADGES[i].id} size={20} />
+                  <Text style={styles.earnedText}>{t('badges.earned')}</Text>
+                </View>
+              ) : reward(BADGES[i].rewardId) ? (
+                <View style={styles.earned}>
+                  <Icon name="giftFill" size={14} color={colors.accent} />
+                  <Text style={styles.rewardText}>{t('ai.rewardPreview', { item: itemName(reward(BADGES[i].rewardId)!, lang) })}</Text>
+                </View>
+              ) : null}
             </View>
             <View style={[styles.radio, active && styles.radioActive]}>
               {active && <Icon name="check" size={14} color={colors.accentText} strokeWidth={2.8} />}
@@ -113,5 +130,8 @@ const styles = StyleSheet.create({
   record: { color: colors.accent, fontSize: 12, marginTop: 2, fontFamily: fonts.bold },
   radio: { width: 24, height: 24, borderRadius: 12, borderWidth: 1.5, borderColor: colors.borderStrong, alignItems: 'center', justifyContent: 'center' },
   radioActive: { borderColor: colors.accent, backgroundColor: colors.accent },
+  earned: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 },
+  earnedText: { color: colors.teal, fontFamily: fonts.bold, fontSize: 12 },
+  rewardText: { color: colors.accent, fontFamily: fonts.bold, fontSize: 12, flexShrink: 1 },
   footnote: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 12, textAlign: 'center' },
 });

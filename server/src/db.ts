@@ -29,6 +29,9 @@ export interface User {
   bestStreak: number;
   /** Modo desenvolvedor (senha nas Configurações do app): loja de graça. */
   devMode?: boolean;
+  /** Emblemas conquistados (um por IA vencida) e o escolhido para aparecer. */
+  badges?: string[];
+  badge?: string | null;
   /** Incrementado para invalidar todos os tokens JWT emitidos (ex: "sair de todos os aparelhos"). */
   tokenVersion: number;
 }

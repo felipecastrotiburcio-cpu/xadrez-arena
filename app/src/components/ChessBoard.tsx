@@ -254,6 +254,7 @@ function ChessBoardBase({
             {(['q', 'r', 'b', 'n'] as const).map((p) => (
               <Pressable
                 key={p}
+                testID={`promo-${p}`}
                 style={[styles.promoOption, { width: sq * 1.1, height: sq * 1.1, backgroundColor: boardStyle.light }]}
                 onPress={() => {
                   onMove({ ...promotion, promotion: p });

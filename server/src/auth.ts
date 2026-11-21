@@ -64,6 +64,8 @@ export function publicUser(u: User) {
   return {
     id: u.id,
     username: u.username,
+    badge: u.badge ?? null,
+    badges: u.badges ?? [],
     rating: u.rating,
     peakRating: u.peakRating,
     level: level.level,

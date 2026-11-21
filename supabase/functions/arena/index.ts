@@ -5,7 +5,7 @@
 // O app chama com o token do jogador; a função usa a chave de serviço para gravar.
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Chess } from 'chess.js';
-import { CATALOG, DAILY_BONUS, LEVEL_UP_BONUS, aiCoinReward, coinReward, getItem, streakBonus } from '../_shared/catalog.ts';
+import { CATALOG, DAILY_BONUS, LEVEL_UP_BONUS, aiCoinReward, aiRewardItem, badgeId, coinReward, getItem, streakBonus } from '../_shared/catalog.ts';
 import { levelFor, ratingDelta } from '../_shared/levels.ts';
 import { getTimeControl, type TimeControl } from '../_shared/timeControls.ts';
 import { PurchaseError, verifyPurchase } from './purchases.ts';
@@ -51,6 +51,8 @@ interface ProfileRow {
   best_streak: number;
   equipped: Record<string, string>;
   created_at: string;
+  badges?: string[];
+  badge?: string | null;
 }
 
 interface WalletRow {
@@ -68,6 +70,8 @@ function publicUser(p: ProfileRow) {
     id: p.id,
     username: p.username,
     country: p.country,
+    badge: p.badge ?? null,
+    badges: p.badges ?? [],
     rating: p.rating,
     peakRating: p.peak_rating,
     level: level.level,
@@ -594,6 +598,7 @@ class Arena {
     // Modo desenvolvedor: tudo de graça, inclusive os lendários de dinheiro real.
     const dev = !!(await this.wallet()).dev_mode;
     if (item.iap && !dev) throw new UserError('Este item é vendido como compra no app (Google Play / App Store).');
+    if (item.unlock && !dev) throw new UserError('Este item não é vendido: é uma recompensa por vencer uma IA.', 403);
     const price = dev ? 0 : item.price;
     const { data: left, error } = await this.db.rpc('buy_item', { p_user: this.userId, p_item: item.id, p_price: price });
     if (error) throw new Error(error.message);
@@ -646,7 +651,27 @@ class Arena {
       p_coins: aiCoinReward(score, lv),
       p_daily_cap: AI_DAILY_CAP,
     });
-    return { user: await this.me(), coins: granted ?? 0, ratingChange: 0, levelUp: false };
+    // 1ª vitória contra esta IA: emblema + recompensa exclusiva (a função do banco garante uma vez só).
+    let newBadge: string | null = null;
+    let rewardItem: string | null = null;
+    if (score === 1) {
+      const reward = aiRewardItem(lv);
+      const { data: isNew, error } = await this.db.rpc('grant_ai_badge', { p_user: this.userId, p_badge: badgeId(lv), p_item: reward?.id ?? null });
+      if (error) throw new Error(error.message);
+      if (isNew) {
+        newBadge = badgeId(lv);
+        rewardItem = reward?.id ?? null;
+      }
+    }
+    return { user: await this.me(), coins: granted ?? 0, ratingChange: 0, levelUp: false, newBadge, rewardItem };
+  }
+
+  /** Escolhe o emblema que aparece no perfil e nas partidas (null = nenhum). */
+  async selectBadge(badge: string | null) {
+    const { data: ok, error } = await this.db.rpc('select_badge', { p_user: this.userId, p_badge: badge });
+    if (error) throw new Error(error.message);
+    if (!ok) throw new UserError('Você ainda não conquistou este emblema.', 403);
+    return { user: await this.me() };
   }
 
   async purchase(input: Json) {
@@ -713,6 +738,8 @@ Deno.serve(async (req) => {
         return json(await arena.equip(s('itemId')));
       case 'daily':
         return json(await arena.daily());
+      case 'badge_select':
+        return json(await arena.selectBadge(body.badge ? s('badge') : null));
       case 'ai_result':
         return json(await arena.aiResult(Number(body.level), Number(body.score)));
       case 'purchase':

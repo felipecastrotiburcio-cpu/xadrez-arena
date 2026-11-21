@@ -1,5 +1,6 @@
-import { Fraunces_600SemiBold, Fraunces_700Bold, useFonts } from '@expo-google-fonts/fraunces';
-import { Manrope_500Medium, Manrope_700Bold, Manrope_800ExtraBold } from '@expo-google-fonts/manrope';
+import { Fraunces_700Bold, useFonts } from '@expo-google-fonts/fraunces';
+import { Fredoka_600SemiBold, Fredoka_700Bold } from '@expo-google-fonts/fredoka';
+import { Nunito_700Bold, Nunito_800ExtraBold, Nunito_900Black } from '@expo-google-fonts/nunito';
 import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View } from 'react-native';
@@ -33,7 +34,7 @@ export default function RootLayout() {
 
 function AppShell() {
   const { t } = useT();
-  const [fontsLoaded, fontError] = useFonts({ Fraunces_600SemiBold, Fraunces_700Bold, Manrope_500Medium, Manrope_700Bold, Manrope_800ExtraBold });
+  const [fontsLoaded, fontError] = useFonts({ Fraunces_700Bold, Fredoka_600SemiBold, Fredoka_700Bold, Nunito_700Bold, Nunito_800ExtraBold, Nunito_900Black });
   // Sem a fonte o app continua funcionando com a fonte do sistema.
   if (!fontsLoaded && !fontError) return blank;
   return (
@@ -58,6 +59,8 @@ function AppShell() {
                   <Stack.Screen name="index" options={{ headerShown: false, title: t('nav.home') }} />
                   <Stack.Screen name="login" options={{ title: t('nav.login'), presentation: 'modal' }} />
                   <Stack.Screen name="ai/index" options={{ title: t('nav.ai') }} />
+                  <Stack.Screen name="train/index" options={{ title: t('nav.train') }} />
+                  <Stack.Screen name="train/[id]" options={{ title: t('nav.puzzle') }} />
                   <Stack.Screen name="ai/play" options={{ title: t('nav.aiPlay') }} />
                   <Stack.Screen name="play" options={{ title: t('nav.play') }} />
                   <Stack.Screen name="game/[id]" options={{ title: t('nav.game'), gestureEnabled: false }} />

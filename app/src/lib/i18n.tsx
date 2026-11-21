@@ -82,6 +82,8 @@ const SERVER_FIXED: Record<string, string> = {
   'Usuário ou senha incorretos.': 'Wrong username or password.',
   'Item não encontrado.': 'Item not found.',
   'Senha do modo desenvolvedor incorreta.': 'Wrong developer mode password.',
+  'Este item não é vendido: é uma recompensa por vencer uma IA.': "This item isn't sold: it's a reward for beating an AI.",
+  'Você ainda não conquistou este emblema.': "You haven't earned this badge yet.",
   'Você já possui este item.': 'You already own this item.',
   'Compre o item antes de equipar.': 'Buy the item before equipping it.',
   'Você já resgatou o bônus de hoje. Volte amanhã!': "You already claimed today's bonus. Come back tomorrow!",

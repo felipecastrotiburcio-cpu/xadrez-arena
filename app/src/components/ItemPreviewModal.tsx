@@ -96,6 +96,8 @@ export function ItemPreviewModal({ item, board, pieces, owned, equipped, coins, 
                 <Button small variant="secondary" title={t('common.equip')} loading={busy} onPress={onEquip} />
               ) : free ? (
                 <Button small variant="gold" iconName="wrench" title={t('shop.devFree')} loading={busy} onPress={onBuy} />
+              ) : item.unlock ? (
+                <Text style={styles.reward}>{t('badges.rewardHint', { name: t(`ai.${item.unlock}.name` as TranslationKey) })}</Text>
               ) : (
                 <Button
                   small
@@ -107,7 +109,7 @@ export function ItemPreviewModal({ item, board, pieces, owned, equipped, coins, 
                 />
               )}
             </View>
-            {!owned && !free && !item.iap && coins < item.price && (
+            {!owned && !free && !item.iap && !item.unlock && coins < item.price && (
               <Text style={styles.hint}>
                 {t('shop.missingCoins', { count: (item.price - coins).toLocaleString(locale) })}
               </Text>
@@ -137,5 +139,6 @@ const styles = StyleSheet.create({
   rarity: { fontSize: 11, fontFamily: fonts.black, textTransform: 'uppercase', letterSpacing: 1.3, marginTop: -8 },
   hint: { color: colors.textMuted, fontSize: 13, textAlign: 'center', fontFamily: fonts.regular },
   actions: { flexDirection: 'row', gap: 10, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' },
+  reward: { color: colors.accent, fontFamily: fonts.black, fontSize: 14 },
   equipped: { color: colors.success, fontFamily: fonts.bold, fontSize: 15 },
 });
