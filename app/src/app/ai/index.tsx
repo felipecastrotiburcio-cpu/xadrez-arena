@@ -10,6 +10,7 @@ import { useAuth } from '../../lib/auth';
 import { BADGES } from '../../lib/badges';
 import { itemName } from '../../lib/catalogI18n';
 import { Emblem } from '../../components/Emblem';
+import { RewardPreview } from '../../components/RewardPreview';
 import { AI_LEVELS } from '../../ai';
 import { loadAiStats, type AiStats } from '../../lib/aiStats';
 import { useT, type TranslationKey } from '../../lib/i18n';
@@ -33,9 +34,10 @@ export default function AiSetup() {
     }, []),
   );
 
-  const start = () => {
+  const [preview, setPreview] = useState<number | null>(null);
+  const start = (lv = level) => {
     const c = color === 'random' ? (Math.random() < 0.5 ? 'w' : 'b') : color;
-    router.push({ pathname: '/ai/play', params: { level: String(level), color: c, time } });
+    router.push({ pathname: '/ai/play', params: { level: String(lv), color: c, time } });
   };
 
   return (
@@ -43,11 +45,25 @@ export default function AiSetup() {
     <Screen
       footer={
         <>
-          <Button title={t('ai.start')} iconName="play" onPress={start} />
+          <Button title={t('ai.start')} iconName="play" onPress={() => start()} />
           <Text style={styles.footnote}>{t('ai.footnote')}</Text>
         </>
       }
     >
+      {preview !== null && (
+        <RewardPreview
+          level={preview}
+          owned={!!user && (user.badges ?? []).includes(`ai_${preview}`)}
+          username={user?.username ?? t('common.you')}
+          onClose={() => setPreview(null)}
+          onPlay={() => {
+            const lv = preview;
+            setPreview(null);
+            setLevel(lv);
+            start(lv);
+          }}
+        />
+      )}
       <SectionTitle>{t('ai.chooseOpponent')}</SectionTitle>
       {AI_LEVELS.map((l, i) => {
         const active = l.id === level;
@@ -65,17 +81,24 @@ export default function AiSetup() {
               {s && (
                 <Text style={styles.record}>{t('ai.record', { w: s.wins, d: s.draws, l: s.losses })}</Text>
               )}
-              {user && (user.badges ?? []).includes(BADGES[i].id) ? (
-                <View style={styles.earned}>
-                  <Emblem id={BADGES[i].id} size={20} />
-                  <Text style={styles.earnedText}>{t('badges.earned')}</Text>
-                </View>
-              ) : reward(BADGES[i].rewardId) ? (
-                <View style={styles.earned}>
-                  <Icon name="giftFill" size={14} color={colors.accent} />
-                  <Text style={styles.rewardText}>{t('ai.rewardPreview', { item: itemName(reward(BADGES[i].rewardId)!, lang) })}</Text>
-                </View>
-              ) : null}
+              {/* Recompensa: dá para ver antes de vencer */}
+              <Pressable onPress={() => setPreview(l.id)} style={styles.rewardBtn} hitSlop={6} accessibilityRole="button">
+                {user && (user.badges ?? []).includes(BADGES[i].id) ? (
+                  <>
+                    <Emblem id={BADGES[i].id} size={20} />
+                    <Text style={styles.earnedText}>{t('badges.earned')}</Text>
+                  </>
+                ) : (
+                  <>
+                    <Icon name="giftFill" size={14} color={colors.accent} />
+                    <Text style={styles.rewardText} numberOfLines={1}>
+                      {reward(BADGES[i].rewardId) ? itemName(reward(BADGES[i].rewardId)!, lang) : t('reward.badge')}
+                    </Text>
+                  </>
+                )}
+                <Text style={styles.seeReward}>{t('reward.see')}</Text>
+                <Icon name="chevron" size={13} color={colors.accent} strokeWidth={2.6} />
+              </Pressable>
             </View>
             <View style={[styles.radio, active && styles.radioActive]}>
               {active && <Icon name="check" size={14} color={colors.accentText} strokeWidth={2.8} />}
@@ -130,7 +153,19 @@ const styles = StyleSheet.create({
   record: { color: colors.accent, fontSize: 12, marginTop: 2, fontFamily: fonts.bold },
   radio: { width: 24, height: 24, borderRadius: 12, borderWidth: 1.5, borderColor: colors.borderStrong, alignItems: 'center', justifyContent: 'center' },
   radioActive: { borderColor: colors.accent, backgroundColor: colors.accent },
-  earned: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 },
+  rewardBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    alignSelf: 'flex-start',
+    marginTop: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 9,
+    borderRadius: 999,
+    backgroundColor: colors.accentSoft,
+    maxWidth: '100%',
+  },
+  seeReward: { color: colors.accent, fontFamily: fonts.black, fontSize: 12, marginLeft: 2 },
   earnedText: { color: colors.teal, fontFamily: fonts.bold, fontSize: 12 },
   rewardText: { color: colors.accent, fontFamily: fonts.bold, fontSize: 12, flexShrink: 1 },
   footnote: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 12, textAlign: 'center' },

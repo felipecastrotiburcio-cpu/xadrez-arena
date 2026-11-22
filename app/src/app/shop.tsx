@@ -22,13 +22,13 @@ import { buyWithStore, iapSupported, loadPrices, restoreStorePurchases } from '.
 import { translateServerText, useT, type TranslationKey } from '../lib/i18n';
 import type { BoardStyle, CharacterStyle, ItemType, PieceStyle, PrivateUser, ShopItem } from '../lib/types';
 
-const TABS: { type: ItemType; label: TranslationKey; icon: IconName }[] = [
-  { type: 'board', label: 'shop.tabBoards', icon: 'board' },
-  { type: 'pieces', label: 'shop.tabPieces', icon: 'knight' },
-  { type: 'entrance', label: 'shop.tabEntrances', icon: 'sparkle' },
-  { type: 'character', label: 'shop.tabCharacters', icon: 'user' },
-  { type: 'avatar', label: 'shop.tabAvatars', icon: 'smile' },
-  { type: 'move', label: 'shop.tabMoves', icon: 'music' },
+const TABS: { type: ItemType; label: TranslationKey; icon: IconName; color: string }[] = [
+  { type: 'board', label: 'shop.tabBoards', icon: 'board', color: '#f4b942' },
+  { type: 'pieces', label: 'shop.tabPieces', icon: 'knight', color: '#a68bff' },
+  { type: 'entrance', label: 'shop.tabEntrances', icon: 'sparkle', color: '#36d1b5' },
+  { type: 'character', label: 'shop.tabCharacters', icon: 'user', color: '#6fb8ff' },
+  { type: 'avatar', label: 'shop.tabAvatars', icon: 'smile', color: '#ff7f7f' },
+  { type: 'move', label: 'shop.tabMoves', icon: 'music', color: '#ff9ce6' },
 ];
 
 const RARITY_ORDER = { comum: 0, raro: 1, epico: 2, lendario: 3 } as const;
@@ -249,27 +249,36 @@ export default function Shop() {
       )}
 
       {/* Categorias */}
-      <View style={styles.tabsWrap}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs}>
-          {TABS.map((tb) => {
-            const active = tab === tb.type;
-            return (
-              <Pressable
-                key={tb.type}
-                onPress={() => {
-                  setTab(tb.type);
-                  setOnlyOwned(false);
-                }}
-                style={[styles.tab, active && styles.tabActive]}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: active }}
-              >
-                <Icon name={tb.icon} size={16} color={active ? colors.accentText : colors.textMuted} strokeWidth={2} />
-                <Text style={[styles.tabText, active && styles.tabTextActive]}>{t(tb.label)}</Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+      {/* Categorias: todas visíveis de uma vez (grade 3×2), com quantos itens você já tem em cada. */}
+      <View style={styles.cats} accessibilityRole="tablist">
+        {TABS.map((tb) => {
+          const active = tab === tb.type;
+          const ofType = items.filter((i) => i.type === tb.type);
+          const mine = ofType.filter((i) => owns(i.id)).length;
+          return (
+            <Pressable
+              key={tb.type}
+              testID={`cat-${tb.type}`}
+              onPress={() => {
+                setTab(tb.type);
+                setOnlyOwned(false);
+              }}
+              style={({ pressed }) => [styles.cat, active && styles.catActive, pressed && { transform: [{ translateY: 2 }] }]}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: active }}
+            >
+              <View style={[styles.catIcon, { backgroundColor: active ? 'rgba(42,26,0,0.14)' : `${tb.color}29` }]}>
+                <Icon name={tb.icon} size={20} color={active ? colors.accentText : tb.color} strokeWidth={2.2} />
+              </View>
+              <Text style={[styles.catText, active && { color: colors.accentText }]} numberOfLines={1}>
+                {t(tb.label)}
+              </Text>
+              <Text style={[styles.catCount, active && { color: '#5c3d00' }]}>
+                {mine}/{ofType.length}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
 
       <View style={styles.listHead}>
@@ -587,22 +596,25 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(220, 171, 79, 0.3)',
   },
   devText: { color: colors.accent, fontFamily: fonts.bold, fontSize: 13, flex: 1 },
-  tabsWrap: { marginHorizontal: -16 },
-  tabs: { gap: 8, paddingHorizontal: 16 },
-  tab: {
-    flexDirection: 'row',
+  cats: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  cat: {
+    width: '31.5%',
+    flexGrow: 1,
     alignItems: 'center',
-    gap: 7,
-    paddingHorizontal: 14,
-    height: 40,
-    borderRadius: 999,
+    gap: 4,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    borderRadius: 18,
     backgroundColor: colors.surface,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.border,
+    borderBottomWidth: 4,
+    borderBottomColor: colors.shadow,
   },
-  tabActive: { backgroundColor: colors.accent, borderColor: colors.accent, borderBottomWidth: 4, borderBottomColor: colors.accentDark },
-  tabText: { color: colors.textMuted, fontFamily: fonts.bold, fontSize: 14 },
-  tabTextActive: { color: colors.accentText },
+  catActive: { backgroundColor: colors.accent, borderColor: colors.accent, borderBottomColor: colors.accentDark },
+  catIcon: { width: 38, height: 38, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  catText: { color: colors.text, fontFamily: fonts.black, fontSize: 13 },
+  catCount: { color: colors.textMuted, fontFamily: fonts.bold, fontSize: 11 },
   listHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: -4 },
   collection: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 13 },
   filter: { flexDirection: 'row', backgroundColor: colors.surface, borderRadius: 999, padding: 3, borderWidth: 1, borderColor: colors.border },
