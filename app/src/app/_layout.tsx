@@ -67,6 +67,7 @@ function AppShell() {
                   <Stack.Screen name="friends" options={{ title: t('nav.friends') }} />
                   <Stack.Screen name="leaderboard" options={{ title: t('nav.leaderboard') }} />
                   <Stack.Screen name="profile/[id]" options={{ title: t('nav.profile') }} />
+                  <Stack.Screen name="me" options={{ title: t('nav.me') }} />
                   <Stack.Screen name="settings" options={{ title: t('nav.settings') }} />
                   <Stack.Screen name="shop" options={{ title: t('nav.shop') }} />
                   <Stack.Screen name="notifications" options={{ title: t('nav.notifications') }} />

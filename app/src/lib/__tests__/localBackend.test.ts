@@ -38,6 +38,17 @@ test('login: senha correta entra, errada é recusada', async () => {
   await assert.rejects(call('/me', undefined, 'local_invalido'), /Sessão expirada/);
 });
 
+test('troca de nome: vira o novo login e não repete nome de outra conta', async () => {
+  const { token } = await call('/auth/register', { username: 'nome1', password: 'segredo123' });
+  await call('/auth/register', { username: 'nome2', password: 'segredo123' });
+  await assert.rejects(call('/me/username', { username: 'x' }, token), /3 a 20/);
+  await assert.rejects(call('/me/username', { username: 'NOME2' }, token), /em uso/);
+  const r = await call('/me/username', { username: 'Nome_Novo' }, token);
+  assert.equal(r.user.username, 'Nome_Novo');
+  await assert.rejects(call('/auth/login', { username: 'nome1', password: 'segredo123' }), /incorretos/);
+  assert.ok((await call('/auth/login', { username: 'nome_novo', password: 'segredo123' })).token);
+});
+
 test('loja: saldo, compra, equipar e bônus diário', async () => {
   const { token } = await call('/auth/register', { username: 'bia', password: 'segredo123' });
   await assert.rejects(call('/shop/buy', { itemId: 'board_lava' }, token), /Faltam 1300 moedas/);

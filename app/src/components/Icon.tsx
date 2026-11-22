@@ -10,7 +10,7 @@ export type IconName =
   | 'back' | 'bell' | 'gear' | 'bag' | 'trophy' | 'users' | 'cpu' | 'swords' | 'check' | 'lock'
   | 'eye' | 'play' | 'gift' | 'chevron' | 'plus' | 'search' | 'clock' | 'flag' | 'refresh'
   | 'sparkle' | 'user' | 'palette' | 'close' | 'card' | 'wrench' | 'knight' | 'board' | 'crown'
-  | 'smile' | 'music' | 'globe' | 'server' | 'logout' | 'fire' | 'dice'
+  | 'smile' | 'music' | 'globe' | 'server' | 'logout' | 'fire' | 'dice' | 'pencil'
   // Ícones cheios (coloridos), usados nos atalhos e botões grandes:
   | 'robotFill' | 'friendsFill' | 'trophyFill' | 'chestFill' | 'moonFill' | 'starFill' | 'fireFill'
   | 'bulbFill' | 'flagFill' | 'giftFill' | 'targetFill' | 'medalFill' | 'lockFill' | 'boltFill';
@@ -21,6 +21,7 @@ const P: Record<IconName, (c: string) => React.ReactNode> = {
   close: () => <Path d="M6 6l12 12M18 6L6 18" />,
   plus: () => <Path d="M12 5v14M5 12h14" />,
   check: () => <Path d="M5 12.5l4.5 4.5L19 7.5" />,
+  pencil: () => <Path d="M4 20l1-4.5L15.5 5a2.1 2.1 0 0 1 3 3L8 18.5zM13.5 7l3 3" />,
   bell: () => (
     <>
       <Path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15z" />

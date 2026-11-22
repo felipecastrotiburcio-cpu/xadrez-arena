@@ -291,3 +291,21 @@ test('sessão: partida ativa é devolvida ao abrir o app', async () => {
   await A.call('resign', { gameId: g });
   assert.equal((await A.call('session')).activeGame, null);
 });
+
+test('troca de nome: o nome novo vira o login e nomes repetidos são recusados', async () => {
+  const P = await player('nome');
+  const Q = await player('outro');
+  await assert.rejects(P.call('rename', { username: 'a' }), /3 a 20/);
+  await assert.rejects(P.call('rename', { username: Q.username.toUpperCase() }), /em uso/);
+  const novo = `novo_${run}`;
+  const r = await P.call('rename', { username: novo });
+  assert.equal(r.user.username, novo);
+  // A sessão continua valendo e o login passa a ser pelo nome novo.
+  assert.equal((await P.call('me')).user.username, novo);
+  const sb = createClient(URL, ANON, { auth: { persistSession: false, autoRefreshToken: false } });
+  const { error: velho } = await sb.auth.signInWithPassword({ email: emailFor(P.username), password: 'segredo123' });
+  assert.ok(velho, 'o nome antigo não entra mais');
+  const { data, error } = await sb.auth.signInWithPassword({ email: emailFor(novo), password: 'segredo123' });
+  assert.ifError(error);
+  assert.equal(data.user.id, P.id);
+});

@@ -14,6 +14,7 @@ import { Flag, countryName } from '../components/Flag';
 import { deviceCountry } from '../lib/supabase';
 import type { PrivateUser } from '../lib/types';
 import { isSoundEnabled, playSound, setSoundEnabled } from '../lib/sound';
+import { setMoveHints, useMoveHints } from '../lib/prefs';
 
 export default function Settings() {
   const { user, logout } = useAuth();
@@ -21,9 +22,25 @@ export default function Settings() {
   const { t, pref, setLang } = useT();
   const [url, setUrl] = useState(getServerUrl());
   const [sound, setSound] = useState(isSoundEnabled());
+  const moveHints = useMoveHints();
 
   return (
     <Screen>
+      <SectionTitle>{t('settings.board')}</SectionTitle>
+      <Card>
+        <View style={styles.row}>
+          <Text style={[styles.text, { flex: 1 }]}>{t('settings.moveHints')}</Text>
+          <Switch
+            testID="setting-move-hints"
+            value={moveHints}
+            onValueChange={(on) => setMoveHints(on)}
+            trackColor={{ true: colors.accent, false: colors.raised }}
+            thumbColor={colors.text}
+            {...({ activeThumbColor: colors.text } as object)}
+          />
+        </View>
+      </Card>
+
       <SectionTitle>{t('settings.sounds')}</SectionTitle>
       <Card>
         <View style={styles.row}>

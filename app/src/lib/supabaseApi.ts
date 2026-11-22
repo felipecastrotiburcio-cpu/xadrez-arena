@@ -56,6 +56,8 @@ export async function supabaseApi<T = any>(path: string, method: string, body: a
     ]);
     return { user: r.user, rank: rank.data ?? null, unreadNotifications: unread.count ?? 0 } as T;
   }
+  if (method === 'POST' && route === '/me/username') return arena<T>('rename', { username: body?.username });
+
   if (method === 'POST' && route === '/me/country') {
     dbError((await sb.rpc('set_country', { p_country: body?.country ?? null })).error);
     return (await arena('me')) as T;

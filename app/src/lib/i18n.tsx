@@ -79,6 +79,7 @@ const SERVER_FIXED: Record<string, string> = {
   'A senha precisa ter de 8 a 128 caracteres.': 'Password must be 8 to 128 characters long.',
   'Esse nome de usuário já existe neste aparelho.': 'That username already exists on this device.',
   'Esse nome de usuário já existe.': 'That username is already taken.',
+  'Esse nome de usuário já está em uso.': 'That username is already taken.',
   'Usuário ou senha incorretos.': 'Wrong username or password.',
   'Item não encontrado.': 'Item not found.',
   'Senha do modo desenvolvedor incorreta.': 'Wrong developer mode password.',

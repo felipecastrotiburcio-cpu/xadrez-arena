@@ -666,6 +666,29 @@ class Arena {
     return { user: await this.me(), coins: granted ?? 0, ratingChange: 0, levelUp: false, newBadge, rewardItem };
   }
 
+  /**
+   * Troca o nome de usuário. Ele também é o login (o e-mail interno da conta é feito a partir dele),
+   * então o e-mail da conta muda junto; se o perfil não puder ser salvo, o e-mail antigo volta.
+   */
+  async rename(raw: string) {
+    const username = raw.trim();
+    if (!/^[A-Za-z0-9_]{3,20}$/.test(username)) throw new UserError('Nome de usuário deve ter 3 a 20 letras, números ou _.');
+    const { data: taken } = await this.db.from('profiles').select('id').eq('username', username).neq('id', this.userId).maybeSingle();
+    if (taken) throw new UserError('Esse nome de usuário já está em uso.', 409);
+    const { data: before } = await this.db.from('profiles').select('username').eq('id', this.userId).single();
+    const old = String(before?.username ?? '');
+    const email = (name: string) => `${name.trim().toLowerCase()}@jogadores.xadrezarena.invalid`;
+    const { error: e1 } = await this.db.auth.admin.updateUserById(this.userId, { email: email(username), email_confirm: true, user_metadata: { username } });
+    if (e1) throw new UserError('Esse nome de usuário já está em uso.', 409);
+    const { error: e2 } = await this.db.from('profiles').update({ username }).eq('id', this.userId);
+    if (e2) {
+      await this.db.auth.admin.updateUserById(this.userId, { email: email(old), email_confirm: true, user_metadata: { username: old } });
+      if (e2.code === '23505') throw new UserError('Esse nome de usuário já está em uso.', 409);
+      throw new Error(e2.message);
+    }
+    return { user: await this.me() };
+  }
+
   /** Escolhe o emblema que aparece no perfil e nas partidas (null = nenhum). */
   async selectBadge(badge: string | null) {
     const { data: ok, error } = await this.db.rpc('select_badge', { p_user: this.userId, p_badge: badge });
@@ -738,6 +761,8 @@ Deno.serve(async (req) => {
         return json(await arena.equip(s('itemId')));
       case 'daily':
         return json(await arena.daily());
+      case 'rename':
+        return json(await arena.rename(s('username')));
       case 'badge_select':
         return json(await arena.selectBadge(body.badge ? s('badge') : null));
       case 'ai_result':

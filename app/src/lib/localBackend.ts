@@ -330,6 +330,18 @@ async function handle(data: Data, method: string, route: string, body: Record<st
     return { user: privateUser(user) };
   }
 
+  // ---- troca do nome de usuário (também é o nome de login)
+  if (method === 'POST' && route === '/me/username') {
+    const user = requireUser(data, token);
+    const username = String(body.username ?? '').trim();
+    if (!USERNAME_RE.test(username)) throw new ApiError('Nome de usuário deve ter 3 a 20 letras, números ou _.', 400);
+    if (data.users.some((u) => u.id !== user.id && u.username.toLowerCase() === username.toLowerCase())) {
+      throw new ApiError('Esse nome de usuário já está em uso.', 409);
+    }
+    user.username = username;
+    return { user: privateUser(user) };
+  }
+
   // ---- emblemas: o jogador escolhe qual mostrar (ou nenhum)
   if (method === 'POST' && route === '/badges/select') {
     const user = requireUser(data, token);

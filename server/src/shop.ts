@@ -59,6 +59,17 @@ export function createShopRoutes(db: Database, auth: Auth, notifier: Notifier) {
     res.json({ user: privateUser(db.updateUser(user.id, { badge })!) });
   });
 
+  // Troca o nome de usuário (é também o nome de login).
+  r.post('/me/username', auth.requireAuth, (req: AuthedRequest, res) => {
+    const username = String(req.body?.username ?? '').trim();
+    if (!/^[A-Za-z0-9_]{3,20}$/.test(username)) {
+      return res.status(400).json({ error: 'Nome de usuário deve ter 3 a 20 letras, números ou _.' });
+    }
+    const taken = db.getUserByName(username);
+    if (taken && taken.id !== req.userId) return res.status(409).json({ error: 'Esse nome de usuário já está em uso.' });
+    res.json({ user: privateUser(db.updateUser(req.userId!, { username })!) });
+  });
+
   r.post('/dev/lock', auth.requireAuth, (req: AuthedRequest, res) => {
     res.json({ user: privateUser(db.updateUser(req.userId!, { devMode: false })!) });
   });

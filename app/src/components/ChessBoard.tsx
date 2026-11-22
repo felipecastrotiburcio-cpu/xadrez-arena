@@ -7,6 +7,7 @@ import { EntranceLayer } from './PieceEntrance';
 import { useT } from '../lib/i18n';
 import { colors, fonts } from '../lib/theme';
 import { playSound, preloadSounds, type BoardSound } from '../lib/sound';
+import { useMoveHints } from '../lib/prefs';
 import type { BoardStyle, EntranceStyle, PieceStyle, Side, SidedStyle } from '../lib/types';
 
 export interface BoardMove {
@@ -38,6 +39,15 @@ interface Props {
 
 const FILES = 'abcdefgh';
 
+// Prévia dos movimentos: ponto escuro com borda clara aparece em qualquer tabuleiro (claro ou escuro).
+const MOVE_DOT = 'rgba(16, 22, 44, 0.5)';
+const MOVE_DOT_RING = 'rgba(255, 255, 255, 0.55)';
+const CAPTURE_RING = 'rgba(255, 92, 92, 0.85)';
+// Peça espiada (do adversário ou fora da sua vez): lilás, para não confundir com um lance seu.
+const PEEK_DOT = 'rgba(166, 139, 255, 0.75)';
+const PEEK_RING = 'rgba(166, 139, 255, 0.85)';
+const PEEK_BG = 'rgba(166, 139, 255, 0.35)';
+
 function ChessBoardBase({
   fen, size: outerSize, orientation, movableColor, lastMove, hint, onMove, boardStyle, pieceStyle, sounds = true, premoveColor = null,
   entrance = null, entranceKey,
@@ -57,11 +67,19 @@ function ChessBoardBase({
   const endIntro = useCallback(() => setIntro(null), []);
   const [selected, setSelected] = useState<Square | null>(null);
   const [promotion, setPromotion] = useState<{ from: string; to: string } | null>(null);
+  // Prévia dos movimentos (Configurações): pontos onde a peça tocada pode ir. Com ela ligada, tocar numa
+  // peça que não pode mexer agora (do adversário, ou fora da sua vez) também mostra para onde ela vai.
+  const showMoves = useMoveHints();
+  const [peek, setPeek] = useState<Square | null>(null);
 
   useEffect(() => {
     setSelected(null);
     setPromotion(null);
+    setPeek(null);
   }, [fen]);
+  useEffect(() => {
+    if (!showMoves) setPeek(null);
+  }, [showMoves]);
 
   const turn = chess.turn();
   const canMove = movableColor === 'both' || movableColor === turn;
@@ -84,9 +102,27 @@ function ChessBoardBase({
     return map;
   }, [chess, selected, premoving, premoveColor]);
   const epVictim = useMemo(() => {
+    if (!showMoves) return null;
     for (const t of targets.values()) if (t.ep) return t.ep;
     return null;
-  }, [targets]);
+  }, [targets, showMoves]);
+  /** Só para olhar: os lances legais da peça espiada, como se fosse a vez dela. */
+  const peekTargets = useMemo(() => {
+    const map = new Map<string, boolean>();
+    if (!peek) return map;
+    const piece = chess.get(peek);
+    if (!piece) return map;
+    try {
+      const parts = fen.split(' ');
+      parts[1] = piece.color;
+      parts[3] = '-';
+      const view = new Chess(parts.join(' '), { skipValidation: true });
+      for (const m of view.moves({ square: peek, verbose: true })) map.set(m.to, !!m.captured);
+    } catch {
+      for (const to of premoveTargets(chess, peek, piece.color)) map.set(to, !!chess.get(to as Square));
+    }
+    return map;
+  }, [chess, fen, peek]);
 
   const checkSquare = useMemo(() => {
     if (!chess.inCheck()) return null;
@@ -101,6 +137,16 @@ function ChessBoardBase({
   // O handler muda a cada render; as casas recebem uma função estável que lê a versão atual.
   const handlerRef = useRef<(square: Square) => void>(() => {});
   handlerRef.current = (square: Square) => {
+    const tapped = chess.get(square);
+    // Espiar: peça que não dá para mexer agora (só com a prévia ligada).
+    const tryPeek = () => {
+      if (showMoves && tapped && square !== peek) {
+        setPeek(square);
+        return true;
+      }
+      setPeek(null);
+      return false;
+    };
     if (premoving && premoveColor) {
       if (selected && targets.has(square)) {
         const piece = chess.get(selected);
@@ -112,11 +158,18 @@ function ChessBoardBase({
       // Tocar em outra casa cancela o pré-lance; tocar numa peça sua começa outro.
       setPremove(null);
       const piece = chess.get(square);
-      setSelected(piece && piece.color === premoveColor && square !== selected ? square : null);
+      const mine = piece && piece.color === premoveColor && square !== selected;
+      setSelected(mine ? square : null);
+      if (mine || !piece) setPeek(null);
+      else tryPeek();
       return;
     }
-    if (!canMove) return;
+    if (!canMove) {
+      tryPeek();
+      return;
+    }
     const target = targets.get(square);
+    setPeek(null);
     if (selected && target) {
       if (target.promotion) {
         setPromotion({ from: selected, to: square });
@@ -128,7 +181,10 @@ function ChessBoardBase({
     }
     const piece = chess.get(square);
     if (piece && piece.color === turn && square !== selected) setSelected(square);
-    else setSelected(null);
+    else {
+      setSelected(null);
+      if (piece && piece.color !== turn) tryPeek();
+    }
   };
   const onPressSquare = useCallback((square: Square) => handlerRef.current(square), []);
 
@@ -209,8 +265,14 @@ function ChessBoardBase({
                 premoved={!!premove && (premove.from === square || premove.to === square)}
                 epVictim={epVictim === square}
                 selected={selected === square}
+                peeked={peek === square}
                 check={checkSquare === square}
-                target={!target ? 0 : target.capture ? 2 : 1}
+                target={
+                  !showMoves ? 0
+                  : target ? (target.capture ? 2 : 1)
+                  : peekTargets.has(square) ? (peekTargets.get(square) ? 4 : 3)
+                  : 0
+                }
                 rankLabel={fi === 0 ? String(rank) : ''}
                 fileLabel={ri === 7 ? file : ''}
                 sq={sq}
@@ -360,9 +422,11 @@ interface SquareProps {
   premoved: boolean;
   epVictim: boolean;
   selected: boolean;
+  /** Peça só espiada (não pode mexer agora). */
+  peeked: boolean;
   check: boolean;
-  /** 0 = nada, 1 = casa livre de destino, 2 = captura possível */
-  target: 0 | 1 | 2;
+  /** 0 = nada, 1 = casa livre de destino, 2 = captura possível, 3/4 = o mesmo só para olhar (peça espiada) */
+  target: 0 | 1 | 2 | 3 | 4;
   rankLabel: string;
   fileLabel: string;
   sq: number;
@@ -387,6 +451,7 @@ const BoardSquare = memo(function BoardSquare(p: SquareProps) {
       {p.hinted && <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.hint }]} />}
       {p.premoved && <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 64, 129, 0.45)' }]} />}
       {p.selected && <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.selected }]} />}
+      {p.peeked && <View style={[StyleSheet.absoluteFill, { backgroundColor: PEEK_BG }]} />}
       {p.check && <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.check, borderRadius: sq / 2 }]} />}
       {p.pieceType && p.pieceColor && !p.hidePiece && (
         <View style={[StyleSheet.absoluteFill, styles.pieceBox]} pointerEvents="none">
@@ -398,9 +463,27 @@ const BoardSquare = memo(function BoardSquare(p: SquareProps) {
       {p.epVictim && (
         <View style={[styles.captureRing, { borderRadius: sq / 2, borderWidth: sq * 0.06, borderColor: 'rgba(230, 40, 60, 0.75)', borderStyle: 'dashed' }]} />
       )}
-      {p.target === 2 && <View style={[styles.captureRing, { borderRadius: sq / 2, borderWidth: sq * 0.08 }]} />}
-      {p.target === 1 && (
-        <View style={[styles.dot, { width: sq * 0.3, height: sq * 0.3, borderRadius: sq, left: sq * 0.35, top: sq * 0.35 }]} />
+      {(p.target === 2 || p.target === 4) && (
+        <View
+          pointerEvents="none"
+          style={[
+            styles.captureRing,
+            { borderRadius: sq / 2, borderWidth: sq * 0.085, borderColor: p.target === 2 ? CAPTURE_RING : PEEK_RING },
+          ]}
+        />
+      )}
+      {(p.target === 1 || p.target === 3) && (
+        <View
+          pointerEvents="none"
+          style={[
+            styles.dot,
+            {
+              width: sq * 0.32, height: sq * 0.32, borderRadius: sq, left: sq * 0.34, top: sq * 0.34, borderWidth: Math.max(1.5, sq * 0.035),
+              backgroundColor: p.target === 1 ? MOVE_DOT : PEEK_DOT,
+              borderColor: p.target === 1 ? MOVE_DOT_RING : 'rgba(255,255,255,0.5)',
+            },
+          ]}
+        />
       )}
     </Pressable>
   );

@@ -21,7 +21,7 @@ const hz = (midi) => 440 * 2 ** ((midi - 69) / 12);
 // ------------------------------------------------------------------ tempo de cada peça (igual ao app)
 
 /** Mesmos números de PieceEntrance.tsx. */
-const PIECE_MS = { pop: 520, ground: 900, rain: 850, glitch: 800, pixel: 950, teleport: 1000, blackhole: 1100, hero: 950, lightning: 1000 };
+const PIECE_MS = { pop: 520, ground: 900, rain: 850, glitch: 800, pixel: 950, teleport: 1000, blackhole: 1100, hero: 1050, lightning: 1100 };
 const appRand = (n) => {
   const x = Math.sin(n * 91.345) * 47453.5453;
   return x - Math.floor(x);
@@ -562,80 +562,193 @@ function gravel(tr, t0, dur, { pan = 0, gain = 1, count = 14, lo = 1800, hi = 55
 }
 
 // ================================================================== 8. ATERRISSAGEM DE HERÓI (lendário)
-// Peças despencam assobiando como bombas; cada fileira cai com um IMPACTO cinematográfico
-// (sub-grave, estalo, destroços e onda de choque). Tudo em sincronia com o tremor da tela.
+// Trilha de filme de super-herói: um "braam" de metais cresce enquanto as peças despencam assobiando;
+// cada peça bate com impacto seco (grave, estalo, pedras); cada fileira cai com um IMPACTO enorme e um
+// acorde de metais (Dó – Lá♭ – Si♭ – Dó, a progressão épica), e no fim tímpanos rufam até a fanfarra.
 {
-  const tr = track(4.4);
-  // "fwoosh" de abertura
-  noiseSweep(tr, 0, 0.45, { gain: 0.25, from: 400, to: 3500, q: 0.9, shape: (x) => Math.sin(Math.PI * x) ** 2 });
+  const tr = track(5.2);
+  /** Metal sintético: serras desafinadas num filtro que abre e fecha (como trompas/trombones). */
+  const brass = (t0, notes, dur, { gain = 0.1, open = 2400, attack = 0.04, pan = 0 } = {}) => {
+    const oscs = notes.flatMap((m) => [[osc('saw'), hz(m) * 1.003], [osc('saw'), hz(m) * 0.997], [osc('sq'), hz(m) * 0.5]]);
+    const f = svf();
+    const vib = osc();
+    voice(tr, t0, dur + 1.0, (t) => {
+      let v = 0;
+      const wob = 1 + 0.004 * vib(5.2) * Math.min(1, t / 0.3);
+      for (const [o, fr] of oscs) v += o(fr * wob) * (fr < 100 ? 0.4 : 1);
+      const e = Math.min(1, t / attack) * (t > dur ? Math.exp(-(t - dur) / 0.18) : 1);
+      const fc = 300 + open * Math.min(1, t / (attack * 2)) * (0.65 + 0.35 * Math.exp(-t / 0.4));
+      return f(v / oscs.length, fc, 1.1).lp * e;
+    }, { gain, pan });
+  };
+  /** Tímpano: tom grave afinado com batida de pele. */
+  const timp = (t0, midi, { gain = 0.5, pan = 0 } = {}) => {
+    const o = osc();
+    const o2 = osc();
+    voice(tr, t0, 1.4, (t) => {
+      const f = hz(midi) * (1 + 0.04 * Math.exp(-t / 0.03));
+      return (o(f) + 0.45 * o2(f * 1.5)) * env(t, 0.002, 0.35);
+    }, { gain, pan });
+    noiseSweep(tr, t0, 0.05, { gain: gain * 0.4, pan, from: 900, to: 300, q: 0.8, mode: 'lp', shape: (x) => Math.exp(-x * 6) });
+  };
+
+  // abertura: vento cortando + "braam" crescendo enquanto as peças caem
+  noiseSweep(tr, 0, 0.7, { gain: 0.3, from: 300, to: 4200, q: 0.8, shape: (x) => Math.sin(Math.PI * x) ** 1.5 });
+  {
+    const notes = [36, 43, 48];
+    const oscs = notes.flatMap((m) => [[osc('saw'), hz(m) * 1.004], [osc('saw'), hz(m) * 0.996]]);
+    const f = svf();
+    voice(tr, 0, 0.62, (t) => {
+      let v = 0;
+      for (const [o, fr] of oscs) v += o(fr);
+      const x = t / 0.62;
+      return f(v / oscs.length, 120 + 1600 * x * x, 1.6).lp * x ** 1.4;
+    }, { gain: 0.42 });
+  }
+
   for (const p of PIECES) {
     const land = at(p, 'hero', 0.5);
+    // assobio da queda (como uma bomba de desenho animado)
     const o = osc();
-    const f0 = 1500 + rnd01() * 400;
+    const f0 = 1700 + rnd01() * 500;
     voice(tr, p.delay, land - p.delay, (t) => {
       const x = t / (land - p.delay);
-      return o(f0 * (1 - 0.6 * x)) * x ** 1.5;
-    }, { pan: p.pan, gain: 0.035 });
-    // impacto de cada peça
-    thump(tr, land, { pan: p.pan, gain: 0.22, f0: 160, f1: 55, decay: 0.09, dist: 2.5 });
-    noiseSweep(tr, land, 0.05, { pan: p.pan, gain: 0.22, from: 4000, to: 900, q: 0.7, mode: 'lp', shape: (x) => Math.exp(-x * 5) });
-    gravel(tr, land + 0.01, 0.35, { pan: p.pan, gain: 0.1, count: 6, lo: 1500, hi: 4500 });
+      return o(f0 * (1 - 0.55 * x)) * x ** 1.6;
+    }, { pan: p.pan, gain: 0.03 });
+    noiseSweep(tr, p.delay, land - p.delay, { pan: p.pan, gain: 0.06, from: 800, to: 4000, q: 1.2, shape: (x) => x ** 3 });
+    // impacto de cada peça: grave + estalo + pedras
+    thump(tr, land, { pan: p.pan, gain: 0.26, f0: 170, f1: 50, decay: 0.1, dist: 3 });
+    noiseSweep(tr, land, 0.008, { pan: p.pan, gain: 0.3, from: 5000, to: 5000, mode: 'hp', shape: () => 1 });
+    noiseSweep(tr, land, 0.07, { pan: p.pan, gain: 0.22, from: 4200, to: 700, q: 0.7, mode: 'lp', shape: (x) => Math.exp(-x * 5) });
+    gravel(tr, land + 0.012, 0.4, { pan: p.pan, gain: 0.13, count: 8, lo: 1400, hi: 5200 });
   }
-  // impacto grande por fileira (cinematográfico)
-  for (const w of WAVES) {
+
+  // impacto enorme + acorde de metais por fileira
+  const chords = [[48, 55, 60, 64], [44, 51, 56, 60], [46, 53, 58, 62], [48, 55, 60, 67]];
+  for (const [k, w] of WAVES.entries()) {
     const t = w.mid + (PIECE_MS.hero / 1000) * 0.5;
-    thump(tr, t, { gain: 0.9, f0: 110, f1: 32, fall: 0.06, decay: 0.42, dist: 3 });
-    noiseSweep(tr, t, 0.5, { gain: 0.3, from: 2500, to: 150, q: 0.9, shape: (x) => Math.exp(-x * 4) });
+    thump(tr, t, { gain: 1, f0: 120, f1: 30, fall: 0.07, decay: 0.45, dist: 3.2 });
+    noiseSweep(tr, t, 0.6, { gain: 0.32, from: 3200, to: 140, q: 0.8, shape: (x) => Math.exp(-x * 4) });
     const rb = svf();
     const bn = brown();
-    voice(tr, t, 0.9, (x) => rb(bn(), 140, 0.8).lp * env(x, 0.01, 0.3), { gain: 0.6 });
+    voice(tr, t, 1.0, (x) => rb(bn(), 150, 0.8).lp * env(x, 0.01, 0.32), { gain: 0.6 });
+    brass(t, chords[k], 0.22, { gain: 0.2, open: 2600, attack: 0.015 });
   }
-  reverb(tr, { mix: 0.24, size: 0.85, damp: 0.55, pre: 0.02 });
-  master(tr, { drive: 1.4 });
+
+  // final: rufar dos tímpanos e fanfarra (Dó maior, cheia) com pratos
+  const end = Math.max(...WAVES.map((w) => w.mid)) + (PIECE_MS.hero / 1000) * 0.5 + 0.32;
+  for (let k = 0; k < 9; k++) timp(end - 0.36 + k * 0.04, 36 + (k % 2) * 7, { gain: 0.12 + k * 0.03, pan: k % 2 ? 0.3 : -0.3 });
+  timp(end, 36, { gain: 0.75 });
+  thump(tr, end, { gain: 0.6, f0: 90, f1: 34, decay: 0.5, dist: 2 });
+  brass(end, [48, 55, 60, 64, 67, 72], 1.0, { gain: 0.26, open: 3400, attack: 0.03 });
+  brass(end + 0.02, [60, 64, 67], 1.0, { gain: 0.09, open: 4200, attack: 0.05, pan: 0.4 });
+  // prato
+  noiseSweep(tr, end, 1.8, { gain: 0.16, from: 9000, to: 5000, q: 0.5, mode: 'hp', shape: (x) => Math.exp(-x * 3.2) });
+  // brilho de vitória
+  [84, 88, 91, 96].forEach((m, i) => bell(tr, end + 0.08 + i * 0.05, hz(m), { pan: -0.45 + i * 0.3, gain: 0.05, decay: 0.45 }));
+  reverb(tr, { mix: 0.26, size: 0.88, damp: 0.5, pre: 0.025 });
+  master(tr, { drive: 1.35 });
   writeMp3('entrance_hero', tr);
 }
 
 // ================================================================== 9. TEMPESTADE DE RAIOS (lendário)
-// Vento de tempestade, um estalo elétrico seco em cada peça (no mesmo instante do clarão),
-// faíscas crepitando e trovões rolando pelo estéreo a cada fileira.
+// Tempestade de verdade: chuva e vento, a eletricidade carregando, um estalo SECO e brilhante em cada
+// raio (com "zap" elétrico, chiado de faíscas e a re-descarga), trovões que rolam de um lado para o
+// outro a cada fileira e, no fim, um trovão gigante com um acorde grave e a energia "desligando".
 {
-  const tr = track(4.6);
-  // vento da tempestade
+  const tr = track(5.8);
+  // chuva + vento
   const wf = svf();
   const pk = pink();
-  voice(tr, 0, 2.6, (t) => {
-    const e = Math.min(1, t / 0.3) * (t > 1.9 ? Math.exp(-(t - 1.9) / 0.3) : 1);
-    return wf(pk(), 450 + 300 * Math.sin(TAU * 0.8 * t), 1.4).bp * e * 2.2;
-  }, { gain: 0.25 });
+  const rf = svf();
+  const pk2 = pink();
+  voice(tr, 0, 3.6, (t) => {
+    const e = Math.min(1, t / 0.25) * (t > 2.8 ? Math.exp(-(t - 2.8) / 0.35) : 1);
+    const wind = wf(pk(), 420 + 260 * Math.sin(TAU * 0.6 * t) + 120 * Math.sin(TAU * 1.7 * t), 1.6).bp * 2.4;
+    const rain = rf(pk2(), 6500, 0.5).hp * 0.45;
+    return (wind + rain) * e;
+  }, { gain: 0.26 });
+  for (let k = 0; k < 140; k++) {
+    const st = rnd01() * 3.2;
+    const f = svf();
+    const fc = 2800 + rnd01() * 4500;
+    voice(tr, st, 0.02, (t) => f(rnd(), fc, 4).bp * Math.exp(-t / 0.0025), { pan: rnd() * 0.95, gain: 0.07 });
+  }
+  // eletricidade carregando (zumbido que sobe)
+  {
+    const o = osc('saw');
+    const f = svf();
+    voice(tr, 0, 0.5, (t) => {
+      const x = t / 0.5;
+      const crackle = rnd01() < 0.01 ? rnd() * 4 : 0;
+      return f(o(55 + 200 * x) + crackle, 600 + 3000 * x, 2).bp * x ** 1.2 * (t > 0.42 ? Math.exp(-(t - 0.42) / 0.03) : 1);
+    }, { gain: 0.3 });
+  }
   for (const p of PIECES) {
     const hit = at(p, 'lightning', 0.045);
-    // estalo do raio: ruído branco muito curto e brilhante
-    noiseSweep(tr, hit, 0.05, { pan: p.pan, gain: 0.45, from: 9000, to: 1200, q: 0.6, mode: 'hp', shape: (x) => Math.exp(-x * 7) });
-    thump(tr, hit, { pan: p.pan, gain: 0.12, f0: 200, f1: 70, decay: 0.05, dist: 3 });
-    // zumbido elétrico com faíscas
+    const re = at(p, 'lightning', 0.3);
+    // estalo do raio: clique + ruído branco muito curto e brilhante
+    noiseSweep(tr, hit, 0.004, { pan: p.pan, gain: 0.5, from: 7000, to: 7000, mode: 'hp', shape: () => 1 });
+    noiseSweep(tr, hit, 0.07, { pan: p.pan, gain: 0.45, from: 10000, to: 1000, q: 0.6, mode: 'hp', shape: (x) => Math.exp(-x * 6) });
+    thump(tr, hit, { pan: p.pan, gain: 0.16, f0: 240, f1: 70, decay: 0.05, dist: 3.5 });
+    // "zap" elétrico (FM descendo)
+    const c = osc();
+    const m = osc();
+    voice(tr, hit, 0.14, (t) => c(2600 * Math.exp(-t / 0.04) + 180 + m(90) * 600 * Math.exp(-t / 0.05)) * env(t, 0.001, 0.04), { pan: p.pan, gain: 0.07 });
+    // re-descarga mais fraca
+    noiseSweep(tr, re, 0.04, { pan: p.pan, gain: 0.2, from: 8000, to: 1500, q: 0.6, mode: 'hp', shape: (x) => Math.exp(-x * 7) });
+    // chiado elétrico com faíscas até a peça assentar
     const buzz = osc('saw');
     const bf = svf();
-    const end = at(p, 'lightning', 0.55) - hit;
+    const end = at(p, 'lightning', 0.7) - hit;
     voice(tr, hit + 0.01, end, (t) => {
-      const crack = rnd01() < 0.004 ? rnd() * 6 : 0;
-      return bf(buzz(110 + rnd() * 20) + crack, 2400, 1.2).bp * env(t, 0.002, end * 0.35);
-    }, { pan: p.pan, gain: 0.08 });
+      const crack = rnd01() < 0.006 ? rnd() * 7 : 0;
+      const gate = Math.sin(TAU * 31 * t) > -0.3 ? 1 : 0.3;
+      return bf(buzz(100 + rnd() * 25) + crack, 2600, 1.3).bp * env(t, 0.002, end * 0.4) * gate;
+    }, { pan: p.pan, gain: 0.09 });
   }
-  // trovão por fileira: estalo + ronco rolando de um lado para o outro
+  // trovão por fileira: estalo perto + ronco rolando de um lado para o outro
   for (const [k, w] of WAVES.entries()) {
-    const t0 = w.start + 0.05;
-    const side = k % 2 ? 0.6 : -0.6;
+    const t0 = w.start + 0.06;
+    const side = k % 2 ? 0.65 : -0.65;
+    noiseSweep(tr, t0, 0.35, { gain: 0.35, from: 3000, to: 200, q: 0.7, mode: 'lp', src: brown(), shape: (x) => Math.exp(-x * 5) });
     const rb = svf();
     const bn = brown();
     let bump = 0;
-    voicePan(tr, t0 + 0.06, 1.6, (t) => {
-      if (rnd01() < 0.0009) bump = 1 + rnd01();
-      bump *= 0.9996;
-      const v = rb(bn(), 180 + 220 * Math.exp(-t / 0.2), 0.9).lp * (env(t, 0.03, 0.55) * 1.4 + bump * env(t, 0.1, 0.5));
-      return [v, side * (1 - t / 1.6) - side * 0.5 * (t / 1.6)];
-    }, 0.7);
+    voicePan(tr, t0 + 0.05, 1.9, (t) => {
+      if (rnd01() < 0.0011) bump = 1 + rnd01() * 1.2;
+      bump *= 0.9995;
+      const v = rb(bn(), 170 + 260 * Math.exp(-t / 0.2), 0.9).lp * (env(t, 0.02, 0.6) * 1.5 + bump * env(t, 0.1, 0.55));
+      return [v, side * (1 - t / 1.9) - side * 0.6 * (t / 1.9)];
+    }, 0.75);
   }
-  reverb(tr, { mix: 0.28, size: 0.82, damp: 0.5, pre: 0.025 });
+  // trovão gigante final + acorde grave e energia "desligando"
+  const fin = Math.max(...PIECES.map((p) => at(p, 'lightning', 0.3))) + 0.12;
+  noiseSweep(tr, fin, 0.006, { gain: 0.6, from: 6000, to: 6000, mode: 'hp', shape: () => 1 });
+  noiseSweep(tr, fin, 0.5, { gain: 0.5, from: 9000, to: 400, q: 0.6, mode: 'hp', shape: (x) => Math.exp(-x * 5) });
+  thump(tr, fin, { gain: 1, f0: 110, f1: 26, fall: 0.08, decay: 0.6, dist: 3 });
+  {
+    const rb = svf();
+    const bn = brown();
+    voicePan(tr, fin + 0.02, 3.4, (t) => [rb(bn(), 140 + 300 * Math.exp(-t / 0.25), 0.9).lp * env(t, 0.015, 0.75) * 1.6, Math.sin(t * 2.2) * 0.6], 0.9);
+  }
+  {
+    const notes = [33, 40, 45, 48];
+    const oscs = notes.flatMap((mm) => [[osc('saw'), hz(mm) * 1.005], [osc('saw'), hz(mm) * 0.995]]);
+    const f = svf();
+    voice(tr, fin, 3.4, (t) => {
+      let v = 0;
+      for (const [o, fr] of oscs) v += o(fr);
+      return f(v / oscs.length, 200 + 1800 * Math.exp(-t / 0.35), 1.3).lp * env(t, 0.01, 0.8);
+    }, { gain: 0.3 });
+  }
+  {
+    // energia desligando: zumbido que despenca
+    const o = osc('sq');
+    const f = svf();
+    voice(tr, fin + 0.35, 0.8, (t) => f(o(420 * Math.exp(-t / 0.22) + 40), 1800, 1.5).lp * env(t, 0.005, 0.25), { gain: 0.08 });
+  }
+  reverb(tr, { mix: 0.3, size: 0.86, damp: 0.5, pre: 0.025 });
   master(tr, { drive: 1.3 });
   writeMp3('entrance_lightning', tr);
 }

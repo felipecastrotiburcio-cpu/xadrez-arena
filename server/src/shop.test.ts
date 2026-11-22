@@ -150,3 +150,15 @@ test('modo desenvolvedor: senha errada recusada; com a senha certa a loja sai de
   const off = await api('/dev/lock', { token, body: {} });
   assert.equal(off.data.user.devMode, false);
 });
+
+test('troca de nome: valida, não repete e o login passa a ser pelo nome novo', async () => {
+  const { token } = await register('nomea');
+  await register('nomeb');
+  assert.equal((await api('/me/username', { token, body: { username: 'x' } })).status, 400);
+  assert.equal((await api('/me/username', { token, body: { username: 'NOMEB' } })).status, 409);
+  const r = await api('/me/username', { token, body: { username: 'nomec' } });
+  assert.equal(r.status, 200);
+  assert.equal(r.data.user.username, 'nomec');
+  assert.equal((await api('/auth/login', { body: { username: 'nomea', password: 'senhaforte123' } })).status, 401);
+  assert.equal((await api('/auth/login', { body: { username: 'nomec', password: 'senhaforte123' } })).status, 200);
+});

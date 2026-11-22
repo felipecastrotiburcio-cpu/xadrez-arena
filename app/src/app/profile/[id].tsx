@@ -118,6 +118,8 @@ export default function ProfileScreen() {
         <Stat label={t('profile.winRate')} value={`${winRate}%`} />
       </View>
 
+      {isMe && <Button title={t('me.edit')} iconName="pencil" variant="secondary" onPress={() => router.push('/me')} />}
+
       <SectionTitle>{t('badges.title')}</SectionTitle>
       <Emblems
         owned={(isMe ? me?.badges : user.badges) ?? []}

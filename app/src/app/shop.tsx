@@ -1,13 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { CharacterThumb } from '../components/Character';
-import { BoardFrame, isLight, SquareSurface } from '../components/ChessBoard';
 import { ItemPreviewModal } from '../components/ItemPreviewModal';
-import { EntranceDemo } from '../components/PieceEntrance';
-import { ChessPiece, type PieceType } from '../components/ChessPiece';
+import { ItemPreview } from '../components/ItemThumb';
 import { Finale } from '../components/Finale';
-import { Avatar, Button, Card, Screen } from '../components/ui';
+import { Button, Card, Screen } from '../components/ui';
 import { CoinIcon, Icon, type IconName } from '../components/Icon';
 import { api, isLocalMode } from '../lib/api';
 import { useAuth } from '../lib/auth';
@@ -20,7 +18,7 @@ import { createShowcaseScene } from '../three/scenes';
 import { useToast } from '../lib/toast';
 import { buyWithStore, iapSupported, loadPrices, restoreStorePurchases } from '../lib/iap';
 import { translateServerText, useT, type TranslationKey } from '../lib/i18n';
-import type { BoardStyle, CharacterStyle, ItemType, PieceStyle, PrivateUser, ShopItem } from '../lib/types';
+import type { CharacterStyle, ItemType, PrivateUser, ShopItem } from '../lib/types';
 
 const TABS: { type: ItemType; label: TranslationKey; icon: IconName; color: string }[] = [
   { type: 'board', label: 'shop.tabBoards', icon: 'board', color: '#f4b942' },
@@ -39,7 +37,9 @@ export default function Shop() {
   const look = useMyLook();
   const toast = useToast();
   const { t, lang, locale } = useT();
-  const [tab, setTab] = useState<ItemType>('board');
+  // "Meu perfil" abre a loja direto numa categoria (ex.: /shop?tab=entrance).
+  const params = useLocalSearchParams<{ tab?: string }>();
+  const [tab, setTab] = useState<ItemType>(() => TABS.find((x) => x.type === params.tab)?.type ?? 'board');
   const [onlyOwned, setOnlyOwned] = useState(false);
   const { width } = useWindowDimensions();
   // Duas colunas; a largura da tela (até 640) menos as margens e o espaço entre os cartões.
@@ -482,74 +482,6 @@ function PriceButton({
         {label}
       </Text>
     </Pressable>
-  );
-}
-
-function ItemPreview({
-  item,
-  board,
-  pieces,
-  username,
-  size = 88,
-}: {
-  item: ShopItem;
-  board: BoardStyle;
-  pieces: PieceStyle;
-  username: string;
-  size?: number;
-}) {
-  switch (item.type) {
-    case 'board':
-      return <MiniBoard board={item.style} pieces={pieces} size={size} />;
-    case 'pieces':
-      return <MiniBoard board={board} pieces={item.style} size={size} />;
-    case 'avatar':
-      return <Avatar name={username} size={Math.round(size * 0.68)} icon={item.id} />;
-    case 'character':
-      return <CharacterThumb look={item.style} size={Math.round(size * 0.95)} />;
-    case 'move':
-      return (
-        <View style={[styles.moveArt, { width: size * 0.7, height: size * 0.7, borderRadius: size * 0.35 }]}>
-          <Text style={{ fontFamily: fonts.regular, fontSize: size * 0.36 }}>{item.style.emoji}</Text>
-          <View style={styles.moveBadge}>
-            <Icon name="play" size={12} color={colors.accentText} />
-          </View>
-        </View>
-      );
-    case 'entrance':
-      return <EntranceDemo entrance={item.style} pieceStyle={pieces} light={board.light} dark={board.dark} size={Math.round(size * 0.9)} />;
-  }
-}
-
-const MINI_PIECES: (null | [string, 'w' | 'b'])[] = [
-  ['k', 'b'], null, ['q', 'b'], null,
-  null, ['p', 'b'], null, ['n', 'b'],
-  ['n', 'w'], null, ['p', 'w'], null,
-  null, ['q', 'w'], null, ['k', 'w'],
-];
-
-function MiniBoard({ board, pieces, size = 88 }: { board: BoardStyle; pieces: PieceStyle; size?: number }) {
-  const style = { ...board, frame: Math.min(board.frame, 5) };
-  const sq = (size - style.frame * 2) / 4;
-  return (
-    <BoardFrame style={style} size={size}>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-        {MINI_PIECES.map((p, i) => {
-          // Canto inferior esquerdo escuro, como no tabuleiro de verdade.
-          const light = isLight(`${'abcd'[i % 4]}${4 - Math.floor(i / 4)}`);
-          return (
-            <View key={i} style={{ width: sq, height: sq, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
-              <SquareSurface style={style} index={i * 3 + 7} size={sq} light={light} />
-              {p && (
-                <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}>
-                  <ChessPiece type={p[0] as PieceType} color={p[1]} style={pieces} size={sq} />
-                </View>
-              )}
-            </View>
-          );
-        })}
-      </View>
-    </BoardFrame>
   );
 }
 

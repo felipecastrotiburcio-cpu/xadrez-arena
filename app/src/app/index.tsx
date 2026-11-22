@@ -142,9 +142,10 @@ export default function Home() {
                     <Text style={styles.streakText}>{t('home.streak', { count: user.winStreak })}</Text>
                   </View>
                 )}
-                <Pressable onPress={() => router.push('/shop')} style={styles.customize} hitSlop={6}>
+                <Pressable testID="home-me" onPress={() => router.push('/me')} style={styles.customize} hitSlop={6}>
+                  <Icon name="pencil" size={13} color={colors.accentText} strokeWidth={2.6} />
                   <Text style={styles.customizeText}>{t('home.customize')}</Text>
-                  <Icon name="chevron" size={14} color={colors.accent} strokeWidth={2.4} />
+                  <Icon name="chevron" size={14} color={colors.accentText} strokeWidth={2.6} />
                 </Pressable>
               </>
             ) : (
@@ -364,8 +365,12 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   streakText: { color: '#ffb0b0', fontFamily: fonts.bold, fontSize: 12 },
-  customize: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginTop: 8 },
-  customizeText: { color: colors.accent, fontFamily: fonts.black, fontSize: 14 },
+  customize: {
+    flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', marginTop: 10,
+    backgroundColor: colors.accent, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6,
+    borderBottomWidth: 3, borderBottomColor: colors.accentDark,
+  },
+  customizeText: { color: colors.accentText, fontFamily: fonts.black, fontSize: 13.5 },
   liveGame: {
     flexDirection: 'row',
     alignItems: 'center',
