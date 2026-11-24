@@ -69,10 +69,13 @@ export function Scene3D({
   factory,
   style,
   fallback,
+  maxFps = 60,
 }: {
   factory: SceneFactory;
   style?: StyleProp<ViewStyle>;
   fallback?: ReactNode;
+  /** Limite de quadros por segundo (vitrines usam 30 para poupar bateria e aparelhos mais fracos). */
+  maxFps?: number;
 }) {
   const [failed, setFailed] = useState(false);
   // Ao recriar a tela, o contexto gráfico novo às vezes ainda não responde: tenta de novo antes de desistir.
@@ -117,9 +120,11 @@ export function Scene3D({
     }
     const start = performance.now();
     let last = start;
+    const minGap = 1000 / maxFps - 2;
     const loop = () => {
       frame.current = requestAnimationFrame(loop);
       const now = performance.now();
+      if (now - last < minGap) return;
       try {
         // Testes automáticos podem fixar o tempo da cena para capturar quadros exatos.
         const fixed = (globalThis as { __xaSceneTime?: number }).__xaSceneTime;

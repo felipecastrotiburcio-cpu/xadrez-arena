@@ -183,10 +183,13 @@ if tap 'Criar conta'; then
   if [ "$CREATED" = "1" ]; then ok "Conta '$USERNAME' criada e tela inicial mostra o nome"; else fail "Conta não foi criada"; fi
   if seen '.*300.*'; then ok "Conta nova começa com 300 moedas"; else log "⚠️  Saldo inicial não encontrado"; fi
 
-  # Loja: comprar "Verde Torneio" (150 moedas)
+  # Loja: comprar "Verde Torneio" (150 moedas). A loja abre nas Evoluções: vai para Tabuleiros.
   if tap 'Loja'; then
     sleep 4
     shot 12-loja
+    if seen 'Evoluções'; then ok "Loja abre com as Evoluções em destaque"; else log "⚠️  Evoluções não encontradas na loja"; fi
+    tap 'Tabuleiros' || true
+    sleep 2
     if tapscroll '150'; then
       sleep 2
       tap 'comprar' || true   # botão do diálogo de confirmação

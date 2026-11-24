@@ -106,6 +106,7 @@ export default function Home() {
           <View style={styles.heroScene}>
             {focused && (
               <Scene3D
+                maxFps={30}
                 key={`${look.equipped.character}-${look.equipped.evolution ?? ''}`}
                 factory={factory}
                 style={StyleSheet.absoluteFill}

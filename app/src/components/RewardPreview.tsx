@@ -112,7 +112,7 @@ export function RewardPreview({
                 )}
                 {item.type === 'character' && factory && (
                   <View style={styles.scene}>
-                    <Scene3D factory={factory} style={StyleSheet.absoluteFill} fallback={<CharacterThumb look={{ id: item.id }} size={190} />} />
+                    <Scene3D maxFps={30} factory={factory} style={StyleSheet.absoluteFill} fallback={<CharacterThumb look={{ id: item.id }} size={190} />} />
                   </View>
                 )}
                 <View style={styles.exclusive}>

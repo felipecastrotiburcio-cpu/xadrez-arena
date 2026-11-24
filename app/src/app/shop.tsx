@@ -418,6 +418,7 @@ export default function Shop() {
       {(tab === 'character' || tab === 'evolution') && fittingFactory && fittingLook && fitting && (
         <View style={[styles.fitting, fitting.type === 'evolution' && { borderColor: fitting.style.color, borderWidth: 2 }]}>
           <Scene3D
+            maxFps={30}
             key={`${fitting.id}-${fittingLook.evolution ?? 'n'}`}
             factory={fittingFactory}
             style={styles.fittingScene}
