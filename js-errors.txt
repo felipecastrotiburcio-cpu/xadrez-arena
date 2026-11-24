@@ -1,0 +1,5 @@
+11-24 23:39:45.412  4915  4966 W ReactNativeJS: '[3D] falha na tentativa 1:', [TypeError: Cannot read property 'indexOf' of undefined]
+11-24 23:39:45.413  4915  4967 E unknown:ReactNative: console.error: THREE.WebGLRenderer: Cannot read property 'indexOf' of undefined, stack:
+11-24 23:39:45.413  4915  4967 E unknown:ReactNative: SyntheticError@1:733931
+11-24 23:39:45.413  4915  4967 E unknown:ReactNative: reactConsoleErrorHandler@1:733722
+11-24 23:39:45.413  4915  4967 E unknown:ReactNative: error@1:1840254
