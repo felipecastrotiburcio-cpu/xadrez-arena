@@ -12,7 +12,9 @@ import {
   DEFAULT_EQUIPPED,
   DEV_MODE_KDF,
   DEFAULT_ITEMS,
+  equipSlots,
   getItem,
+  itemsGranted,
   LEVEL_UP_BONUS,
   STARTING_COINS,
   streakBonus,
@@ -164,7 +166,14 @@ function publicUser(u: LocalUser) {
     createdAt: u.createdAt,
     winStreak: u.winStreak,
     bestStreak: u.bestStreak,
-    cosmetics: { avatar: u.equipped.avatar, character: u.equipped.character, move: u.equipped.move, pieces: u.equipped.pieces, entrance: u.equipped.entrance },
+    cosmetics: {
+      avatar: u.equipped.avatar,
+      character: u.equipped.character,
+      move: u.equipped.move,
+      pieces: u.equipped.pieces,
+      entrance: u.equipped.entrance,
+      evolution: u.equipped.evolution || undefined,
+    },
   };
 }
 
@@ -321,12 +330,21 @@ async function handle(data: Data, method: string, route: string, body: Record<st
         throw new ApiError(`Faltam ${price - user.coins} moedas para comprar ${item.name}.`, 402);
       }
       user.coins -= price;
-      user.inventory.push(item.id);
+      // A evolução traz o boneco dela junto.
+      user.inventory.push(...itemsGranted(item, user.inventory));
     } else if (!user.inventory.includes(item.id)) {
       throw new ApiError('Compre o item antes de equipar.', 403);
     }
     // Comprar já equipa: é o que o jogador quer ver em seguida.
-    user.equipped = { ...user.equipped, [item.type]: item.id };
+    user.equipped = { ...user.equipped, ...equipSlots(item, user.inventory) };
+    return { user: privateUser(user) };
+  }
+
+  // Desliga a evolução (volta ao visual normal do boneco).
+  if (method === 'POST' && route === '/shop/unequip') {
+    const user = requireUser(data, token);
+    if (body.type !== 'evolution') throw new ApiError('Só a evolução pode ser desligada.', 400);
+    user.equipped = { ...user.equipped, evolution: '' };
     return { user: privateUser(user) };
   }
 

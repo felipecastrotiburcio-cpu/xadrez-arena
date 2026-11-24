@@ -7,7 +7,8 @@ import { Button, Coins, Screen } from '../components/ui';
 import { Icon, type IconName } from '../components/Icon';
 import { isLocalMode } from '../lib/api';
 import { useAuth } from '../lib/auth';
-import { useCharacterStyle, useMyLook } from '../lib/cosmetics';
+import { useFullLook, useMyLook } from '../lib/cosmetics';
+import { CATALOG } from '../lib/catalog';
 import { levelName, useT } from '../lib/i18n';
 import { levelProgress } from '../lib/levels';
 import { useSocket } from '../lib/socket';
@@ -28,7 +29,7 @@ export default function Home() {
   const focused = useIsFocused();
   const look = useMyLook();
   const { t } = useT();
-  const character = useCharacterStyle(look.equipped.character);
+  const character = useFullLook(look.equipped.character, look.equipped.evolution);
   const training = useTrainingSummary(user);
   const factory = useMemo(
     () => createShowcaseScene({ look: character, board: look.board, bg: HERO_BG }),
@@ -105,7 +106,7 @@ export default function Home() {
           <View style={styles.heroScene}>
             {focused && (
               <Scene3D
-                key={look.equipped.character}
+                key={`${look.equipped.character}-${look.equipped.evolution ?? ''}`}
                 factory={factory}
                 style={StyleSheet.absoluteFill}
                 fallback={<CharacterThumb look={character} size={160} />}
@@ -157,6 +158,31 @@ export default function Home() {
             )}
           </View>
         </View>
+
+        {/* Destaque das Evoluções (some quando a pessoa já tem todas) */}
+        {user && !CATALOG_EVOLUTIONS.every((id) => user.inventory.includes(id)) && (
+          <Pressable
+            testID="home-evolutions"
+            onPress={() => router.push('/shop?tab=evolution')}
+            style={({ pressed }) => [styles.evoPromo, pressed && { opacity: 0.9 }]}
+            accessibilityRole="button"
+          >
+            <View style={styles.evoPromoArt}>
+              <CharacterThumb look={{ id: 'char_wizard', evolution: 'outfit_archmage' }} size={70} />
+              <View style={{ marginLeft: -22 }}>
+                <CharacterThumb look={{ id: 'char_king', evolution: 'outfit_emperor' }} size={78} />
+              </View>
+            </View>
+            <View style={{ flex: 1, gap: 2 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Icon name="sparkle" size={14} color="#ffc83d" strokeWidth={2.4} />
+                <Text style={styles.evoPromoTitle}>{t('home.evoTitle')}</Text>
+              </View>
+              <Text style={styles.evoPromoSub}>{t('home.evoSub')}</Text>
+            </View>
+            <Icon name="chevron" size={18} color="#ffc83d" strokeWidth={2.6} />
+          </Pressable>
+        )}
 
         {activeGame && (
           <Pressable onPress={() => router.push(`/game/${activeGame.id}`)} style={styles.liveGame} accessibilityRole="button">
@@ -291,7 +317,24 @@ const card = {
   borderBottomColor: colors.shadow,
 } as const;
 
+const CATALOG_EVOLUTIONS = CATALOG.filter((i) => i.type === 'evolution').map((i) => i.id);
+
 const styles = StyleSheet.create({
+  evoPromo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: radius.lg,
+    backgroundColor: 'rgba(255, 200, 61, 0.1)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 200, 61, 0.55)',
+    borderBottomWidth: 4,
+  },
+  evoPromoArt: { flexDirection: 'row', alignItems: 'flex-end', width: 92 },
+  evoPromoTitle: { color: colors.text, fontFamily: fonts.black, fontSize: 16 },
+  evoPromoSub: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 13 },
   center: { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },
   brand: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 },

@@ -1,0 +1,23 @@
+/** Fotos dos bonecos (geradas a partir do modelo 3D): normal e evoluído (sufixo _evo). */
+export const CHARACTER_IMAGES: Record<string, number> = {
+  char_astronaut: require('../../assets/characters/char_astronaut.png'),
+  char_astronaut_evo: require('../../assets/characters/char_astronaut_evo.png'),
+  char_athlete: require('../../assets/characters/char_athlete.png'),
+  char_athlete_evo: require('../../assets/characters/char_athlete_evo.png'),
+  char_cool: require('../../assets/characters/char_cool.png'),
+  char_cool_evo: require('../../assets/characters/char_cool_evo.png'),
+  char_golden_robot: require('../../assets/characters/char_golden_robot.png'),
+  char_golden_robot_evo: require('../../assets/characters/char_golden_robot_evo.png'),
+  char_king: require('../../assets/characters/char_king.png'),
+  char_king_evo: require('../../assets/characters/char_king_evo.png'),
+  char_ninja: require('../../assets/characters/char_ninja.png'),
+  char_ninja_evo: require('../../assets/characters/char_ninja_evo.png'),
+  char_rookie: require('../../assets/characters/char_rookie.png'),
+  char_rookie_evo: require('../../assets/characters/char_rookie_evo.png'),
+  char_streetwear: require('../../assets/characters/char_streetwear.png'),
+  char_streetwear_evo: require('../../assets/characters/char_streetwear_evo.png'),
+  char_tower_guard: require('../../assets/characters/char_tower_guard.png'),
+  char_tower_guard_evo: require('../../assets/characters/char_tower_guard_evo.png'),
+  char_wizard: require('../../assets/characters/char_wizard.png'),
+  char_wizard_evo: require('../../assets/characters/char_wizard_evo.png'),
+};

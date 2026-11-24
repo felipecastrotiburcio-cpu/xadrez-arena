@@ -2,7 +2,7 @@ import { pbkdf2 } from 'node:crypto';
 import { promisify } from 'node:util';
 import { Router } from 'express';
 import { privateUser, today, type Auth, type AuthedRequest } from './auth.js';
-import { CATALOG, DAILY_BONUS, DEV_MODE_KDF, getItem } from './catalog.js';
+import { CATALOG, DAILY_BONUS, DEV_MODE_KDF, equipSlots, getItem, itemsGranted } from './catalog.js';
 import type { Database } from './db.js';
 import type { Notifier } from './notifications.js';
 
@@ -33,11 +33,12 @@ export function createShopRoutes(db: Database, auth: Auth, notifier: Notifier) {
     if (user.coins < price) {
       return res.status(402).json({ error: `Faltam ${price - user.coins} moedas para comprar ${item.name}.` });
     }
-    // Comprar já equipa: é o que o jogador quer ver em seguida.
+    // Comprar já equipa: é o que o jogador quer ver em seguida. A evolução traz o boneco dela junto.
+    const inventory = [...user.inventory, ...itemsGranted(item, user.inventory)];
     const updated = db.updateUser(user.id, {
       coins: user.coins - price,
-      inventory: [...user.inventory, item.id],
-      equipped: { ...user.equipped, [item.type]: item.id },
+      inventory,
+      equipped: { ...user.equipped, ...equipSlots(item, inventory) },
     })!;
     res.json({ user: privateUser(updated) });
   });
@@ -79,8 +80,15 @@ export function createShopRoutes(db: Database, auth: Auth, notifier: Notifier) {
     const item = getItem(String(req.body?.itemId ?? ''));
     if (!item) return res.status(404).json({ error: 'Item não encontrado.' });
     if (!user.inventory.includes(item.id)) return res.status(403).json({ error: 'Compre o item antes de equipar.' });
-    const updated = db.updateUser(user.id, { equipped: { ...user.equipped, [item.type]: item.id } })!;
+    const updated = db.updateUser(user.id, { equipped: { ...user.equipped, ...equipSlots(item, user.inventory) } })!;
     res.json({ user: privateUser(updated) });
+  });
+
+  // Desliga a evolução (volta ao visual normal do boneco).
+  r.post('/shop/unequip', auth.requireAuth, (req: AuthedRequest, res) => {
+    if (req.body?.type !== 'evolution') return res.status(400).json({ error: 'Só a evolução pode ser desligada.' });
+    const user = db.getUser(req.userId!)!;
+    res.json({ user: privateUser(db.updateUser(user.id, { equipped: { ...user.equipped, evolution: '' } })!) });
   });
 
   r.post('/rewards/daily', auth.requireAuth, (req: AuthedRequest, res) => {

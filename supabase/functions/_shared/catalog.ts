@@ -4,7 +4,7 @@
  * Regra de preço: quanto mais elaborado o visual, maior a raridade e o preço.
  */
 
-export type ItemType = 'board' | 'pieces' | 'avatar' | 'character' | 'move' | 'entrance';
+export type ItemType = 'board' | 'pieces' | 'avatar' | 'character' | 'move' | 'entrance' | 'evolution';
 export type Rarity = 'comum' | 'raro' | 'epico' | 'lendario';
 
 export interface BoardStyle {
@@ -42,17 +42,54 @@ export interface AvatarStyle {
   ring: string;
 }
 
-/** Boneco em blocos (estilo avatar de jogo): as peças são desenhadas em 3D no app. */
+/**
+ * Boneco em blocos (estilo avatar de jogo), desenhado em 3D no app: corpo com ombros mais
+ * largos que a cintura, mãos, rosto com sobrancelhas, cabelo em mechas e roupas especiais.
+ */
 export interface CharacterStyle {
   skin: string;
-  shirt: string;
+  hair: 'none' | 'spiky' | 'swoop' | 'buzz' | 'long';
+  hairColor: string;
+  outfit: 'tee' | 'hoodie' | 'gi' | 'ninja' | 'royal' | 'space' | 'robot' | 'robe' | 'armor' | 'jacket';
+  /** Cor principal da roupa. */
+  top: string;
+  /** Cor de destaque (listras, faixa, detalhes). */
+  accent: string;
   pants: string;
+  ripped?: boolean;
   shoes: string;
-  /** Acessório da cabeça, modelado em 3D. */
-  hat: 'none' | 'cap' | 'crown' | 'tophat' | 'helmet' | 'headband' | 'hair';
-  /** Cor do acessório. */
-  hatColor: string;
-  face: 'smile' | 'grin' | 'shades' | 'mask' | 'visor';
+  sole?: string;
+  headwear: 'none' | 'cap' | 'capBack' | 'headband' | 'crown' | 'wizard' | 'helmet' | 'knight';
+  headwearColor: string;
+  face: 'smile' | 'grin' | 'smirk' | 'determined' | 'shades' | 'visor' | 'mask';
+  /** Corpo mais forte (ombros e braços maiores). */
+  strong?: boolean;
+  /** Cavalo do xadrez estampado no peito. */
+  logo?: boolean;
+  /** Braceletes e caneleiras de pedra. */
+  bracers?: boolean;
+  /** Cor da barba (sem barba se ausente). */
+  beard?: string;
+}
+
+/**
+ * Evolução de um boneco (compra com dinheiro real): inclui o boneco, uma roupa evoluída
+ * mais detalhada e um item especial com efeitos (espada, cajado, jetpack...).
+ */
+export interface EvolutionStyle {
+  /** Boneco que evolui. */
+  character: string;
+  /** Item especial (modelo 3D com efeitos). */
+  gear: string;
+  /** Roupa evoluída (peças extras desenhadas no app). */
+  outfit: string;
+  /** Cores novas da roupa evoluída. */
+  colors: Partial<CharacterStyle>;
+  /** Nome do item especial que vem junto. */
+  gearName: string;
+  emoji: string;
+  /** Cor de destaque da evolução na loja. */
+  color: string;
 }
 
 export interface ShopItemBase {
@@ -80,7 +117,8 @@ export type ShopItem =
   | (ShopItemBase & { type: 'avatar'; style: AvatarStyle })
   | (ShopItemBase & { type: 'character'; style: CharacterStyle })
   | (ShopItemBase & { type: 'move'; style: { animation: string; emoji: string } })
-  | (ShopItemBase & { type: 'entrance'; style: EntranceStyle });
+  | (ShopItemBase & { type: 'entrance'; style: EntranceStyle })
+  | (ShopItemBase & { type: 'evolution'; style: EvolutionStyle });
 
 /** Surgimento das peças no começo da partida (animação no tabuleiro). */
 export interface EntranceStyle {
@@ -105,6 +143,9 @@ const character = (
 const entrance = (
   id: string, name: string, description: string, price: number, rarity: Rarity, effect: EntranceStyle['effect'], emoji: string, color: string,
 ): ShopItem => ({ id, type: 'entrance', name, description, price, rarity, style: { effect, emoji, color } });
+const evolution = (
+  id: string, name: string, description: string, style: EvolutionStyle,
+): ShopItem => ({ id, type: 'evolution', name, description, price: 5000, rarity: 'lendario', style });
 const move = (
   id: string, name: string, description: string, price: number, rarity: Rarity, emoji: string,
 ): ShopItem => ({ id, type: 'move', name, description, price, rarity, style: { animation: id.replace('move_', ''), emoji } });
@@ -244,32 +285,84 @@ const ITEMS: ShopItem[] = [
   avatar('avatar_diamond', 'Diamante', 2500, 'lendario', { emoji: '💎', background: '#0f2f4a', ring: '#7fe3ff' }),
 
   // ----------------------------------------------------------- bonecos
-  character('char_rookie', 'Novato', 'O boneco padrão: blocos, sorriso e muita vontade de jogar.', 0, 'comum', {
-    skin: '#f8d34a', shirt: '#1e88e5', pants: '#7cb342', shoes: '#4e7a27', hat: 'none', hatColor: '#000000', face: 'smile',
+  character('char_rookie', 'Novato', 'O boneco padrão: topete, camiseta com o cavalo e muita vontade de jogar.', 0, 'comum', {
+    skin: '#f2c18f', hair: 'swoop', hairColor: '#5d3a1a', outfit: 'tee', top: '#1e88e5', accent: '#ffffff', logo: true,
+    pants: '#3b5f8a', shoes: '#e53935', headwear: 'none', headwearColor: '#000000', face: 'smile',
   }),
-  character('char_streetwear', 'Estiloso', 'Boné virado e moletom laranja.', 200, 'comum', {
-    skin: '#c68642', shirt: '#ff6b35', pants: '#37474f', shoes: '#fafafa', hat: 'cap', hatColor: '#e53935', face: 'grin',
+  character('char_streetwear', 'Estiloso', 'Cabelo espetado, faixa vermelha, moletom e calça rasgada.', 200, 'comum', {
+    skin: '#f0c08a', hair: 'spiky', hairColor: '#1c1a1a', outfit: 'hoodie', top: '#3a3d44', accent: '#ffffff', logo: true,
+    pants: '#1f1f24', ripped: true, shoes: '#f5f5f5', sole: '#ffffff', headwear: 'headband', headwearColor: '#e53935', face: 'smile',
   }),
-  character('char_cool', 'Descolado', 'Óculos escuros nunca saem de moda.', 400, 'raro', {
-    skin: '#f1c27d', shirt: '#1de9b6', pants: '#283593', shoes: '#212121', hat: 'hair', hatColor: '#5d4037', face: 'shades',
+  character('char_cool', 'Descolado', 'Óculos escuros, boné para trás e jaqueta aberta.', 400, 'raro', {
+    skin: '#c68642', hair: 'buzz', hairColor: '#1b1b1b', outfit: 'jacket', top: '#1de9b6', accent: '#263238', logo: true,
+    pants: '#283593', shoes: '#212121', headwear: 'capBack', headwearColor: '#ff6b35', face: 'shades',
   }),
-  character('char_athlete', 'Atleta', 'Faixa na testa e fôlego de campeão.', 500, 'raro', {
-    skin: '#a0663e', shirt: '#2ee59d', pants: '#1b2a49', shoes: '#ff4d6d', hat: 'headband', hatColor: '#ffffff', face: 'grin',
+  character('char_athlete', 'Lutador', 'Kimono, faixa preta e braceletes de pedra.', 500, 'raro', {
+    skin: '#f2a66b', hair: 'spiky', hairColor: '#4a4d52', outfit: 'gi', top: '#f7f7f7', accent: '#1b1b1f',
+    pants: '#f2f2f2', shoes: '#f2a66b', headwear: 'headband', headwearColor: '#2e9e4f', face: 'determined', strong: true, bracers: true,
   }),
-  character('char_ninja', 'Ninja', 'Silencioso e mortal no tabuleiro.', 700, 'epico', {
-    skin: '#f1c27d', shirt: '#212121', pants: '#1a1a1a', shoes: '#000000', hat: 'headband', hatColor: '#e53935', face: 'mask',
+  character('char_ninja', 'Ninja', 'Silencioso e mortal no tabuleiro, com espada nas costas.', 700, 'epico', {
+    skin: '#f1c27d', hair: 'none', hairColor: '#111111', outfit: 'ninja', top: '#22252b', accent: '#c62828',
+    pants: '#1c1e23', shoes: '#111216', headwear: 'headband', headwearColor: '#c62828', face: 'mask',
   }),
-  character('char_wizard', 'Feiticeiro', 'Lê o futuro antes do lance.', 1000, 'epico', {
-    skin: '#ffe0bd', shirt: '#7c4dff', pants: '#4527a0', shoes: '#311b92', hat: 'tophat', hatColor: '#311b92', face: 'grin',
+  character('char_wizard', 'Feiticeiro', 'Chapéu pontudo, barba branca e manto de estrelas.', 1000, 'epico', {
+    skin: '#ffe0bd', hair: 'long', hairColor: '#e8e8e8', outfit: 'robe', top: '#5e35b1', accent: '#ffd54f',
+    pants: '#4527a0', shoes: '#311b92', headwear: 'wizard', headwearColor: '#4527a0', face: 'smile', beard: '#ececec',
   }),
-  character('char_king', 'Rei do Tabuleiro', 'Coroa de ouro e manto real.', 2000, 'lendario', {
-    skin: '#8d5524', shirt: '#c62828', pants: '#ffca28', shoes: '#6d4c41', hat: 'crown', hatColor: '#ffc107', face: 'smile',
+  character('char_king', 'Rei do Tabuleiro', 'Coroa de ouro, capa real e gola de pele.', 2000, 'lendario', {
+    skin: '#8d5524', hair: 'buzz', hairColor: '#1b1b1b', outfit: 'royal', top: '#c62828', accent: '#ffd54f',
+    pants: '#3e2723', shoes: '#4e342e', headwear: 'crown', headwearColor: '#ffc107', face: 'smirk', beard: '#1b1b1b',
   }),
   character('char_golden_robot', 'Robô Dourado', 'Armadura de ouro e visor futurista.', 2500, 'lendario', {
-    skin: '#ffd34d', shirt: '#e0a526', pants: '#b07d10', shoes: '#5c4100', hat: 'none', hatColor: '#000000', face: 'visor',
+    skin: '#e8b923', hair: 'none', hairColor: '#000000', outfit: 'robot', top: '#d4a017', accent: '#1de9ff',
+    pants: '#b07d10', shoes: '#6b4c00', headwear: 'none', headwearColor: '#000000', face: 'visor',
   }),
   character('char_astronaut', 'Astronauta', 'Vitórias de outro planeta.', 3000, 'lendario', {
-    skin: '#ffe0bd', shirt: '#eceff1', pants: '#cfd8dc', shoes: '#546e7a', hat: 'helmet', hatColor: '#80deea', face: 'visor',
+    skin: '#ffe0bd', hair: 'swoop', hairColor: '#8d5a2b', outfit: 'space', top: '#f5f7f8', accent: '#ff7043',
+    pants: '#e6eaec', shoes: '#90a4ae', headwear: 'helmet', headwearColor: '#80deea', face: 'grin',
+  }),
+
+  // ----------------------------------------------------------- evoluções (dinheiro real)
+  // Cada uma inclui o boneco, a roupa evoluída e o item especial com efeitos.
+  evolution('evo_rookie', 'Novato Campeão', 'Jaqueta universitária, medalha de ouro e a Mochila do Campeão com troféu que solta confete.', {
+    character: 'char_rookie', gear: 'gear_backpack', outfit: 'outfit_varsity', gearName: 'Mochila do Campeão', emoji: '🎒', color: '#ffc83d',
+    colors: { top: '#1565c0', pants: '#1f3a5f', shoes: '#ffffff', sole: '#ffc83d' },
+  }),
+  evolution('evo_streetwear', 'DJ Neon', 'Moletom com linhas neon que mudam de cor e o Fone Neon com ondas sonoras e notas musicais.', {
+    character: 'char_streetwear', gear: 'gear_headphones', outfit: 'outfit_dj', gearName: 'Fone Neon', emoji: '🎧', color: '#00e676',
+    colors: { top: '#1a1b20', pants: '#111216' },
+  }),
+  evolution('evo_cool', 'Descolado Milionário', 'Jaqueta de veludo com ouro, tênis dourado e o Kit Ostentação: corrente, medalhão de diamantes e relógio.', {
+    character: 'char_cool', gear: 'gear_chain', outfit: 'outfit_luxury', gearName: 'Kit Ostentação', emoji: '💎', color: '#c17bff',
+    colors: { top: '#4a148c', accent: '#111111', pants: '#141414', shoes: '#ffc83d', sole: '#ffffff', headwearColor: '#ffc83d' },
+  }),
+  evolution('evo_athlete', 'Mestre do Fogo', 'Kimono preto com chamas, ombreira de lava e as Luvas de Fogo que deixam um rastro em cada soco.', {
+    character: 'char_athlete', gear: 'gear_fire_gloves', outfit: 'outfit_fire_master', gearName: 'Luvas de Fogo', emoji: '🔥', color: '#ff6d00',
+    colors: { top: '#1d1d22', pants: '#1d1d22', accent: '#c62828', headwearColor: '#c62828', hairColor: '#2a2a2e' },
+  }),
+  evolution('evo_ninja', 'Ninja Sombra Elétrica', 'Armadura com linhas elétricas, cachecol que voa e as Kunais de Energia com faíscas e rastro azul.', {
+    character: 'char_ninja', gear: 'gear_kunai', outfit: 'outfit_shadow', gearName: 'Kunais de Energia', emoji: '⚡', color: '#00e5ff',
+    colors: { top: '#15171d', pants: '#121419', accent: '#00b8d4', headwearColor: '#00b8d4' },
+  }),
+  evolution('evo_wizard', 'Arquimago', 'Manto com runas, auréola mágica e o Cajado Arcano com círculo mágico no chão.', {
+    character: 'char_wizard', gear: 'gear_staff', outfit: 'outfit_archmage', gearName: 'Cajado Arcano', emoji: '🔮', color: '#b388ff',
+    colors: { top: '#311b92', pants: '#1a237e', headwearColor: '#1a237e', shoes: '#1a237e' },
+  }),
+  evolution('evo_king', 'Rei Imperador', 'Armadura de ouro, coroa imperial e a Espada Dourada com rastro de ouro.', {
+    character: 'char_king', gear: 'gear_gold_sword', outfit: 'outfit_emperor', gearName: 'Espada Dourada', emoji: '🗡️', color: '#ffc83d',
+    colors: { top: '#8e0000' },
+  }),
+  evolution('evo_robot', 'Robô Mark II', 'Linhas de energia, núcleo girando, propulsores e o Jetpack Turbo com fogo e fumaça.', {
+    character: 'char_golden_robot', gear: 'gear_jetpack', outfit: 'outfit_mk2', gearName: 'Jetpack Turbo', emoji: '🚀', color: '#18ffff',
+    colors: { skin: '#ffcf33', top: '#f0b400', pants: '#c99400' },
+  }),
+  evolution('evo_astronaut', 'Astronauta Comandante', 'Traje de comandante com tubos de oxigênio e o Drone Companheiro que escaneia o chão.', {
+    character: 'char_astronaut', gear: 'gear_drone', outfit: 'outfit_commander', gearName: 'Drone Companheiro', emoji: '🛸', color: '#40c4ff',
+    colors: { accent: '#1e88e5', headwearColor: '#ffd54f' },
+  }),
+  evolution('evo_guard', 'Guardião Paladino', 'Armadura de paladino com tabardo e o Escudo da Torre com barreira de energia. Precisa do Guardião da Torre (vença a Torre Implacável).', {
+    character: 'char_tower_guard', gear: 'gear_shield', outfit: 'outfit_paladin', gearName: 'Escudo da Torre', emoji: '🛡️', color: '#40c4ff',
+    colors: { top: '#cfd8dc', pants: '#90a4ae', headwearColor: '#e0e6ea' },
   }),
 
   // ----------------------------------------------------------- movimentos especiais (finalizações)
@@ -317,8 +410,9 @@ const ITEMS: ShopItem[] = [
     unlock: 3,
   },
   {
-    ...character('char_tower_guard', 'Guardião da Torre', 'Elmo e armadura de quem derrubou a Torre Implacável.', 0, 'epico', {
-      skin: '#f1c27d', shirt: '#7d8790', pants: '#4a525a', shoes: '#2b3036', hat: 'helmet', hatColor: '#aab4bd', face: 'grin',
+    ...character('char_tower_guard', 'Guardião da Torre', 'Elmo de cavaleiro, armadura e capa de quem derrubou a Torre Implacável.', 0, 'epico', {
+      skin: '#f1c27d', hair: 'none', hairColor: '#000000', outfit: 'armor', top: '#8a949e', accent: '#1565c0',
+      pants: '#4a525a', shoes: '#2b3036', headwear: 'knight', headwearColor: '#b0bac3', face: 'smile', strong: true,
     }),
     unlock: 4,
   },
@@ -350,9 +444,36 @@ export const DEFAULT_EQUIPPED: Record<ItemType, string> = {
   character: 'char_rookie',
   move: 'move_jamal',
   entrance: 'entrance_pop',
+  // Evolução ativa ('' = nenhuma). Só vale enquanto o boneco dela estiver equipado.
+  evolution: '',
 };
 
+/** Evolução do boneco (a que inclui este boneco), se houver. */
+export const evolutionOf = (characterId: string) =>
+  CATALOG.find((i): i is Extract<ShopItem, { type: 'evolution' }> => i.type === 'evolution' && i.style.character === characterId);
+
 export const getItem = (id: string) => CATALOG.find((i) => i.id === id);
+
+/**
+ * Itens entregues ao adquirir um item. A evolução traz junto o boneco dela, menos quando o
+ * boneco é recompensa de IA (aí é preciso vencê-la antes).
+ */
+export function itemsGranted(item: ShopItem, inventory: string[]): string[] {
+  const out = [item.id];
+  if (item.type === 'evolution') {
+    const ch = getItem(item.style.character);
+    if (ch && !ch.unlock && !inventory.includes(ch.id)) out.push(ch.id);
+  }
+  return out;
+}
+
+/** O que fica equipado ao usar um item: a evolução também equipa o boneco dela (se a pessoa o tiver). */
+export function equipSlots(item: ShopItem, inventory: string[]): Partial<Record<ItemType, string>> {
+  if (item.type === 'evolution') {
+    return inventory.includes(item.style.character) ? { evolution: item.id, character: item.style.character } : { evolution: item.id };
+  }
+  return { [item.type]: item.id };
+}
 
 // ------------------------------------------------------------- economia
 export const STARTING_COINS = 300;

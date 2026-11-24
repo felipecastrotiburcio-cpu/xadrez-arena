@@ -2,10 +2,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { api } from './api';
 import { useAuth } from './auth';
-import type { AvatarStyle, BoardStyle, CharacterStyle, EntranceStyle, ItemType, PieceStyle, ShopItem } from './types';
+import type { GearId } from '../three/gear';
+import type { EvoId } from '../three/evolve';
+import type { AvatarStyle, BoardStyle, CharacterStyle, EntranceStyle, EvolutionStyle, ItemType, PieceStyle, ShopItem } from './types';
 
-// v2: bonecos em blocos (acessórios 3D em vez de emoji).
-const CACHE_KEY = 'xadrez.catalog.v4';
+// v5: bonecos no visual novo (roupas, cabelo e mãos) e evoluções.
+const CACHE_KEY = 'xadrez.catalog.v5';
 
 /**
  * Itens gratuitos embutidos no app: garantem que tudo seja desenhado mesmo
@@ -26,7 +28,10 @@ const FALLBACK: ShopItem[] = [
   { id: 'avatar_letter', type: 'avatar', name: 'Inicial', description: '', price: 0, rarity: 'comum', style: { emoji: '', background: '', ring: 'transparent' } },
   {
     id: 'char_rookie', type: 'character', name: 'Novato', description: '', price: 0, rarity: 'comum',
-    style: { skin: '#f8d34a', shirt: '#1e88e5', pants: '#7cb342', shoes: '#4e7a27', hat: 'none', hatColor: '#000000', face: 'smile' },
+    style: {
+      skin: '#f2c18f', hair: 'swoop', hairColor: '#5d3a1a', outfit: 'tee', top: '#1e88e5', accent: '#ffffff', logo: true,
+      pants: '#3b5f8a', shoes: '#e53935', headwear: 'none', headwearColor: '#000000', face: 'smile',
+    },
   },
   { id: 'move_jamal', type: 'move', name: 'Passinho do Jamal', description: '', price: 0, rarity: 'comum', style: { animation: 'jamal', emoji: '🕺' } },
   { id: 'move_67', type: 'move', name: 'Movimento do 67', description: '', price: 0, rarity: 'comum', style: { animation: '67', emoji: '🤲' } },
@@ -40,11 +45,13 @@ export const DEFAULT_LOOK: Record<ItemType, string> = {
   character: 'char_rookie',
   move: 'move_jamal',
   entrance: 'entrance_pop',
+  evolution: '',
 };
 
-/** Boneco usado pela IA nas finalizações. */
+/** Boneco usado pela IA nas finalizações (um robô prateado). */
 export const AI_CHARACTER: CharacterStyle = {
-  skin: '#b0bec5', shirt: '#546e7a', pants: '#37474f', shoes: '#263238', hat: 'none', hatColor: '#000000', face: 'visor',
+  skin: '#b0bec5', hair: 'none', hairColor: '#000000', outfit: 'robot', top: '#78909c', accent: '#ff3d00',
+  pants: '#546e7a', shoes: '#37474f', headwear: 'none', headwearColor: '#000000', face: 'visor',
 };
 
 export const RARITY = {
@@ -112,6 +119,29 @@ export function useAvatarStyle(id?: string): AvatarStyle {
 }
 export function useCharacterStyle(id?: string): CharacterStyle {
   return styleOf(useCosmetics(), 'character', id);
+}
+
+/** Aparência completa do boneco para o 3D: estilo + roupa evoluída e item especial (se houver). */
+export type FullLook = CharacterStyle & { gear?: GearId[]; evolution?: EvoId; /** Id do boneco (para a foto em miniatura). */ id?: string };
+
+/** Junta o boneco com a evolução — só se a evolução for deste boneco. */
+export function resolveLook(get: CosmeticsValue['get'], characterId?: string, evolutionId?: string): FullLook {
+  const ch = get(characterId) ?? get(DEFAULT_LOOK.character) ?? FALLBACK.find((i) => i.id === DEFAULT_LOOK.character)!;
+  const base: FullLook = { ...(ch.style as CharacterStyle), id: ch.id };
+  const evo = get(evolutionId);
+  if (evo?.type !== 'evolution' || evo.style.character !== ch.id) return base;
+  return evolvedLook(base, evo.style);
+}
+
+/** Aplica uma evolução (cores novas, roupa evoluída e item especial) sobre o boneco. */
+export function evolvedLook(base: FullLook, evo: EvolutionStyle): FullLook {
+  return { ...base, ...evo.colors, gear: [evo.gear as GearId], evolution: evo.outfit as EvoId };
+}
+
+/** Aparência completa (boneco + evolução) de um jogador. */
+export function useFullLook(characterId?: string, evolutionId?: string): FullLook {
+  const { get } = useCosmetics();
+  return useMemo(() => resolveLook(get, characterId, evolutionId), [get, characterId, evolutionId]);
 }
 export function useEntranceStyle(id?: string): EntranceStyle {
   return styleOf(useCosmetics(), 'entrance', id);

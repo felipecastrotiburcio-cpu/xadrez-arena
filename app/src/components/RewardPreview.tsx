@@ -46,7 +46,7 @@ export function RewardPreview({
   const [lastMove, setLastMove] = useState<{ from: string; to: string } | null>(null);
   const boardSize = Math.min(width - 64, height * 0.42, 380);
   const factory = useMemo(
-    () => (item?.type === 'character' ? createShowcaseScene({ look: item.style, board: look.board, bg: colors.surfaceAlt }) : null),
+    () => (item?.type === 'character' ? createShowcaseScene({ look: { ...item.style, id: item.id }, board: look.board, bg: colors.surfaceAlt }) : null),
     [item, look.board],
   );
 
@@ -112,7 +112,7 @@ export function RewardPreview({
                 )}
                 {item.type === 'character' && factory && (
                   <View style={styles.scene}>
-                    <Scene3D factory={factory} style={StyleSheet.absoluteFill} fallback={<CharacterThumb look={item.style} size={190} />} />
+                    <Scene3D factory={factory} style={StyleSheet.absoluteFill} fallback={<CharacterThumb look={{ id: item.id }} size={190} />} />
                   </View>
                 )}
                 <View style={styles.exclusive}>

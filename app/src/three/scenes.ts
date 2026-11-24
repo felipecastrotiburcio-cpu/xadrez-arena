@@ -1,7 +1,9 @@
 import * as THREE from 'three';
-import type { BoardStyle, CharacterStyle } from '../lib/types';
+import type { BoardStyle } from '../lib/types';
+import type { FullLook } from '../lib/cosmetics';
 import { Animator, applyPose, type Clip } from './anim';
-import { buildAvatar, buildCrown, disposeTree } from './avatar';
+import { buildCrown, disposeTree } from './avatar';
+import { buildAvatar2 as buildAvatar } from './avatar2';
 import {
   DANCES,
   FLYING_KICK,
@@ -260,8 +262,8 @@ function digit(n: 6 | 7) {
 
 // ------------------------------------------------------------------ cenas
 export interface FinaleOptions {
-  winner: CharacterStyle;
-  loser: CharacterStyle;
+  winner: FullLook;
+  loser: FullLook;
   move: string;
   board: BoardStyle;
   bg: string;
@@ -381,6 +383,9 @@ export const createFinaleScene =
         L.root.position.set(lx, 0, 0);
         L.root.rotation.y = -PI / 2;
         scene.updateMatrixWorld();
+        // Piscar, faixas/capas balançando, itens especiais e roupa evoluída.
+        W.tick(t, dt);
+        L.tick(t, dt);
 
         // ---- efeitos
         if (style === 'lightning') {
@@ -451,7 +456,7 @@ export const createFinaleScene =
   };
 
 export interface ShowcaseOptions {
-  look: CharacterStyle;
+  look: FullLook;
   board: BoardStyle;
   bg: string;
   /** Se definido, o boneco fica dançando este movimento. */
@@ -474,7 +479,7 @@ export const createShowcaseScene =
     if (crown) scene.add(crown);
     const p = new THREE.Vector3();
     return {
-      update(t) {
+      update(t, dt) {
         if (!move) {
           if (t >= nextWave) {
             anim.play(WAVE, t, 0.3);
@@ -484,6 +489,7 @@ export const createShowcaseScene =
         }
         applyPose(A, anim.evaluate(t));
         scene.updateMatrixWorld();
+        A.tick(t, dt);
         if (crown) {
           A.neck.getWorldPosition(p);
           crown.position.set(p.x, p.y + 1.45, p.z);

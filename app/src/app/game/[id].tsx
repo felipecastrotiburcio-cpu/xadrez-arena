@@ -11,7 +11,7 @@ import { PlayerBar } from '../../components/PlayerBar';
 import { Button, Card, Screen } from '../../components/ui';
 import { useAuth } from '../../lib/auth';
 import { confirmAction } from '../../lib/confirm';
-import { DEFAULT_LOOK, useCharacterStyle, useCosmetics, useEntranceStyle, useMyLook, usePieceStyle } from '../../lib/cosmetics';
+import { DEFAULT_LOOK, useFullLook, useCosmetics, useEntranceStyle, useMyLook, usePieceStyle } from '../../lib/cosmetics';
 import { materialInfo, resultText } from '../../lib/chessUtils';
 import { itemName } from '../../lib/catalogI18n';
 import { timeControlLabel, translateServerText, useT } from '../../lib/i18n';
@@ -104,8 +104,8 @@ export default function OnlineGame() {
 
   const mySide: Side | null = !state || !user ? null : state.white.id === user.id ? 'w' : state.black.id === user.id ? 'b' : null;
   const material = useMemo(() => materialInfo(state?.fen ?? new Chess().fen()), [state?.fen]);
-  const whiteLook = useCharacterStyle(state?.white.cosmetics?.character);
-  const blackLook = useCharacterStyle(state?.black.cosmetics?.character);
+  const whiteLook = useFullLook(state?.white.cosmetics?.character, state?.white.cosmetics?.evolution);
+  const blackLook = useFullLook(state?.black.cosmetics?.character, state?.black.cosmetics?.evolution);
   // Cada jogador usa as próprias peças e o próprio surgimento: o meu lado com os meus itens,
   // o do adversário com os dele (quem joga numa versão antiga aparece com os itens padrão).
   const whitePieces = usePieceStyle(state?.white.cosmetics?.pieces);

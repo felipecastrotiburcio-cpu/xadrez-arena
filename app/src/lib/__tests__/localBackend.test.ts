@@ -115,6 +115,8 @@ test('modo desenvolvedor: senha errada recusada; com a senha certa a loja sai de
   const { token } = await call('/auth/register', { username: 'devlocal', password: 'segredo123' });
   assert.equal((await call('/me', undefined, token)).user.devMode, false);
   await assert.rejects(call('/dev/unlock', { password: 'errada123' }, token), /incorreta/);
+  // Evoluções são compra com dinheiro real.
+  await assert.rejects(call('/shop/buy', { itemId: 'evo_wizard' }, token), /compra no app/);
   // A senha certa não fica no repositório (ele é público): só é testada quando vem de fora.
   const pw = process.env.DEV_MODE_PASSWORD;
   if (!pw) return;
@@ -124,6 +126,17 @@ test('modo desenvolvedor: senha errada recusada; com a senha certa a loja sai de
   assert.equal(r.user.coins, on.user.coins);
   const r2 = await call('/shop/buy', { itemId: 'board_lava' }, token);
   assert.equal(r2.user.coins, on.user.coins, 'item caro de moedas também é grátis');
+  // Evolução: vem com o boneco e já veste os dois; o Paladino não traz o Guardião (recompensa da IA).
+  const evo = await call('/shop/buy', { itemId: 'evo_wizard' }, token);
+  assert.ok(evo.user.inventory.includes('char_wizard'));
+  assert.equal(evo.user.equipped.character, 'char_wizard');
+  assert.equal(evo.user.equipped.evolution, 'evo_wizard');
+  assert.equal(evo.user.cosmetics.evolution, 'evo_wizard');
+  assert.equal((await call('/shop/unequip', { type: 'evolution' }, token)).user.equipped.evolution, '');
+  assert.equal((await call('/shop/equip', { itemId: 'evo_wizard' }, token)).user.equipped.evolution, 'evo_wizard');
+  const pal = await call('/shop/buy', { itemId: 'evo_guard' }, token);
+  assert.ok(!pal.user.inventory.includes('char_tower_guard'));
+  assert.equal(pal.user.equipped.character, 'char_wizard');
   assert.equal((await call('/dev/lock', {}, token)).user.devMode, false);
   await assert.rejects(call('/shop/buy', { itemId: 'board_royal' }, token), /compra no app/);
 });

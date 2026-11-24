@@ -30,7 +30,17 @@ export function ItemPreview({
     case 'avatar':
       return <Avatar name={username} size={Math.round(size * 0.68)} icon={item.id} />;
     case 'character':
-      return <CharacterThumb look={item.style} size={Math.round(size * 0.95)} />;
+      return <CharacterThumb look={{ id: item.id }} size={Math.round(size * 0.95)} />;
+    case 'evolution':
+      return (
+        <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+          <View style={[styles.evoGlow, { width: size * 0.8, height: size * 0.8, borderRadius: size * 0.4, backgroundColor: `${item.style.color}33` }]} />
+          <CharacterThumb look={{ id: item.style.character, evolution: item.style.outfit }} size={Math.round(size * 0.98)} />
+          <View style={[styles.evoBadge, { backgroundColor: item.style.color }]}>
+            <Text style={{ fontSize: Math.max(11, size * 0.13) }}>{item.style.emoji}</Text>
+          </View>
+        </View>
+      );
     case 'move':
       return (
         <View style={[styles.moveArt, { width: size * 0.7, height: size * 0.7, borderRadius: size * 0.35 }]}>
@@ -78,6 +88,8 @@ export function MiniBoard({ board, pieces, size = 88 }: { board: BoardStyle; pie
 }
 
 const styles = StyleSheet.create({
+  evoGlow: { position: 'absolute' },
+  evoBadge: { position: 'absolute', right: -4, bottom: 2, minWidth: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3, borderWidth: 2, borderColor: 'rgba(0,0,0,0.25)' },
   moveArt: { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.raised },
   moveBadge: {
     position: 'absolute',

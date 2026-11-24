@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ReactNode, Ref } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -9,6 +9,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import type { ScrollViewInstance } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAvatarStyle } from '../lib/cosmetics';
 import { levelName, useT } from '../lib/i18n';
@@ -91,9 +92,12 @@ export function Screen({
   style,
   footer,
   stars = true,
+  scrollRef,
 }: {
   children: ReactNode;
   scroll?: boolean;
+  /** Referência do ScrollView (para rolar até o topo, por exemplo). */
+  scrollRef?: Ref<ScrollViewInstance>;
   /** Céu estrelado discreto atrás do conteúdo (padrão: sim). */
   stars?: boolean;
   style?: StyleProp<ViewStyle>;
@@ -108,6 +112,7 @@ export function Screen({
       {stars && <StarrySky />}
       {scroll ? (
         <ScrollView
+          ref={scrollRef}
           style={{ flex: 1 }}
           contentContainerStyle={[styles.content, style]}
           keyboardShouldPersistTaps="handled"

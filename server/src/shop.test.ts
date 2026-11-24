@@ -35,7 +35,7 @@ test('novo jogador começa com moedas e itens padrão equipados', async () => {
   const { user } = await register('gui');
   assert.equal(user.coins, 300);
   assert.deepEqual(user.equipped, {
-    board: 'board_classic', pieces: 'pieces_classic', avatar: 'avatar_letter', character: 'char_rookie', move: 'move_jamal', entrance: 'entrance_pop',
+    board: 'board_classic', pieces: 'pieces_classic', avatar: 'avatar_letter', character: 'char_rookie', move: 'move_jamal', entrance: 'entrance_pop', evolution: '',
   });
   assert.ok(user.inventory.includes('move_67'), 'movimento do 67 é padrão');
 });
@@ -139,6 +139,8 @@ test('modo desenvolvedor: senha errada recusada; com a senha certa a loja sai de
   assert.equal((await api('/me', { token })).data.user.devMode, false);
   assert.equal((await api('/dev/unlock', { token, body: { password: 'errada123' } })).status, 403);
   assert.equal((await api('/shop/buy', { token, body: { itemId: 'board_galaxy' } })).status, 400);
+  // Evoluções também são compra com dinheiro real.
+  assert.equal((await api('/shop/buy', { token, body: { itemId: 'evo_king' } })).status, 400);
   // A senha certa não fica no repositório (ele é público): só é testada quando vem de fora.
   const pw = process.env.DEV_MODE_PASSWORD;
   if (!pw) return;
@@ -147,6 +149,16 @@ test('modo desenvolvedor: senha errada recusada; com a senha certa a loja sai de
   const r = await api('/shop/buy', { token, body: { itemId: 'board_galaxy' } });
   assert.equal(r.status, 200);
   assert.equal(r.data.user.coins, on.data.user.coins);
+  // Evolução no modo desenvolvedor: vem com o boneco, já veste os dois e dá para voltar ao normal.
+  const evo = await api('/shop/buy', { token, body: { itemId: 'evo_king' } });
+  assert.equal(evo.status, 200);
+  assert.ok(evo.data.user.inventory.includes('evo_king') && evo.data.user.inventory.includes('char_king'));
+  assert.equal(evo.data.user.equipped.character, 'char_king');
+  assert.equal(evo.data.user.equipped.evolution, 'evo_king');
+  assert.equal(evo.data.user.cosmetics.evolution, 'evo_king');
+  const normal = await api('/shop/unequip', { token, body: { type: 'evolution' } });
+  assert.equal(normal.data.user.equipped.evolution, '');
+  assert.equal(normal.data.user.equipped.character, 'char_king');
   const off = await api('/dev/lock', { token, body: {} });
   assert.equal(off.data.user.devMode, false);
 });

@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View, type ScrollViewInstance } from 'react-native';
 import { CharacterThumb } from '../components/Character';
 import { ItemPreviewModal } from '../components/ItemPreviewModal';
 import { ItemPreview } from '../components/ItemThumb';
@@ -9,9 +9,9 @@ import { Button, Card, Screen } from '../components/ui';
 import { CoinIcon, Icon, type IconName } from '../components/Icon';
 import { api, isLocalMode } from '../lib/api';
 import { useAuth } from '../lib/auth';
-import { itemDescription, itemName } from '../lib/catalogI18n';
+import { gearName, itemDescription, itemName } from '../lib/catalogI18n';
 import { confirmAction } from '../lib/confirm';
-import { AI_CHARACTER, RARITY, useCharacterStyle, useCosmetics, useMyLook } from '../lib/cosmetics';
+import { AI_CHARACTER, evolvedLook, RARITY, useCosmetics, useFullLook, useMyLook, type FullLook } from '../lib/cosmetics';
 import { colors, fonts, radius } from '../lib/theme';
 import { Scene3D } from '../three/Scene3D';
 import { createShowcaseScene } from '../three/scenes';
@@ -20,7 +20,10 @@ import { buyWithStore, iapSupported, loadPrices, restoreStorePurchases } from '.
 import { translateServerText, useT, type TranslationKey } from '../lib/i18n';
 import type { CharacterStyle, ItemType, PrivateUser, ShopItem } from '../lib/types';
 
+type EvolutionItem = Extract<ShopItem, { type: 'evolution' }>;
+
 const TABS: { type: ItemType; label: TranslationKey; icon: IconName; color: string }[] = [
+  { type: 'evolution', label: 'shop.tabEvolutions', icon: 'sparkle', color: '#ffc83d' },
   { type: 'board', label: 'shop.tabBoards', icon: 'board', color: '#f4b942' },
   { type: 'pieces', label: 'shop.tabPieces', icon: 'knight', color: '#a68bff' },
   { type: 'entrance', label: 'shop.tabEntrances', icon: 'sparkle', color: '#36d1b5' },
@@ -39,15 +42,21 @@ export default function Shop() {
   const { t, lang, locale } = useT();
   // "Meu perfil" abre a loja direto numa categoria (ex.: /shop?tab=entrance).
   const params = useLocalSearchParams<{ tab?: string }>();
-  const [tab, setTab] = useState<ItemType>(() => TABS.find((x) => x.type === params.tab)?.type ?? 'board');
+  // Abre nas Evoluções: são o destaque da loja.
+  const [tab, setTab] = useState<ItemType>(() => TABS.find((x) => x.type === params.tab)?.type ?? 'evolution');
+  const scroll = useRef<ScrollViewInstance>(null);
   const [onlyOwned, setOnlyOwned] = useState(false);
   const { width } = useWindowDimensions();
   // Duas colunas; a largura da tela (até 640) menos as margens e o espaço entre os cartões.
   const cardW = Math.floor((Math.min(width, 640) - 32 - 12) / 2);
+  // Cartão do carrossel de Evoluções: quase a largura toda, deixando o próximo aparecer.
+  const heroW = Math.floor((Math.min(width, 640) - 32) * 0.84);
   const [busy, setBusy] = useState<string | null>(null);
   const [preview, setPreview] = useState<ShopItem | null>(null);
-  /** Boneco exibido no provador 3D (aba Bonecos). */
+  /** Boneco (ou evolução) exibido no provador 3D. */
   const [trying, setTrying] = useState<string | null>(null);
+  /** No provador da aba Bonecos: mostrar a versão evoluída. */
+  const [showEvolved, setShowEvolved] = useState(false);
   /** Preços das lojas (Play Store / App Store) para os itens lendários. */
   const [prices, setPrices] = useState<Record<string, string>>({});
   const storeOk = iapSupported();
@@ -55,24 +64,41 @@ export default function Shop() {
     if (!storeOk) return;
     loadPrices(items.filter((i) => i.iap).map((i) => i.iap!)).then(setPrices);
   }, [storeOk, items]);
-  const myCharacter = useCharacterStyle(user?.equipped.character);
+  const myCharacter = useFullLook(user?.equipped.character, user?.equipped.evolution);
+  const evolutions = useMemo(() => items.filter((i): i is EvolutionItem => i.type === 'evolution'), [items]);
+  const evolutionFor = (characterId: string) => evolutions.find((e) => e.style.character === characterId);
 
-  const fittingId = trying ?? user?.equipped.character;
+  // Provador: na aba Evoluções mostra a evolução escolhida; na aba Bonecos, o boneco (normal ou evoluído).
+  const fittingId =
+    tab === 'evolution'
+      ? trying && evolutions.some((e) => e.id === trying)
+        ? trying
+        : (evolutions.find((e) => user?.equipped.evolution === e.id) ?? evolutions[evolutions.length - 4] ?? evolutions[0])?.id
+      : (trying && items.find((i) => i.id === trying)?.type === 'character' ? trying : user?.equipped.character);
   const fitting = items.find((i) => i.id === fittingId);
+  const fittingLook: FullLook | null = useMemo(() => {
+    if (fitting?.type === 'evolution') {
+      const ch = items.find((i) => i.id === fitting.style.character);
+      return ch?.type === 'character' ? evolvedLook({ ...ch.style, id: ch.id }, fitting.style) : null;
+    }
+    if (fitting?.type === 'character') {
+      const evo = items.find((i): i is EvolutionItem => i.type === 'evolution' && i.style.character === fitting.id);
+      const base = { ...fitting.style, id: fitting.id };
+      return showEvolved && evo ? evolvedLook(base, evo.style) : base;
+    }
+    return null;
+  }, [fitting, items, showEvolved]);
   const fittingFactory = useMemo(
-    () =>
-      fitting?.type === 'character'
-        ? createShowcaseScene({ look: fitting.style, board: look.board, bg: colors.surface })
-        : null,
-    [fitting, look.board],
+    () => (fittingLook ? createShowcaseScene({ look: fittingLook, board: look.board, bg: colors.surface }) : null),
+    [fittingLook, look.board],
   );
 
   const all = useMemo(
     () =>
-      items
-        .filter((i) => i.type === tab)
-        .sort((a, b) => RARITY_ORDER[a.rarity] - RARITY_ORDER[b.rarity] || a.price - b.price),
-    [items, tab],
+      tab === 'evolution'
+        ? evolutions
+        : items.filter((i) => i.type === tab).sort((a, b) => RARITY_ORDER[a.rarity] - RARITY_ORDER[b.rarity] || a.price - b.price),
+    [items, tab, evolutions],
   );
 
   if (!user) {
@@ -88,6 +114,20 @@ export default function Shop() {
 
   /** Modo desenvolvedor (Configurações): todos os itens de graça, sem confirmação. */
   const dev = !!user.devMode;
+
+  /** Volta ao visual normal do boneco (desliga a evolução). */
+  const useNormal = async () => {
+    setBusy('normal');
+    try {
+      const r = await api<{ user: PrivateUser }>('/shop/unequip', { body: { type: 'evolution' } });
+      setUser(r.user);
+      toast(t('shop.evoOff'), 'success');
+    } catch (e) {
+      toast(translateServerText((e as Error).message), 'error');
+    } finally {
+      setBusy(null);
+    }
+  };
 
   const run = async (itemId: string, action: 'buy' | 'equip') => {
     setBusy(itemId);
@@ -149,15 +189,30 @@ export default function Shop() {
   const ownedCount = all.filter((i) => owns(i.id)).length;
   const list = onlyOwned ? all.filter((i) => owns(i.id)) : all;
   // Destaque: o item mais raro (e mais caro) da categoria que a pessoa ainda não tem.
-  const featured = onlyOwned
+  const featured = onlyOwned || tab === 'evolution'
     ? undefined
     : [...all].reverse().find((i) => !owns(i.id) && i.rarity !== 'comum' && i.type !== 'avatar');
   const grid = list.filter((i) => i.id !== featured?.id);
 
   const open = (item: ShopItem) => {
-    if (item.type === 'character') setTrying(item.id);
-    else if (item.type !== 'avatar') setPreview(item);
+    if (item.type === 'character' || item.type === 'evolution') {
+      setTrying(item.id);
+      setShowEvolved(false);
+      scroll.current?.scrollTo({ y: 0, animated: true });
+    } else if (item.type !== 'avatar') setPreview(item);
   };
+
+  /** Abre uma evolução no provador (a partir do carrossel de destaque). */
+  const openEvolution = (evo: EvolutionItem) => {
+    setTab('evolution');
+    setOnlyOwned(false);
+    setTrying(evo.id);
+  };
+
+  const isActive = (item: ShopItem) =>
+    item.type === 'evolution'
+      ? user.equipped.evolution === item.id && user.equipped.character === item.style.character
+      : user.equipped[item.type] === item.id;
 
   const confirmBuy = (item: ShopItem) =>
     confirmAction(
@@ -170,8 +225,10 @@ export default function Shop() {
   /** Ação principal de um item: equipar, comprar com moedas, comprar na loja do aparelho ou pegar grátis (dev). */
   const action = (item: ShopItem, wide?: boolean) => {
     const owned = owns(item.id);
-    const equipped = user.equipped[item.type] === item.id;
+    const equipped = isActive(item);
     const loading = busy === item.id;
+    // O Guardião Paladino precisa do Guardião da Torre (recompensa da IA), que não vem junto.
+    const needsReward = item.type === 'evolution' && !owns(item.style.character) ? items.find((i) => i.id === item.style.character)?.unlock : undefined;
     if (equipped)
       return (
         <View style={[styles.state, wide && styles.wide]}>
@@ -179,17 +236,35 @@ export default function Shop() {
           <Text style={[styles.stateText, { color: colors.success }]}>{t('common.equipped')}</Text>
         </View>
       );
-    if (owned)
-      return <PriceButton label={t('common.equip')} kind="outline" wide={wide} loading={loading} onPress={() => run(item.id, 'equip')} />;
-    if (dev)
-      return <PriceButton label={t('shop.devFree')} icon="wrench" kind="gold" wide={wide} loading={loading} onPress={() => run(item.id, 'buy')} />;
-    // Recompensa exclusiva: não se compra, se ganha vencendo a IA.
-    if (item.unlock)
+    if (owned && needsReward)
       return (
         <View style={[styles.locked, wide && styles.wide]}>
           <Icon name="lockFill" size={14} color={colors.accent} />
           <Text style={styles.lockedText} numberOfLines={1}>
-            {t('badges.rewardHint', { name: t(`ai.${item.unlock}.name` as TranslationKey) })}
+            {t('badges.rewardHint', { name: t(`ai.${needsReward}.name` as TranslationKey) })}
+          </Text>
+        </View>
+      );
+    if (owned)
+      return (
+        <PriceButton
+          label={item.type === 'evolution' ? t('shop.wear') : t('common.equip')}
+          kind="outline"
+          wide={wide}
+          loading={loading}
+          onPress={() => run(item.id, 'equip')}
+        />
+      );
+    if (dev)
+      return <PriceButton label={t('shop.devFree')} icon="wrench" kind="gold" wide={wide} loading={loading} onPress={() => run(item.id, 'buy')} />;
+    // Recompensa exclusiva: não se compra, se ganha vencendo a IA.
+    const lockLevel = item.unlock ?? needsReward;
+    if (lockLevel)
+      return (
+        <View style={[styles.locked, wide && styles.wide]}>
+          <Icon name="lockFill" size={14} color={colors.accent} />
+          <Text style={styles.lockedText} numberOfLines={1}>
+            {t('badges.rewardHint', { name: t(`ai.${lockLevel}.name` as TranslationKey) })}
           </Text>
         </View>
       );
@@ -218,7 +293,7 @@ export default function Shop() {
   };
 
   return (
-    <Screen style={{ gap: 18, paddingBottom: 40 }}>
+    <Screen scrollRef={scroll} style={{ gap: 18, paddingBottom: 40 }}>
       {/* Saldo e bônus diário */}
       <View style={styles.wallet}>
         <View style={{ flex: 1, gap: 2 }}>
@@ -248,10 +323,58 @@ export default function Shop() {
         </View>
       )}
 
-      {/* Categorias */}
-      {/* Categorias: todas visíveis de uma vez (grade 3×2), com quantos itens você já tem em cada. */}
+      {/* Destaque: carrossel das Evoluções (compra com dinheiro real) */}
+      {tab !== 'evolution' && evolutions.length > 0 && (
+        <View style={{ gap: 10 }}>
+          <EvoHeader count={evolutions.length} />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} snapToInterval={heroW + 12} decelerationRate="fast" contentContainerStyle={{ gap: 12, paddingRight: 4 }}>
+            {evolutions.map((evo) => (
+              <EvoCard key={evo.id} evo={evo} width={heroW} compact onOpen={() => openEvolution(evo)} action={action(evo, true)} owned={owns(evo.id)} />
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
+      {/* Categorias: todas visíveis de uma vez (grade), com quantos itens você já tem em cada. */}
+      {/* Evoluções: categoria de destaque, larga e dourada */}
+      {(() => {
+        const active = tab === 'evolution';
+        const mine = evolutions.filter((e) => owns(e.id)).length;
+        return (
+          <Pressable
+            testID="cat-evolution"
+            onPress={() => {
+              setTab('evolution');
+              setOnlyOwned(false);
+            }}
+            style={({ pressed }) => [styles.catEvo, active && styles.catEvoActive, pressed && { transform: [{ translateY: 2 }] }]}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: active }}
+          >
+            <View style={[styles.catIcon, { backgroundColor: active ? 'rgba(42,26,0,0.14)' : 'rgba(255,200,61,0.2)' }]}>
+              <Icon name="sparkle" size={20} color={active ? colors.accentText : '#ffc83d'} strokeWidth={2.2} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={[styles.catEvoTitle, active && { color: colors.accentText }]}>{t('shop.tabEvolutions')}</Text>
+                <Text style={styles.newChip}>{t('shop.new')}</Text>
+              </View>
+              <Text style={[styles.catCount, active && { color: '#5c3d00' }]}>
+                {mine}/{evolutions.length}
+              </Text>
+            </View>
+            <View style={styles.catEvoArt}>
+              {['char_ninja', 'char_wizard', 'char_king'].map((id, i) => (
+                <View key={id} style={{ marginLeft: i ? -18 : 0 }}>
+                  <CharacterThumb look={{ id, evolution: 'x' }} size={46} />
+                </View>
+              ))}
+            </View>
+          </Pressable>
+        );
+      })()}
       <View style={styles.cats} accessibilityRole="tablist">
-        {TABS.map((tb) => {
+        {TABS.filter((tb) => tb.type !== 'evolution').map((tb) => {
           const active = tab === tb.type;
           const ofType = items.filter((i) => i.type === tb.type);
           const mine = ofType.filter((i) => owns(i.id)).length;
@@ -292,21 +415,50 @@ export default function Shop() {
         </View>
       </View>
 
-      {tab === 'character' && fittingFactory && fitting?.type === 'character' && (
-        <View style={styles.fitting}>
+      {(tab === 'character' || tab === 'evolution') && fittingFactory && fittingLook && fitting && (
+        <View style={[styles.fitting, fitting.type === 'evolution' && { borderColor: fitting.style.color, borderWidth: 2 }]}>
           <Scene3D
-            key={fitting.id}
+            key={`${fitting.id}-${fittingLook.evolution ?? 'n'}`}
             factory={fittingFactory}
             style={styles.fittingScene}
-            fallback={<CharacterThumb look={fitting.style} size={200} />}
+            fallback={<CharacterThumb look={fittingLook} size={200} />}
           />
+          {fitting.type === 'evolution' && (
+            <View style={[styles.evoRibbon, { backgroundColor: fitting.style.color }]}>
+              <Icon name="sparkle" size={13} color="#1a1200" strokeWidth={2.4} />
+              <Text style={styles.evoRibbonText}>{t('shop.evoBadge')}</Text>
+            </View>
+          )}
+          {fitting.type === 'character' && evolutionFor(fitting.id) && (
+            <View style={styles.toggle}>
+              {[false, true].map((on) => (
+                <Pressable
+                  key={String(on)}
+                  testID={on ? 'fit-evolved' : 'fit-normal'}
+                  onPress={() => setShowEvolved(on)}
+                  style={[styles.toggleBtn, showEvolved === on && { backgroundColor: on ? evolutionFor(fitting.id)!.style.color : colors.raised }]}
+                >
+                  {on && <Icon name="sparkle" size={13} color={showEvolved ? '#1a1200' : colors.textMuted} strokeWidth={2.2} />}
+                  <Text style={[styles.toggleText, showEvolved === on && { color: on ? '#1a1200' : colors.text }]}>{on ? t('shop.evolved') : t('shop.normal')}</Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
           <View style={styles.fittingBar}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.eyebrow}>{t('shop.fittingRoom')}</Text>
-              <Text style={styles.fittingName}>{itemName(fitting, lang)}</Text>
+              <Text style={styles.eyebrow}>{fitting.type === 'evolution' ? t('shop.evoIncludesShort') : t('shop.fittingRoom')}</Text>
+              <Text style={styles.fittingName}>
+                {fitting.type === 'character' && showEvolved && evolutionFor(fitting.id) ? itemName(evolutionFor(fitting.id)!, lang) : itemName(fitting, lang)}
+              </Text>
+              {fitting.type === 'evolution' && <Text style={styles.fittingSub}>{t('shop.evoIncludes', { gear: gearName(fitting, lang) })}</Text>}
             </View>
-            {action(fitting)}
+            {fitting.type === 'character' && showEvolved && evolutionFor(fitting.id)
+              ? action(evolutionFor(fitting.id)!)
+              : action(fitting)}
           </View>
+          {fitting.type === 'evolution' && isActive(fitting) && (
+            <Button small variant="ghost" title={t('shop.useNormal')} loading={busy === 'normal'} onPress={useNormal} />
+          )}
         </View>
       )}
 
@@ -344,7 +496,16 @@ export default function Shop() {
         </Pressable>
       )}
 
-      {grid.length === 0 ? (
+      {tab === 'evolution' ? (
+        <View style={{ gap: 12 }}>
+          <EvoHeader count={evolutions.length} />
+          {list.map((evo) =>
+            evo.type === 'evolution' ? (
+              <EvoCard key={evo.id} evo={evo} width={Math.min(width, 640) - 32} onOpen={() => open(evo)} action={action(evo, true)} owned={owns(evo.id)} selected={fittingId === evo.id} />
+            ) : null,
+          )}
+        </View>
+      ) : grid.length === 0 ? (
         <View style={styles.empty}>
           <Icon name="bag" size={26} color={colors.textMuted} />
           <Text style={styles.emptyText}>{t('shop.noneOwned')}</Text>
@@ -352,7 +513,7 @@ export default function Shop() {
       ) : (
         <View style={styles.grid}>
           {grid.map((item) => {
-            const equipped = user.equipped[item.type] === item.id;
+            const equipped = isActive(item);
             const rarity = RARITY[item.rarity];
             const selected = tab === 'character' && trying === item.id;
             return (
@@ -368,6 +529,12 @@ export default function Shop() {
               >
                 <View style={[styles.art, { height: cardW - 24, backgroundColor: tintFor(item.rarity) }]}>
                   <ItemPreview item={item} board={look.board} pieces={look.pieces} username={user.username} size={cardW - 44} />
+                  {item.type === 'character' && evolutionFor(item.id) && (
+                    <View style={[styles.evoTag, { backgroundColor: evolutionFor(item.id)!.style.color }]}>
+                      <Icon name="sparkle" size={11} color="#1a1200" strokeWidth={2.4} />
+                      <Text style={styles.evoTagText}>{owns(evolutionFor(item.id)!.id) ? t('shop.evoOwned') : t('shop.evoBadge')}</Text>
+                    </View>
+                  )}
                   {item.iap && !owns(item.id) && !dev && (
                     <View style={styles.cornerTag}>
                       <Icon name="card" size={12} color={colors.accent} strokeWidth={2} />
@@ -433,6 +600,92 @@ export default function Shop() {
         />
       )}
     </Screen>
+  );
+}
+
+/** Título da seção de Evoluções, com selo de novidade. */
+function EvoHeader({ count }: { count: number }) {
+  const { t } = useT();
+  return (
+    <View style={styles.evoHead}>
+      <View style={styles.evoHeadIcon}>
+        <Icon name="sparkle" size={18} color="#1a1200" strokeWidth={2.4} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Text style={styles.evoHeadTitle}>{t('shop.evoTitle')}</Text>
+          <Text style={styles.newChip}>{t('shop.new')}</Text>
+        </View>
+        <Text style={styles.evoHeadSub}>{t('shop.evoSubtitle', { count })}</Text>
+      </View>
+    </View>
+  );
+}
+
+/** Cartão de uma Evolução: antes → depois, o que vem junto e o botão de compra. */
+function EvoCard({
+  evo,
+  width,
+  compact,
+  selected,
+  owned,
+  action,
+  onOpen,
+}: {
+  evo: EvolutionItem;
+  width: number;
+  compact?: boolean;
+  selected?: boolean;
+  owned: boolean;
+  action: ReactNode;
+  onOpen: () => void;
+}) {
+  const { t, lang } = useT();
+  const { get } = useCosmetics();
+  const ch = get(evo.style.character);
+  const imgH = compact ? 150 : 170;
+  return (
+    <Pressable
+      testID={`evo-${evo.id}`}
+      onPress={onOpen}
+      style={({ pressed }) => [
+        styles.evoCard,
+        { width, borderColor: selected ? evo.style.color : `${evo.style.color}66`, backgroundColor: `${evo.style.color}1f` },
+        pressed && { transform: [{ scale: 0.99 }] },
+      ]}
+    >
+      <View style={[styles.evoArt, { height: imgH }]}>
+        <View style={[styles.evoHalo, { backgroundColor: `${evo.style.color}40`, width: imgH * 0.95, height: imgH * 0.95, borderRadius: imgH }]} />
+        <View style={{ opacity: 0.55, alignItems: 'center' }}>
+          <CharacterThumb look={{ id: evo.style.character }} size={imgH * 0.66} />
+          <Text style={styles.evoSmall} numberOfLines={1}>{ch ? itemName(ch, lang) : ''}</Text>
+        </View>
+        <Icon name="chevron" size={22} color={evo.style.color} strokeWidth={3} />
+        <CharacterThumb look={{ id: evo.style.character, evolution: evo.style.outfit }} size={imgH} />
+        <View style={[styles.evoEmoji, { backgroundColor: evo.style.color }]}>
+          <Text style={{ fontSize: 15 }}>{evo.style.emoji}</Text>
+        </View>
+        {owned && (
+          <View style={styles.evoOwned}>
+            <Icon name="check" size={12} color={colors.success} strokeWidth={2.6} />
+          </View>
+        )}
+      </View>
+      <View style={{ gap: 3 }}>
+        <Text style={[styles.eyebrow, { color: evo.style.color }]}>{t('shop.evoBadge')} · {t('rarity.lendario')}</Text>
+        <Text style={styles.evoName} numberOfLines={1}>{itemName(evo, lang)}</Text>
+        <Text style={styles.evoDesc} numberOfLines={compact ? 2 : 3}>{itemDescription(evo, lang)}</Text>
+        <View style={styles.evoIncl}>
+          {[t('shop.inclOutfit'), gearName(evo, lang), t('shop.inclCharacter')].map((x) => (
+            <View key={x} style={styles.evoChip}>
+              <Icon name="check" size={11} color={evo.style.color} strokeWidth={2.6} />
+              <Text style={styles.evoChipText} numberOfLines={1}>{x}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+      <View style={{ marginTop: 4 }}>{action}</View>
+    </Pressable>
   );
 }
 
@@ -543,6 +796,23 @@ const styles = StyleSheet.create({
     borderBottomWidth: 4,
     borderBottomColor: colors.shadow,
   },
+  catEvo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 200, 61, 0.1)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 200, 61, 0.6)',
+    borderBottomWidth: 4,
+    borderBottomColor: colors.accentDark,
+    marginBottom: -8,
+  },
+  catEvoActive: { backgroundColor: colors.accent, borderColor: colors.accent },
+  catEvoTitle: { color: colors.text, fontFamily: fonts.black, fontSize: 15 },
+  catEvoArt: { flexDirection: 'row', alignItems: 'flex-end' },
   catActive: { backgroundColor: colors.accent, borderColor: colors.accent, borderBottomColor: colors.accentDark },
   catIcon: { width: 38, height: 38, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
   catText: { color: colors.text, fontFamily: fonts.black, fontSize: 13 },
@@ -664,4 +934,28 @@ const styles = StyleSheet.create({
   fittingScene: { width: '100%', height: 260 },
   fittingBar: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderTopWidth: 1, borderTopColor: colors.border },
   fittingName: { color: colors.text, fontFamily: fonts.display, fontSize: 20 },
+  fittingSub: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 12.5, marginTop: 2 },
+  evoRibbon: { position: 'absolute', top: 12, left: 12, flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999 },
+  evoRibbonText: { color: '#1a1200', fontFamily: fonts.black, fontSize: 12 },
+  toggle: { position: 'absolute', top: 12, right: 12, flexDirection: 'row', backgroundColor: 'rgba(10,12,30,0.75)', borderRadius: 999, padding: 3 },
+  toggleBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 },
+  toggleText: { color: colors.textMuted, fontFamily: fonts.black, fontSize: 12.5 },
+  evoTag: { position: 'absolute', top: 8, left: 8, flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 999 },
+  evoTagText: { color: '#1a1200', fontFamily: fonts.black, fontSize: 10.5 },
+  evoHead: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  evoHeadIcon: { width: 38, height: 38, borderRadius: 13, backgroundColor: '#ffc83d', alignItems: 'center', justifyContent: 'center' },
+  evoHeadTitle: { color: colors.text, fontFamily: fonts.displayBold, fontSize: 22 },
+  evoHeadSub: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 13 },
+  newChip: { color: '#1a1200', backgroundColor: '#2ee59d', fontFamily: fonts.black, fontSize: 10.5, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 999, overflow: 'hidden' },
+  evoCard: { borderRadius: radius.lg, borderWidth: 2, padding: 12, gap: 8, borderBottomWidth: 5 },
+  evoArt: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
+  evoHalo: { position: 'absolute', right: '18%' },
+  evoSmall: { color: colors.textMuted, fontFamily: fonts.bold, fontSize: 10.5, maxWidth: 90 },
+  evoEmoji: { position: 'absolute', right: 6, bottom: 6, width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  evoOwned: { position: 'absolute', left: 6, top: 6, width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(15,14,12,0.7)', alignItems: 'center', justifyContent: 'center' },
+  evoName: { color: colors.text, fontFamily: fonts.display, fontSize: 21 },
+  evoDesc: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 13, lineHeight: 18 },
+  evoIncl: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
+  evoChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999, backgroundColor: 'rgba(10,12,30,0.45)' },
+  evoChipText: { color: colors.text, fontFamily: fonts.bold, fontSize: 11.5 },
 });

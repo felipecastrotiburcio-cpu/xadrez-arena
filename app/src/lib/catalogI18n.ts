@@ -49,14 +49,24 @@ export const CATALOG_EN: Record<string, { name: string; description: string }> =
   avatar_dragon: { name: 'Dragon', description: '' },
   avatar_crown: { name: 'Crown', description: '' },
   avatar_diamond: { name: 'Diamond', description: '' },
-  char_rookie: { name: 'Rookie', description: 'The default character: blocks, a smile and lots of will to play.' },
-  char_streetwear: { name: 'Streetwear', description: 'Backwards cap and an orange hoodie.' },
-  char_cool: { name: 'Cool Kid', description: 'Sunglasses never go out of style.' },
-  char_athlete: { name: 'Athlete', description: "A headband and a champion's stamina." },
-  char_ninja: { name: 'Ninja', description: 'Silent and deadly on the board.' },
-  char_wizard: { name: 'Sorcerer', description: 'Reads the future before every move.' },
-  char_king: { name: 'King of the Board', description: 'A golden crown and a royal cape.' },
+  char_rookie: { name: 'Rookie', description: 'The default character: a quiff, a knight T-shirt and lots of will to play.' },
+  char_streetwear: { name: 'Streetwear', description: 'Spiky hair, a red headband, a hoodie and ripped jeans.' },
+  char_cool: { name: 'Cool Kid', description: 'Sunglasses, a backwards cap and an open jacket.' },
+  char_athlete: { name: 'Fighter', description: 'Martial arts gi, black belt and stone bracers.' },
+  char_ninja: { name: 'Ninja', description: 'Silent and deadly on the board, with a sword on the back.' },
+  char_wizard: { name: 'Sorcerer', description: 'Pointy hat, white beard and a starry robe.' },
+  char_king: { name: 'King of the Board', description: 'A golden crown, a royal cape and a fur collar.' },
   char_golden_robot: { name: 'Golden Robot', description: 'Golden armor and a futuristic visor.' },
+  evo_rookie: { name: 'Rookie Champion', description: "Varsity jacket, gold medal and the Champion's Backpack with a trophy that pops confetti." },
+  evo_streetwear: { name: 'Neon DJ', description: 'A hoodie with color-changing neon lines and the Neon Headphones with sound waves and music notes.' },
+  evo_cool: { name: 'Millionaire Cool Kid', description: 'Velvet jacket with gold, golden sneakers and the Bling Kit: chain, diamond medallion and watch.' },
+  evo_athlete: { name: 'Fire Master', description: 'Black gi with flames, a lava shoulder guard and the Fire Gloves that leave a trail on every punch.' },
+  evo_ninja: { name: 'Electric Shadow Ninja', description: 'Armor with electric lines, a flowing scarf and the Energy Kunai with sparks and a blue trail.' },
+  evo_wizard: { name: 'Archmage', description: 'A rune robe, a magic halo and the Arcane Staff with a magic circle on the floor.' },
+  evo_king: { name: 'Emperor King', description: 'Golden armor, an imperial crown and the Golden Sword with a gold trail.' },
+  evo_robot: { name: 'Robot Mark II', description: 'Energy lines, a spinning core, thrusters and the Turbo Jetpack with fire and smoke.' },
+  evo_astronaut: { name: 'Commander Astronaut', description: "A commander's suit with oxygen tubes and the Companion Drone that scans the floor." },
+  evo_guard: { name: 'Paladin Guardian', description: 'Paladin armor with a tabard and the Tower Shield with an energy barrier. Requires the Tower Guardian (beat the Relentless Rook).' },
   char_astronaut: { name: 'Astronaut', description: 'Out-of-this-world wins.' },
   move_jamal: { name: "Jamal's Step", description: 'The classic dance step: side to side to the beat.' },
   move_67: { name: 'The 67 Move', description: 'Hands up and down: six… seven!' },
@@ -95,4 +105,22 @@ export function itemDescription(item: Named, lang: 'pt' | 'en'): string {
 const EN_BY_PT_NAME = new Map(CATALOG.map((i) => [i.name, CATALOG_EN[i.id]?.name ?? i.name]));
 export function itemNameFromPt(ptName: string): string | undefined {
   return EN_BY_PT_NAME.get(ptName);
+}
+
+const GEAR_EN: Record<string, string> = {
+  gear_backpack: "Champion's Backpack",
+  gear_headphones: 'Neon Headphones',
+  gear_chain: 'Bling Kit',
+  gear_fire_gloves: 'Fire Gloves',
+  gear_kunai: 'Energy Kunai',
+  gear_staff: 'Arcane Staff',
+  gear_gold_sword: 'Golden Sword',
+  gear_jetpack: 'Turbo Jetpack',
+  gear_drone: 'Companion Drone',
+  gear_shield: 'Tower Shield',
+};
+
+/** Nome do item especial que vem com a evolução. */
+export function gearName(item: { style: { gear: string; gearName: string } }, lang: 'pt' | 'en'): string {
+  return lang === 'en' ? GEAR_EN[item.style.gear] ?? item.style.gearName : item.style.gearName;
 }

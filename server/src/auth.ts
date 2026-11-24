@@ -83,6 +83,7 @@ export function publicUser(u: User) {
       move: u.equipped.move,
       pieces: u.equipped.pieces,
       entrance: u.equipped.entrance,
+      evolution: u.equipped.evolution || undefined,
     },
   };
 }

@@ -80,6 +80,7 @@ const SERVER_FIXED: Record<string, string> = {
   'Esse nome de usuário já existe neste aparelho.': 'That username already exists on this device.',
   'Esse nome de usuário já existe.': 'That username is already taken.',
   'Esse nome de usuário já está em uso.': 'That username is already taken.',
+  'Só a evolução pode ser desligada.': 'Only the evolution can be turned off.',
   'Usuário ou senha incorretos.': 'Wrong username or password.',
   'Item não encontrado.': 'Item not found.',
   'Senha do modo desenvolvedor incorreta.': 'Wrong developer mode password.',

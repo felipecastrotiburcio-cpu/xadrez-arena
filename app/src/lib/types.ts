@@ -15,14 +15,14 @@ export interface PublicUser {
   winStreak: number;
   bestStreak: number;
   /** Itens equipados que aparecem para os outros (peças e surgimento só nas versões novas). */
-  cosmetics: { avatar: string; character: string; move: string; pieces?: string; entrance?: string };
+  cosmetics: { avatar: string; character: string; move: string; pieces?: string; entrance?: string; evolution?: string };
   /** Emblema que o jogador escolheu mostrar (perfil e partidas). */
   badge?: string | null;
   /** Emblemas conquistados (um por IA vencida). */
   badges?: string[];
 }
 
-export type ItemType = 'board' | 'pieces' | 'avatar' | 'character' | 'move' | 'entrance';
+export type ItemType = 'board' | 'pieces' | 'avatar' | 'character' | 'move' | 'entrance' | 'evolution';
 export type Rarity = 'comum' | 'raro' | 'epico' | 'lendario';
 
 export interface PrivateUser extends PublicUser {
@@ -63,15 +63,8 @@ export interface AvatarStyle {
   ring: string;
 }
 
-export interface CharacterStyle {
-  skin: string;
-  shirt: string;
-  pants: string;
-  shoes: string;
-  hat: 'none' | 'cap' | 'crown' | 'tophat' | 'helmet' | 'headband' | 'hair';
-  hatColor: string;
-  face: 'smile' | 'grin' | 'shades' | 'mask' | 'visor';
-}
+import type { CharacterStyle, EvolutionStyle } from './catalog';
+export type { CharacterStyle, EvolutionStyle };
 
 interface ShopItemBase {
   id: string;
@@ -91,7 +84,8 @@ export type ShopItem =
   | (ShopItemBase & { type: 'avatar'; style: AvatarStyle })
   | (ShopItemBase & { type: 'character'; style: CharacterStyle })
   | (ShopItemBase & { type: 'move'; style: { animation: string; emoji: string } })
-  | (ShopItemBase & { type: 'entrance'; style: EntranceStyle });
+  | (ShopItemBase & { type: 'entrance'; style: EntranceStyle })
+  | (ShopItemBase & { type: 'evolution'; style: EvolutionStyle });
 
 /** Surgimento das peças no começo da partida. */
 export interface EntranceStyle {

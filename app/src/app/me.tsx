@@ -19,6 +19,7 @@ import type { ItemType, PrivateUser, ShopItem } from '../lib/types';
 /** Categorias na ordem em que aparecem (o que mais muda o visual vem primeiro). */
 const SECTIONS: { type: ItemType; label: TranslationKey; icon: IconName; color: string }[] = [
   { type: 'character', label: 'shop.tabCharacters', icon: 'user', color: '#6fb8ff' },
+  { type: 'evolution', label: 'me.evolution', icon: 'sparkle', color: '#ffc83d' },
   { type: 'avatar', label: 'shop.tabAvatars', icon: 'smile', color: '#ff7f7f' },
   { type: 'board', label: 'shop.tabBoards', icon: 'board', color: '#f4b942' },
   { type: 'pieces', label: 'shop.tabPieces', icon: 'knight', color: '#a68bff' },
@@ -62,8 +63,28 @@ export default function MyProfile() {
     );
   }
 
+  /** Item em uso agora (a evolução só conta se o boneco dela estiver equipado). */
+  const isOn = (item: ShopItem) =>
+    item.type === 'evolution'
+      ? user.equipped.evolution === item.id && user.equipped.character === item.style.character
+      : (user.equipped[item.type] ?? DEFAULT_LOOK[item.type]) === item.id;
+
+  /** Volta ao visual normal do boneco (desliga a evolução). */
+  const useNormal = async () => {
+    setBusy('normal');
+    try {
+      const r = await api<{ user: PrivateUser }>('/shop/unequip', { body: { type: 'evolution' } });
+      setUser(r.user);
+      toast(t('shop.evoOff'), 'success');
+    } catch (e) {
+      toast(translateServerText((e as Error).message), 'error');
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const equip = async (item: ShopItem) => {
-    if ((user.equipped[item.type] ?? DEFAULT_LOOK[item.type]) === item.id) return;
+    if (isOn(item)) return;
     setBusy(item.id);
     try {
       const r = await api<{ user: PrivateUser }>('/shop/equip', { body: { itemId: item.id } });
@@ -191,13 +212,34 @@ export default function MyProfile() {
       {SECTIONS.map((s) => {
         const list = owned.get(s.type) ?? [];
         const total = items.filter((i) => i.type === s.type).length;
-        const current = user.equipped[s.type] ?? DEFAULT_LOOK[s.type];
+        const evoActive = list.some((i) => isOn(i));
         return (
           <View key={s.type} style={{ gap: 8 }}>
             <SectionHead icon={s.icon} color={s.color} title={t(s.label)} count={`${list.length}/${total}`} />
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.strip}>
+              {s.type === 'evolution' && list.length > 0 && (
+                <Pressable
+                  testID="me-evo-normal"
+                  onPress={useNormal}
+                  disabled={busy !== null || !evoActive}
+                  style={[styles.tile, !evoActive && styles.tileOn, busy === 'normal' && { opacity: 0.6 }]}
+                >
+                  <View style={styles.thumb}>
+                    <ItemPreview item={items.find((i) => i.id === user.equipped.character) ?? list[0]} board={look.board} pieces={look.pieces} username={user.username} size={84} />
+                  </View>
+                  <Text style={styles.tileName} numberOfLines={1}>{t('me.normalLook')}</Text>
+                  {!evoActive ? (
+                    <View style={styles.onChip}>
+                      <Icon name="check" size={11} color={colors.accentText} strokeWidth={3} />
+                      <Text style={styles.onText}>{t('common.equipped')}</Text>
+                    </View>
+                  ) : (
+                    <Text style={styles.useText}>{t('me.use')}</Text>
+                  )}
+                </Pressable>
+              )}
               {list.map((item) => {
-                const on = current === item.id;
+                const on = isOn(item);
                 return (
                   <Pressable
                     key={item.id}

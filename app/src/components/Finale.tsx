@@ -1,17 +1,16 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import { useMyLook } from '../lib/cosmetics';
+import { useMyLook, type FullLook } from '../lib/cosmetics';
 import { useT } from '../lib/i18n';
 import { playMusic, stopMusic } from '../lib/sound';
 import { colors, fonts } from '../lib/theme';
-import type { CharacterStyle } from '../lib/types';
 import { Scene3D } from '../three/Scene3D';
 import { CharacterThumb } from './Character';
 import { createFinaleScene } from '../three/scenes';
 
 export interface Fighter {
   name: string;
-  look: CharacterStyle;
+  look: FullLook;
 }
 
 interface Props {

@@ -242,6 +242,10 @@ test('loja: moedas, item lendário só por compra real, equipar, bônus diário 
   assert.equal(r.user.equipped.board, 'board_tournament');
   await assert.rejects(B.call('buy', { itemId: 'board_tournament' }), /já possui/);
   await assert.rejects(B.call('buy', { itemId: 'board_galaxy' }), /compra no app/);
+  await assert.rejects(B.call('buy', { itemId: 'evo_king' }), /compra no app/);
+  await assert.rejects(B.call('equip', { itemId: 'evo_king' }), /Compre/);
+  assert.equal((await B.call('unequip', { type: 'evolution' })).user.equipped.evolution, '');
+  await assert.rejects(B.call('unequip', { type: 'board' }), /Só a evolução/);
   await assert.rejects(B.call('equip', { itemId: 'char_astronaut' }), /Compre/);
   const d = await B.call('daily');
   assert.equal(d.amount, 50);
@@ -278,6 +282,12 @@ test('modo desenvolvedor: desligado por padrão, senha errada recusada, app não
   const r = await B.call('buy', { itemId: 'board_galaxy' });
   assert.equal(r.user.coins, on.user.coins, 'lendário de graça');
   assert.ok(r.user.inventory.includes('board_galaxy'));
+  // Evolução: vem com o boneco e já veste os dois.
+  const evo = await B.call('buy', { itemId: 'evo_robot' });
+  assert.ok(evo.user.inventory.includes('char_golden_robot'));
+  assert.equal(evo.user.equipped.character, 'char_golden_robot');
+  assert.equal(evo.user.equipped.evolution, 'evo_robot');
+  assert.equal(evo.user.cosmetics.evolution, 'evo_robot');
   assert.equal((await B.call('dev_lock')).user.devMode, false);
 });
 

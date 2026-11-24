@@ -5,7 +5,7 @@
 // O app chama com o token do jogador; a função usa a chave de serviço para gravar.
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Chess } from 'chess.js';
-import { CATALOG, DAILY_BONUS, LEVEL_UP_BONUS, aiCoinReward, aiRewardItem, badgeId, coinReward, getItem, streakBonus } from '../_shared/catalog.ts';
+import { CATALOG, DAILY_BONUS, LEVEL_UP_BONUS, aiCoinReward, aiRewardItem, badgeId, coinReward, equipSlots, getItem, itemsGranted, streakBonus, type ShopItem } from '../_shared/catalog.ts';
 import { levelFor, ratingDelta } from '../_shared/levels.ts';
 import { getTimeControl, type TimeControl } from '../_shared/timeControls.ts';
 import { PurchaseError, verifyPurchase } from './purchases.ts';
@@ -83,7 +83,14 @@ function publicUser(p: ProfileRow) {
     createdAt: Date.parse(p.created_at),
     winStreak: p.win_streak,
     bestStreak: p.best_streak,
-    cosmetics: { avatar: p.equipped.avatar, character: p.equipped.character, move: p.equipped.move, pieces: p.equipped.pieces, entrance: p.equipped.entrance },
+    cosmetics: {
+      avatar: p.equipped.avatar,
+      character: p.equipped.character,
+      move: p.equipped.move,
+      pieces: p.equipped.pieces,
+      entrance: p.equipped.entrance,
+      evolution: p.equipped.evolution || undefined,
+    },
   };
 }
 
@@ -607,7 +614,38 @@ class Arena {
       if (w.inventory.includes(item.id)) throw new UserError('Você já possui este item.', 409);
       throw new UserError(`Faltam ${price - w.coins} moedas para comprar ${item.name}.`, 402);
     }
-    await this.db.rpc('equip_item', { p_user: this.userId, p_type: item.type, p_item: item.id });
+    await this.grantExtras(item);
+    await this.equipAll(item);
+    return { user: await this.me() };
+  }
+
+  /** A evolução traz o boneco dela junto (buy_item com preço 0 só acrescenta se ainda não tiver). */
+  async grantExtras(item: ShopItem) {
+    const w = await this.wallet();
+    for (const id of itemsGranted(item, w.inventory)) {
+      if (id === item.id) continue;
+      const { error } = await this.db.rpc('buy_item', { p_user: this.userId, p_item: id, p_price: 0 });
+      if (error) throw new Error(error.message);
+    }
+  }
+
+  /** Equipa o item (a evolução também equipa o boneco dela). */
+  async equipAll(item: ShopItem) {
+    const w = await this.wallet();
+    for (const [type, id] of Object.entries(equipSlots(item, w.inventory))) {
+      const { data: ok } = await this.db.rpc('equip_item', { p_user: this.userId, p_type: type, p_item: id });
+      if (!ok) return false;
+    }
+    return true;
+  }
+
+  /** Desliga a evolução (volta ao visual normal do boneco). */
+  async unequip(type: string) {
+    if (type !== 'evolution') throw new UserError('Só a evolução pode ser desligada.');
+    const { data: row, error } = await this.db.from('profiles').select('equipped').eq('id', this.userId).single();
+    if (error) throw new Error(error.message);
+    const { error: e2 } = await this.db.from('profiles').update({ equipped: { ...(row?.equipped ?? {}), evolution: '' } }).eq('id', this.userId);
+    if (e2) throw new Error(e2.message);
     return { user: await this.me() };
   }
 
@@ -631,8 +669,7 @@ class Arena {
   async equip(itemId: string) {
     const item = getItem(itemId);
     if (!item) throw new UserError('Item não encontrado.', 404);
-    const { data: ok } = await this.db.rpc('equip_item', { p_user: this.userId, p_type: item.type, p_item: item.id });
-    if (!ok) throw new UserError('Compre o item antes de equipar.', 403);
+    if (!(await this.equipAll(item))) throw new UserError('Compre o item antes de equipar.', 403);
     return { user: await this.me() };
   }
 
@@ -710,6 +747,11 @@ class Arena {
     });
     if (error) throw new Error(error.message);
     if (!ok) throw new UserError('Esta compra pertence a outra conta.', 409);
+    // Evolução: entrega o boneco junto e já veste (é o que a pessoa quer ver depois de pagar).
+    if (item.type === 'evolution') {
+      await this.grantExtras(item);
+      await this.equipAll(item);
+    }
     return { user: await this.me(), itemId: item.id };
   }
 }
@@ -759,6 +801,8 @@ Deno.serve(async (req) => {
         return json(await arena.devLock());
       case 'equip':
         return json(await arena.equip(s('itemId')));
+      case 'unequip':
+        return json(await arena.unequip(s('type')));
       case 'daily':
         return json(await arena.daily());
       case 'rename':
