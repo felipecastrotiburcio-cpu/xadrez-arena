@@ -184,7 +184,8 @@ if tap 'Criar conta'; then
   if seen '.*300.*'; then ok "Conta nova começa com 300 moedas"; else log "⚠️  Saldo inicial não encontrado"; fi
 
   # Loja: comprar "Verde Torneio" (150 moedas). A loja abre nas Evoluções: vai para Tabuleiros.
-  if tap 'Loja'; then
+  # O botão da Loja pode ficar abaixo da dobra (destaque das Evoluções acima): rola até achar.
+  if tapscroll 'Loja'; then
     sleep 4
     shot 12-loja
     if seen 'Evoluções'; then ok "Loja abre com as Evoluções em destaque"; else log "⚠️  Evoluções não encontradas na loja"; fi
