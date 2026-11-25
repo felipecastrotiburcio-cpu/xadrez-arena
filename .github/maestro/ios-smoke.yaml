@@ -121,6 +121,13 @@ appId: app.xadrezarena
       - extendedWaitUntil:
           visible: ".*Tabuleiros.*"
           timeout: 10000
+# A loja abre nas Evoluções (destaque): confere e vai para a categoria Tabuleiros.
+- assertVisible: ".*Evoluções.*"
+- takeScreenshot: ${OUT}/07-loja-evolucoes
+- tapOn:
+    id: "cat-board"
+- waitForAnimationToEnd:
+    timeout: 3000
 # Os itens ficam numa grade abaixo do destaque: rola até o "Verde Torneio" (150) aparecer
 - scrollUntilVisible:
     element:
