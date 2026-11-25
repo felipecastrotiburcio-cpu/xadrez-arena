@@ -1,0 +1,7 @@
+IPA para iPhone (sem assinatura — assine com seu Apple ID, veja IOS.md)
+Tamanho:  18M (18768931 bytes)
+Versão: 1.2.0 (build 36)
+iOS mínimo: 16.4
+Arquiteturas: arm64
+Permissões pedidas ao usuário:
+  nenhuma
